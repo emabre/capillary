@@ -3,6 +3,7 @@
 */
 /* ///////////////////////////////////////////////////////////////////// */
 #include "pluto.h"
+#include "gamma_transp.h"
 
 //#define BWALL 2.758e-1
 #define BWALL 1.1*2.758e-1 // old : 0.1*2.758e-1
@@ -11,15 +12,14 @@
 #define RLIMIT1 (3/4*100)
 #define RLIMIT2 100 // punto finale in r del dominio, questo lo devi cambiare se cambi la lunghezza in r del dominio
 //void BoundValues (double *v, double x1, double x2, double x3, double t);
+
 /* ********************************************************************* */
 void Init (double *us, double x1, double x2, double x3)
 /*
  *
  *********************************************************************** */
 {
-  /*added by Ema*/
   double T,mu;/*Temperature in K and mean particle weight*/
-
 
   #if GEOMETRY != CYLINDRICAL
    #error geometry not valid
@@ -66,7 +66,6 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
 /*
  *
  *********************************************************************** */
- /*ANDARE AVANTI A MODIFICARE QUI!!*/
 {
   int  i, j, k;
   double *r_coord, *z_coord;
@@ -74,7 +73,12 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   int  vsign[NVAR]; /*vector containing signs which will be set by Flipsign*/
   double T,mu;/*Temperature in K and mean particle weight, for the usage of macro "KELVIN" see page 45 of the manual*/
 
+  if (idx_rcap==0 || idx_zcap==0) {
+    print1("inidici prima di algoritmo ricerca bordi interni");
+    print1("idx_rcap: %d, idx_zcap: %d",idx_rcap,idx_zcap);
+    /* I find the indexes of the cells closest to the capillary bounds*/
 
+  }
  /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
   t = g_time; /*at the moment unused*/
 

@@ -1,0 +1,4 @@
+*.bin
+*.o
+pluto
+pluto.log

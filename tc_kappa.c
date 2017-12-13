@@ -1,5 +1,5 @@
 #include "pluto.h"
-#include "additional_const_disch.h"
+#include "gamma_transp.h"
 
 void TC_kappa(double *v, double x1, double x2, double x3,
               double *kpar, double *knor, double *phi)
