@@ -7,9 +7,6 @@ as in:
 This file contains also some other quantities and parameter useful for computing
 quantities like thermal conductivity, electrical resistivity.*/
 
-double rcap = 50.0;
-double zcap = 30.0;/*the capillary is long 2*zcap and wide 2*rcap */
-
 /*GAMMA_ilj[i,l,j] is the parameter "capital gamma"
 with subscripts i+1,j+1 and superscript l .
 You find it in Ref [1]*/

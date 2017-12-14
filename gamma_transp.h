@@ -7,7 +7,6 @@
 
 double Gamma_jil[2][10][4];
 int extern idx_rcap, idx_zcap;
-double extern rcap,zcap;
 
 double Gamma_i(int i, double xe, double w);
 double Gamma_ij(int i, int j, double w);

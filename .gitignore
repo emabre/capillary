@@ -2,3 +2,5 @@
 *.o
 pluto
 pluto.log
+*.vtk
+*.out

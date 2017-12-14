@@ -1,14 +1,13 @@
 # *********************************************************
 #
 #                  PLUTO 4.2  Makefile
-#                  modified by Ema(added gamma_transp.o to OBJ)
 #
 # *********************************************************
 
 pluto:                              # Default target
 
 ARCH         = debug.defs
-PLUTO_DIR    = /home/ema/myprogr/PLUTO
+PLUTO_DIR    = /home/konrad/Codes/PLUTO
 SRC          = $(PLUTO_DIR)/Src
 INCLUDE_DIRS = -I. -I$(SRC)
 VPATH        = ./:$(SRC)/New:$(SRC):$(SRC)/Time_Stepping:$(SRC)/States
