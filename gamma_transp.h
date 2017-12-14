@@ -15,4 +15,6 @@ double cl_ei(double ne, double T);
 double cl_en(double ioniz, double T);
 // double cl_ee(double ne, double T);
 
+int find_idx_closest(double *vec, int Nvec, double v);
+
 #endif
