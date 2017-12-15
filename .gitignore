@@ -4,3 +4,4 @@ pluto
 pluto.log
 *.vtk
 *.out
+makefile

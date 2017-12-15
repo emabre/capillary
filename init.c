@@ -9,7 +9,7 @@
 // #define BWALL 1.1*2.758e-1 // old : 0.1*2.758e-1
 #define T0 5000.0
 #define TWALL 5000.0
-#define RCAP 0.04
+#define RCAP 0.03
 #define ZCAP 3.0 /*the capillary is long 2*ZCAP and wide 2*RCAP */
 /* ********************************************************************* */
 void Init (double *us, double x1, double x2, double x3)
@@ -69,7 +69,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     print1("inidici prima di algoritmo ricerca bordi interni\n");
     print1("idx_rcap: %d, idx_zcap: %d\n",idx_rcap,idx_zcap);
     /* I find the indexes of the cells closest to the capillary bounds*/
-    idx_rcap = find_idx_closest(grid[0].x_glob,grid[0].gend-grid[0].gbeg,RCAP/UNIT_LENGTH);
+    idx_rcap = find_idx_closest(grid[0].x_glob, grid[0].gend-grid[0].gbeg+1, RCAP/UNIT_LENGTH);
     //print1("grid[0].gbeg:%d, grid[0].gend:%d\n",grid[0].gbeg,grid[0].gend );
     //print1("grid[0].x_glob:%g,grid[0].gend-grid[0].gbeg:%d,rcap%g\n",grid[0].x_glob,grid[0].gend-grid[0].gbeg,RCAP);
     KTOT_LOOP(k) JTOT_LOOP(j) {
@@ -122,7 +122,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       d->Vc[RHO][k][j][idx_rcap+1] = d->Vc[RHO][k][j][idx_rcap];
       d->Vc[iVR][k][j][idx_rcap+1] = -(d->Vc[iVR][k][j][idx_rcap]);
       d->Vc[iVZ][k][j][idx_rcap+1] = d->Vc[iVZ][k][j][idx_rcap];
-      d->Vc[PRS][k][j][idx_rcap+1] = d->Vc[RHO][k][j][idx_rcap+1]*T / (KELVIN*mu);
+      d->Vc[PRS][k][j][idx_rcap] = d->Vc[RHO][k][j][idx_rcap]*T / (KELVIN*mu);
       d->flag[k][j][idx_rcap+1] |= FLAG_INTERNAL_BOUNDARY;
     }
   }

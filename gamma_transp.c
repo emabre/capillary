@@ -1,6 +1,10 @@
 #include <math.h>
 #include "pluto.h"
 #include "gamma_transp.h"
+
+//debug macro
+// #define DBG_FIND_CLOSEST
+
 /*This file contains the definition of the gamma parameters
 as in:
 [1] N. A. Bobrova and P. V. Sasorov, Plasma Phys. Rep. 19, 409 1993
@@ -127,12 +131,24 @@ int find_idx_closest(double *vec, int Nvec, double v){
   int i, i_mindiff;
   double diff;
 
-  diff = abs(vec[0]-v);
+  #ifdef DBG_FIND_CLOSEST
+    print1("\nvec[0]:%g, v:%g", vec[0], v);
+    print1("\nfabs(vec[0]-v):%g", fabs(vec[0]-v));
+  #endif
+
+  diff = fabs(vec[0]-v);
   for (i=1;i<Nvec;i++){
-    if (abs(vec[i]-v) < diff) {
-      diff = abs(vec[i]-v);
+    if (fabs(vec[i]-v) < diff) {
+      #ifdef DBG_FIND_CLOSEST
+        print1("\nabs(vec[%d](=%e)-%e)<%e",i,vec[i],v,diff);
+      #endif
+      diff = fabs(vec[i]-v);
       i_mindiff = i;
+    } else {
+      #ifdef DBG_FIND_CLOSEST
+        print1("\nfabs(vec[%d](=%e)-%e)>%e",i,vec[i],v,diff);
+      #endif
     }
   }
-  return i;
+  return i_mindiff;
 }
