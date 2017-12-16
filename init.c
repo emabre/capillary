@@ -122,8 +122,11 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       d->Vc[RHO][k][j][idx_rcap+1] = d->Vc[RHO][k][j][idx_rcap];
       d->Vc[iVR][k][j][idx_rcap+1] = -(d->Vc[iVR][k][j][idx_rcap]);
       d->Vc[iVZ][k][j][idx_rcap+1] = d->Vc[iVZ][k][j][idx_rcap];
-      d->Vc[PRS][k][j][idx_rcap] = d->Vc[RHO][k][j][idx_rcap]*T / (KELVIN*mu);
-      d->flag[k][j][idx_rcap+1] |= FLAG_INTERNAL_BOUNDARY;
+      // d->Vc[PRS][k][j][idx_rcap] = d->Vc[RHO][k][j][idx_rcap]*T / (KELVIN*mu);
+      /*** At every step I must set the flag, at the program resets it automatically***/
+      for (i = idx_rcap+1; i < NX1_TOT; i++)
+        d->flag[k][j][i] |= FLAG_INTERNAL_BOUNDARY;
+      /*** ***/
     }
   }
 }

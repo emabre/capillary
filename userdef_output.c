@@ -25,7 +25,7 @@ void ComputeUserVar (const Data *d, Grid *grid)
   // export Internal boundary flags
   interBound = GetUserVar("interBound");
   DOM_LOOP(k,j,i){
-    if ((int) d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY) {
+    if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY)) {
       interBound[k][j][i] = 33.3; //Just a conventional number
     } else {
       interBound[k][j][i] = 0.0; //Just a conventional number
