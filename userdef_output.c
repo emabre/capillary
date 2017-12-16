@@ -1,6 +1,6 @@
 #include "pluto.h"
 
-//#define WRITE_T_MU_NE_IONIZ
+#define WRITE_T_MU_NE_IONIZ
 
 /* *************************************************************** */
 void ComputeUserVar (const Data *d, Grid *grid)
