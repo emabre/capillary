@@ -10,7 +10,8 @@
 #define T0 5000.0
 #define TWALL 5000.0
 #define RCAP 0.03
-#define ZCAP 0.05 /*the capillary is long 2*ZCAP and wide 2*RCAP */
+#define DZCAP 0.01 /*the electrodes are wide DZCAP cm*/
+#define ZCAP 0.05 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 /* ********************************************************************* */
 void Init (double *us, double x1, double x2, double x3)
 /*
@@ -26,23 +27,36 @@ void Init (double *us, double x1, double x2, double x3)
    #error physics not valid
   #endif
 
-  if (x1<(RCAP/UNIT_LENGTH)) { //in cyl coords x1 is r, x2 is z
-    us[iBPHI] = BWALL*x1/(RCAP/UNIT_LENGTH);
-  } else {
-    us[iBPHI] = BWALL;
+  if (x2<ZCAP-DZCAP) {
+    if (x1<(RCAP/UNIT_LENGTH)) { //in cyl coords x1 is r, x2 is z
+      us[iBPHI] = BWALL*x1/(RCAP/UNIT_LENGTH);
+    } else {
+      us[iBPHI] = BWALL;
+    }
+  } else if ( ZCAP-DZCAP<=x2<=ZCAP ) {
+    // the field linearly decreses in z direction (this is provisory, better electrode have to be implemented)
+    if (x1<(RCAP/UNIT_LENGTH)) { //in cyl coords x1 is r, x2 is z
+      us[iBPHI] = (BWALL*x1/(RCAP/UNIT_LENGTH)) * ( 1 - (x2 - (ZCAP-DZCAP))/DZCAP );
+    } else {
+      us[iBPHI] = BWALL * ( 1 - (x2 - (ZCAP-DZCAP))/DZCAP );
+    }
+  } else if (x2>ZCAP) {
+    // No field outside capillary
+    us[iBPHI] = 0.0;
   }
-    us[iBZ] = us[iBR] = 0.0;
 
-    us[iVPHI] = us[iVZ] = us[iVR] = 0.0;
-    us[RHO] = 10.0;
+  us[iBZ] = us[iBR] = 0.0;
 
-    T = T0;
-    #if EOS==IDEAL
-        mu = MeanMolecularWeight(us);
-    #elif EOS==PVTE_LAW
-        GetMu(T, us[RHO], &mu);
-    #endif
-    us[PRS] = us[RHO]*T / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
+  us[iVPHI] = us[iVZ] = us[iVR] = 0.0;
+  us[RHO] = 10.0;
+
+  T = T0;
+  #if EOS==IDEAL
+      mu = MeanMolecularWeight(us);
+  #elif EOS==PVTE_LAW
+      GetMu(T, us[RHO], &mu);
+  #endif
+  us[PRS] = us[RHO]*T / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
 
 }
 
@@ -104,7 +118,7 @@ i=0          |________________________(axis)
     /**********************************************
      side r = rmax
      **********************************************/
-    // Setting the Magnetic field
+     // Setting the Magnetic field
       BOX_LOOP(box,k,j,i){
         d->Vc[iBPHI][k][j][i] = BWALL;
         d->Vc[iBZ][k][j][i] = 0.0;
@@ -119,7 +133,7 @@ i=0          |________________________(axis)
       ReflectiveBound (d->Vc[iVPHI], vsign[iVPHI], X1_END, CENTER);
       //ReflectiveBound (d->Vc[PRS], vsign[PRS], X1_END, CENTER);
 
-      // Setting T (which means pressure!)
+      // Setting T
       T = TWALL;
       BOX_LOOP(box,k,j,i){
         #if EOS==IDEAL
@@ -134,11 +148,16 @@ i=0          |________________________(axis)
     }
   } else if (side == 0) {
     /**********************************
+    ***********************************
     Internal Boundary
+    ***********************************
     ***********************************/
     // I make reflective boundary using as ghost the cell idx_rcap+1
     T = TWALL;
 
+    /***********************
+    Capillary wall r=cost
+    ************************/
     KTOT_LOOP(k) {
       for (j=0; j<=idx_zcap-1; j++) { // I stop at idx_zcap-1 to exclude the corner cell
         d->Vc[RHO][k][j][idx_rcap+1] = d->Vc[RHO][k][j][idx_rcap];
@@ -146,14 +165,20 @@ i=0          |________________________(axis)
         d->Vc[iVZ][k][j][idx_rcap+1] = d->Vc[iVZ][k][j][idx_rcap];
       }
     }
+    /***********************
+    Capillary wall z=cost
+    ************************/
     KTOT_LOOP(k) {
       for (i=idx_rcap+2; i<NX1_TOT; i++) { // I start from idx_rcap+2 to exclude the corner cell
         d->Vc[RHO][k][idx_zcap][i] = d->Vc[RHO][k][idx_zcap+1][i];
         d->Vc[iVR][k][idx_zcap][i] = d->Vc[iVR][k][idx_zcap+1][i];
         d->Vc[iVZ][k][idx_zcap][i] = -(d->Vc[iVZ][k][idx_zcap+1][i]);
+
       }
     }
-    // for the corner point
+    /*********************
+    Corner point
+    *********************/
     // I should not change the grid size near the capillary end!
     diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
 
@@ -172,8 +197,9 @@ i=0          |________________________(axis)
     d->Vc[iVR][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
     d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
 
-    // d->Vc[PRS][k][j][idx_rcap] = d->Vc[RHO][k][j][idx_rcap]*T / (KELVIN*mu);
-
+    /*********************
+    Set the flag in the whole wall region
+    **********************/
     /*** At every step I must set the flag, at the program resets it automatically***/
     KTOT_LOOP(k) {
       for (j=0; j<=idx_zcap; j++) {
