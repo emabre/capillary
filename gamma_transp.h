@@ -6,7 +6,7 @@
 #define EPS_0_ESAU 5.81e-11 /* in erg*/
 
 double Gamma_jil[2][10][4];
-int extern idx_rcap, idx_zcap;
+int extern idx_rcap, idx_zcap, idx_start_electr;
 
 double Gamma_i(int i, double xe, double w);
 double Gamma_ij(int i, int j, double w);

@@ -33,7 +33,7 @@ void Init (double *us, double x1, double x2, double x3)
     } else {
       us[iBPHI] = BWALL;
     }
-  } else if ( ZCAP-DZCAP<=x2<=ZCAP ) {
+  } else if ( ZCAP-DZCAP<=x2 && x2<=ZCAP ) {
     // the field linearly decreses in z direction (this is provisory, better electrode have to be implemented)
     if (x1<(RCAP/UNIT_LENGTH)) { //in cyl coords x1 is r, x2 is z
       us[iBPHI] = (BWALL*x1/(RCAP/UNIT_LENGTH)) * ( 1 - (x2 - (ZCAP-DZCAP))/DZCAP );
@@ -86,17 +86,19 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     /* I find the indexes of the cells closest to the capillary bounds*/
     idx_rcap = find_idx_closest(grid[0].x_glob, grid[0].gend-grid[0].gbeg+1, RCAP/UNIT_LENGTH);
     idx_zcap = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, ZCAP/UNIT_LENGTH);
+    idx_start_electr = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, (ZCAP-DZCAP)/UNIT_LENGTH);
     //print1("grid[0].gbeg:%d, grid[0].gend:%d\n",grid[0].gbeg,grid[0].gend );
     //print1("grid[0].x_glob:%g,grid[0].gend-grid[0].gbeg:%d,rcap%g\n",grid[0].x_glob,grid[0].gend-grid[0].gbeg,RCAP);
 
     /* Capillary:
-                                j=idx_zcap (ghost)
-        r                        |
-        ^    |                   *
-        |    |       wall        *
-             |                   *
-i=idx_rcap+1 |****(ghosts)********|
-i=idx_rcap   |                   j=idx_zcap+1 (first outside, not ghost)
+                              j=idx_start_electr
+                               |     j=idx_zcap (ghost)
+        r                      |      |
+        ^    |                 |      *
+        |    |       wall      |      *
+             |                 v      *
+i=idx_rcap+1 |****(ghosts)*****o*******|
+i=idx_rcap   |                        j=idx_zcap+1 (first outside, not ghost)
              |
 i=0          |________________________(axis)
             j=0    -> z
@@ -120,7 +122,7 @@ i=0          |________________________(axis)
      **********************************************/
      // Setting the Magnetic field
       BOX_LOOP(box,k,j,i){
-        d->Vc[iBPHI][k][j][i] = BWALL;
+        d->Vc[iBPHI][k][j][i] = 0.0;
         d->Vc[iBZ][k][j][i] = 0.0;
         d->Vc[iBR][k][j][i] = 0.0;
       }
@@ -152,17 +154,25 @@ i=0          |________________________(axis)
     Internal Boundary
     ***********************************
     ***********************************/
-    // I make reflective boundary using as ghost the cell idx_rcap+1
     T = TWALL;
 
     /***********************
     Capillary wall r=cost
     ************************/
     KTOT_LOOP(k) {
+      // rho and v
       for (j=0; j<=idx_zcap-1; j++) { // I stop at idx_zcap-1 to exclude the corner cell
         d->Vc[RHO][k][j][idx_rcap+1] = d->Vc[RHO][k][j][idx_rcap];
         d->Vc[iVR][k][j][idx_rcap+1] = -(d->Vc[iVR][k][j][idx_rcap]);
         d->Vc[iVZ][k][j][idx_rcap+1] = d->Vc[iVZ][k][j][idx_rcap];
+      }
+      // magnetic field on capillary wall
+      for (j=0; j<idx_start_electr; j++) {
+        d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL;
+      }
+      // magnetic field on electrode (provisory)
+      for (j=idx_start_electr; j<=idx_zcap; j++) {
+        d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL*(1-(grid[1].x_glob[j]-(ZCAP-DZCAP))/DZCAP );
       }
     }
     /***********************
@@ -170,10 +180,12 @@ i=0          |________________________(axis)
     ************************/
     KTOT_LOOP(k) {
       for (i=idx_rcap+2; i<NX1_TOT; i++) { // I start from idx_rcap+2 to exclude the corner cell
+        // v and rho
         d->Vc[RHO][k][idx_zcap][i] = d->Vc[RHO][k][idx_zcap+1][i];
         d->Vc[iVR][k][idx_zcap][i] = d->Vc[iVR][k][idx_zcap+1][i];
         d->Vc[iVZ][k][idx_zcap][i] = -(d->Vc[iVZ][k][idx_zcap+1][i]);
-
+        // magnetic field
+        d->Vc[iBPHI][k][idx_zcap][i] = 0.0;
       }
     }
     /*********************
@@ -181,21 +193,22 @@ i=0          |________________________(axis)
     *********************/
     // I should not change the grid size near the capillary end!
     diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
-
     // I compute cos(theta) and sin(theta)
     sinth = grid[0].dx_glob[idx_rcap+1] / diagonal;
     costh = grid[1].dx_glob[idx_zcap] / diagonal;
-
     //qr = rhoA*vrA + rhoB*vrB
     qr = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVR][k][idx_zcap][idx_rcap];
     qr += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVR][k][idx_zcap+1][idx_rcap+1];
     //qz = rhoA*vzA + rhoB*vzB
     qz = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVZ][k][idx_zcap][idx_rcap];
     qz += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1];
-
+    // now I set the actual values
     d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
     d->Vc[iVR][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
     d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
+
+    //magnetic field
+    d->Vc[iBPHI][k][idx_zcap][idx_rcap+1] = 0.0;
 
     /*********************
     Set the flag in the whole wall region
