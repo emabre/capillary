@@ -10,7 +10,7 @@
 #define T0 5000.0
 #define TWALL 5000.0
 #define RCAP 0.03
-#define ZCAP 3.0 /*the capillary is long 2*ZCAP and wide 2*RCAP */
+#define ZCAP 0.05 /*the capillary is long 2*ZCAP and wide 2*RCAP */
 /* ********************************************************************* */
 void Init (double *us, double x1, double x2, double x3)
 /*
@@ -64,16 +64,36 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   double t;
   int  vsign[NVAR]; /*vector containing signs which will be set by Flipsign*/
   double T,mu;/*Temperature in K and mean particle weight, for the usage of macro "KELVIN" see page 45 of the manual*/
+  double qz,qr,diagonal,sinth,costh;
 
   if (idx_rcap==0 && idx_zcap==0) {
     print1("inidici prima di algoritmo ricerca bordi interni\n");
     print1("idx_rcap: %d, idx_zcap: %d\n",idx_rcap,idx_zcap);
     /* I find the indexes of the cells closest to the capillary bounds*/
     idx_rcap = find_idx_closest(grid[0].x_glob, grid[0].gend-grid[0].gbeg+1, RCAP/UNIT_LENGTH);
+    idx_zcap = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, ZCAP/UNIT_LENGTH);
     //print1("grid[0].gbeg:%d, grid[0].gend:%d\n",grid[0].gbeg,grid[0].gend );
     //print1("grid[0].x_glob:%g,grid[0].gend-grid[0].gbeg:%d,rcap%g\n",grid[0].x_glob,grid[0].gend-grid[0].gbeg,RCAP);
-    KTOT_LOOP(k) JTOT_LOOP(j) {
-      for(i=idx_rcap+1;i<NX1_TOT; i++) d->flag[k][j][i] |= FLAG_INTERNAL_BOUNDARY;
+
+    /* Capillary:
+                                j=idx_zcap (ghost)
+        r                        |
+        ^    |                   *
+        |    |       wall        *
+             |                   *
+i=idx_rcap+1 |****(ghosts)********|
+i=idx_rcap   |                   j=idx_zcap+1 (first outside, not ghost)
+             |
+i=0          |________________________(axis)
+            j=0    -> z
+    // I should not change the grid size exacly on the capillary end!
+    */
+    KTOT_LOOP(k) {
+      for (j=0; j<=idx_zcap; j++) {
+        for (i=idx_rcap+1; i<NX1_TOT; i++) {
+          d->flag[k][j][i] |= FLAG_INTERNAL_BOUNDARY;
+        }
+      }
     }
   }
  /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
@@ -118,15 +138,50 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     ***********************************/
     // I make reflective boundary using as ghost the cell idx_rcap+1
     T = TWALL;
-    KTOT_LOOP(k) JTOT_LOOP(j) {
-      d->Vc[RHO][k][j][idx_rcap+1] = d->Vc[RHO][k][j][idx_rcap];
-      d->Vc[iVR][k][j][idx_rcap+1] = -(d->Vc[iVR][k][j][idx_rcap]);
-      d->Vc[iVZ][k][j][idx_rcap+1] = d->Vc[iVZ][k][j][idx_rcap];
-      // d->Vc[PRS][k][j][idx_rcap] = d->Vc[RHO][k][j][idx_rcap]*T / (KELVIN*mu);
-      /*** At every step I must set the flag, at the program resets it automatically***/
-      for (i = idx_rcap+1; i < NX1_TOT; i++)
-        d->flag[k][j][i] |= FLAG_INTERNAL_BOUNDARY;
-      /*** ***/
+
+    KTOT_LOOP(k) {
+      for (j=0; j<=idx_zcap-1; j++) { // I stop at idx_zcap-1 to exclude the corner cell
+        d->Vc[RHO][k][j][idx_rcap+1] = d->Vc[RHO][k][j][idx_rcap];
+        d->Vc[iVR][k][j][idx_rcap+1] = -(d->Vc[iVR][k][j][idx_rcap]);
+        d->Vc[iVZ][k][j][idx_rcap+1] = d->Vc[iVZ][k][j][idx_rcap];
+      }
     }
+    KTOT_LOOP(k) {
+      for (i=idx_rcap+2; i<NX1_TOT; i++) { // I start from idx_rcap+2 to exclude the corner cell
+        d->Vc[RHO][k][idx_zcap][i] = d->Vc[RHO][k][idx_zcap+1][i];
+        d->Vc[iVR][k][idx_zcap][i] = d->Vc[iVR][k][idx_zcap+1][i];
+        d->Vc[iVZ][k][idx_zcap][i] = -(d->Vc[iVZ][k][idx_zcap+1][i]);
+      }
+    }
+    // for the corner point
+    // I should not change the grid size near the capillary end!
+    diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
+
+    // I compute cos(theta) and sin(theta)
+    sinth = grid[0].dx_glob[idx_rcap+1] / diagonal;
+    costh = grid[1].dx_glob[idx_zcap] / diagonal;
+
+    //qr = rhoA*vrA + rhoB*vrB
+    qr = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVR][k][idx_zcap][idx_rcap];
+    qr += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVR][k][idx_zcap+1][idx_rcap+1];
+    //qz = rhoA*vzA + rhoB*vzB
+    qz = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVZ][k][idx_zcap][idx_rcap];
+    qz += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1];
+
+    d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
+    d->Vc[iVR][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
+    d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
+
+    // d->Vc[PRS][k][j][idx_rcap] = d->Vc[RHO][k][j][idx_rcap]*T / (KELVIN*mu);
+
+    /*** At every step I must set the flag, at the program resets it automatically***/
+    KTOT_LOOP(k) {
+      for (j=0; j<=idx_zcap; j++) {
+        for (i=idx_rcap+1; i<NX1_TOT; i++) {
+          d->flag[k][j][i] |= FLAG_INTERNAL_BOUNDARY;
+        }
+      }
+    }
+    /*** ***/
   }
 }
