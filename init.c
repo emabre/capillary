@@ -206,23 +206,35 @@ i=0          |________________________(axis)
       /*********************
       Corner point
       *********************/
-      // I should not change the grid size near the capillary end!
-      diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
-      // I compute cos(theta) and sin(theta)
-      sinth = grid[0].dx_glob[idx_rcap+1] / diagonal;
-      costh = grid[1].dx_glob[idx_zcap] / diagonal;
-      //qr = 0.5*(rhoA*vrA + rhoB*vrB)
-      qr = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVR][k][idx_zcap][idx_rcap];
-      qr += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVR][k][idx_zcap+1][idx_rcap+1];
-      qr = 0.5*qr;
-      //qz =  0.5*(rhoA*vzA + rhoB*vzB)
-      qz = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVZ][k][idx_zcap][idx_rcap];
-      qz += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1];
-      qz = 0.5*qz;
-      // now I set the actual values
+      // // I should not change the grid size near the capillary end!
+      // diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
+      // // I compute cos(theta) and sin(theta)
+      // sinth = grid[0].dx_glob[idx_rcap+1] / diagonal;
+      // costh = grid[1].dx_glob[idx_zcap] / diagonal;
+      // //qr = 0.5*(rhoA*vrA + rhoB*vrB)
+      // qr = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVR][k][idx_zcap][idx_rcap];
+      // qr += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVR][k][idx_zcap+1][idx_rcap+1];
+      // qr = 0.5*qr;
+      // //qz =  0.5*(rhoA*vzA + rhoB*vzB)
+      // qz = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVZ][k][idx_zcap][idx_rcap];
+      // qz += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1];
+      // qz = 0.5*qz;
+      // // now I set the actual values
+      // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
+      // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
+      // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
+
+      /***********************/
+      /*I try to set 0 speed on corner ghost cell (experimental)*/
+      /***********************/
       d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
-      d->Vc[iVR][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
-      d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
+      d->Vc[iVR][k][idx_zcap][idx_rcap+1] = 0.0;
+      d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = 0.0;
+      /******************/
+      /*Also enforcing zero orthgonal velocity to wall in corner point (experimental!)*/
+      /******************/
+      d->Vc[iVR][k][idx_zcap][idx_rcap] = 0.0;
+      d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = 0.0;
 
       //magnetic field
       d->Vc[iBPHI][k][idx_zcap][idx_rcap+1] = 0.0;
