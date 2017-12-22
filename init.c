@@ -12,6 +12,10 @@
 #define RCAP 0.03
 #define DZCAP 0.01 /*the electrodes are wide DZCAP cm*/
 #define ZCAP 0.05 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
+
+/*Auxiliary function to set the temperature*/
+void setT(const Data *d, double T, int i, int j, int k);
+
 /* ********************************************************************* */
 void Init (double *us, double x1, double x2, double x3)
 /*
@@ -38,12 +42,13 @@ void Init (double *us, double x1, double x2, double x3)
     if (x1<(RCAP/UNIT_LENGTH)) { //in cyl coords x1 is r, x2 is z
       us[iBPHI] = (BWALL*x1/(RCAP/UNIT_LENGTH)) * ( 1 - (x2 - (ZCAP-DZCAP))/DZCAP );
     } else {
-      us[iBPHI] = BWALL * ( 1 - (x2 - (ZCAP-DZCAP))/DZCAP );
+      us[iBPHI] = BWALL * ( 1 - (x2 - (ZCAP-DZCAP)/UNIT_LENGTH)/(DZCAP/UNIT_LENGTH) );
     }
   } else if (x2>ZCAP) {
     // No field outside capillary
     us[iBPHI] = 0.0;
   }
+  // us[iBPHI] = 0.0;
 
   us[iBZ] = us[iBR] = 0.0;
 
@@ -77,16 +82,22 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   int  i, j, k;
   double t;
   int  vsign[NVAR]; /*vector containing signs which will be set by Flipsign*/
-  double T,mu;/*Temperature in K and mean particle weight, for the usage of macro "KELVIN" see page 45 of the manual*/
+  // double T,mu;/*Temperature in K and mean particle weight, for the usage of macro "KELVIN" see page 45 of the manual*/
+  // double mu_all[NX3_TOT][NX2_TOT][NX1_TOT]; /*mean particle weight in the whole domain*/
   double qz,qr,diagonal,sinth,costh;
 
+  /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
+  t = g_time; /*at the moment unused*/
+
   if (idx_rcap==0 && idx_zcap==0) {
-    print1("inidici prima di algoritmo ricerca bordi interni\n");
-    print1("idx_rcap: %d, idx_zcap: %d\n",idx_rcap,idx_zcap);
+    // print1("inidici prima di algoritmo ricerca bordi interni\n");
     /* I find the indexes of the cells closest to the capillary bounds*/
     idx_rcap = find_idx_closest(grid[0].x_glob, grid[0].gend-grid[0].gbeg+1, RCAP/UNIT_LENGTH);
     idx_zcap = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, ZCAP/UNIT_LENGTH);
     idx_start_electr = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, (ZCAP-DZCAP)/UNIT_LENGTH);
+
+    print1("idx_rcap: %d, idx_zcap: %d, idx_start_electr\n",idx_rcap,idx_zcap, idx_start_electr);
+
     //print1("grid[0].gbeg:%d, grid[0].gend:%d\n",grid[0].gbeg,grid[0].gend );
     //print1("grid[0].x_glob:%g,grid[0].gend-grid[0].gbeg:%d,rcap%g\n",grid[0].x_glob,grid[0].gend-grid[0].gbeg,RCAP);
 
@@ -112,8 +123,6 @@ i=0          |________________________(axis)
       }
     }
   }
- /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
-  t = g_time; /*at the moment unused*/
 
   if (side == X1_END){
     if (box->vpos == CENTER) {
@@ -136,14 +145,8 @@ i=0          |________________________(axis)
       //ReflectiveBound (d->Vc[PRS], vsign[PRS], X1_END, CENTER);
 
       // Setting T
-      T = TWALL;
       BOX_LOOP(box,k,j,i){
-        #if EOS==IDEAL
-            mu = MeanMolecularWeight(d->Vc);
-        #elif EOS==PVTE_LAW
-            GetMu(T, d->Vc[RHO][k][j][i], &mu);
-        #endif
-          d->Vc[PRS][k][j][i] = d->Vc[RHO][k][j][i]*T / (KELVIN*mu);
+        setT( d, TWALL, i, j, k);
       }
     } else {
         print1("[Ema]UserDefBoundary: Not setting BCs!!!!\n");
@@ -154,7 +157,6 @@ i=0          |________________________(axis)
     Internal Boundary
     ***********************************
     ***********************************/
-    T = TWALL;
 
     /***********************
     Capillary wall r=cost
@@ -166,13 +168,23 @@ i=0          |________________________(axis)
         d->Vc[iVR][k][j][idx_rcap+1] = -(d->Vc[iVR][k][j][idx_rcap]);
         d->Vc[iVZ][k][j][idx_rcap+1] = d->Vc[iVZ][k][j][idx_rcap];
       }
+      // Temperature
+      for (j=0; j<=idx_zcap-1; j++) {
+        setT( d, TWALL, idx_rcap+1, j, k);
+      }
       // magnetic field on capillary wall
       for (j=0; j<idx_start_electr; j++) {
         d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL;
       }
       // magnetic field on electrode (provisory)
       for (j=idx_start_electr; j<=idx_zcap; j++) {
-        d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL*(1-(grid[1].x_glob[j]-(ZCAP-DZCAP))/DZCAP );
+        // Sistemare meglio, usare le posizioni dei punti dove davvero inizia
+        //l'elettrodo e le altre cose, anzichè le macro
+        // d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL*(1-(grid[1].x_glob[j]-(ZCAP-DZCAP)/UNIT_LENGTH)/(DZCAP/UNIT_LENGTH) );
+        d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL*\
+            (1-(grid[1].x_glob[j]-grid[1].x_glob[idx_start_electr])/ \
+            (grid[1].x_glob[idx_zcap]-grid[1].x_glob[idx_start_electr]));
+        // d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL;
       }
     }
     /***********************
@@ -186,30 +198,38 @@ i=0          |________________________(axis)
         d->Vc[iVZ][k][idx_zcap][i] = -(d->Vc[iVZ][k][idx_zcap+1][i]);
         // magnetic field
         d->Vc[iBPHI][k][idx_zcap][i] = 0.0;
+        //temperature
+        setT( d, TWALL, idx_rcap+1, j, k);
       }
     }
-    /*********************
-    Corner point
-    *********************/
-    // I should not change the grid size near the capillary end!
-    diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
-    // I compute cos(theta) and sin(theta)
-    sinth = grid[0].dx_glob[idx_rcap+1] / diagonal;
-    costh = grid[1].dx_glob[idx_zcap] / diagonal;
-    //qr = rhoA*vrA + rhoB*vrB
-    qr = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVR][k][idx_zcap][idx_rcap];
-    qr += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVR][k][idx_zcap+1][idx_rcap+1];
-    //qz = rhoA*vzA + rhoB*vzB
-    qz = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVZ][k][idx_zcap][idx_rcap];
-    qz += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1];
-    // now I set the actual values
-    d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
-    d->Vc[iVR][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
-    d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
+    KTOT_LOOP(k) {
+      /*********************
+      Corner point
+      *********************/
+      // I should not change the grid size near the capillary end!
+      diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
+      // I compute cos(theta) and sin(theta)
+      sinth = grid[0].dx_glob[idx_rcap+1] / diagonal;
+      costh = grid[1].dx_glob[idx_zcap] / diagonal;
+      //qr = 0.5*(rhoA*vrA + rhoB*vrB)
+      qr = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVR][k][idx_zcap][idx_rcap];
+      qr += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVR][k][idx_zcap+1][idx_rcap+1];
+      qr = 0.5*qr;
+      //qz =  0.5*(rhoA*vzA + rhoB*vzB)
+      qz = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVZ][k][idx_zcap][idx_rcap];
+      qz += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1];
+      qz = 0.5*qz;
+      // now I set the actual values
+      d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
+      d->Vc[iVR][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
+      d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
 
-    //magnetic field
-    d->Vc[iBPHI][k][idx_zcap][idx_rcap+1] = 0.0;
+      //magnetic field
+      d->Vc[iBPHI][k][idx_zcap][idx_rcap+1] = 0.0;
 
+      //temperature
+      setT( d, TWALL, idx_rcap+1, j, k);
+    }
     /*********************
     Set the flag in the whole wall region
     **********************/
@@ -223,4 +243,18 @@ i=0          |________________________(axis)
     }
     /*** ***/
   }
+}
+
+/*Auxiliary function to set the temperature*/
+void setT(const Data *d, double T, int i, int j, int k) {
+  double mu;
+  /*I don't do a check on the i,j,k indexes, otherwise
+  it would mean doing a lot of if cycles, espectially considering
+  that this function is called many times */
+  #if EOS==IDEAL
+    mu = MeanMolecularWeight(d->Vc);
+  #elif EOS==PVTE_LAW
+    GetMu(T, d->Vc[RHO][k][j][i], &mu);
+  #endif
+  d->Vc[PRS][k][j][i] = d->Vc[RHO][k][j][i]*T / (KELVIN*mu);
 }
