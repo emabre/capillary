@@ -29,14 +29,14 @@
 
 /* [Beg] user-defined constants (do not change this line) */
 
-#define  UNIT_DENSITY            1.67382e-7
+#define  UNIT_DENSITY            1.67382e-6
 #define  UNIT_LENGTH             1.0e-3
 #define  UNIT_VELOCITY           1.0e6
 #define  TC_SATURATED_FLUX       NO
 
 /* [End] user-defined constants (do not change this line) */
 
-/* -- supplementary constants (user editable) -- */ 
+/* -- supplementary constants (user editable) -- */
 
 #define  INITIAL_SMOOTHING         NO
 #define  WARNING_MESSAGES          YES
@@ -47,3 +47,4 @@
 #define  LIMITER                   DEFAULT
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
+#define  VTK_VECTOR_DUMP           YES /*To have v and B as vectors...*/

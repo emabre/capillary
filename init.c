@@ -9,6 +9,8 @@
 // #define BWALL 1.1*2.758e-1 // old : 0.1*2.758e-1
 #define T0 5000.0
 #define TWALL 5000.0
+#define DENS0 2.5e-6
+// #define DENS0 2.5e-7
 #define RCAP 0.03
 #define DZCAP 0.01 /*the electrodes are wide DZCAP cm*/
 #define ZCAP 0.05 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
@@ -31,16 +33,18 @@ void Init (double *us, double x1, double x2, double x3)
    #error physics not valid
   #endif
 
-  if (x2<ZCAP-DZCAP) {
+  us[RHO] = (0.1*DENS0/UNIT_DENSITY);
+  if (x2<(ZCAP-DZCAP)/UNIT_LENGTH) {
     if (x1<(RCAP/UNIT_LENGTH)) { //in cyl coords x1 is r, x2 is z
       us[iBPHI] = BWALL*x1/(RCAP/UNIT_LENGTH);
+      us[RHO] = DENS0/UNIT_DENSITY;
     } else {
       us[iBPHI] = BWALL;
     }
   } else if ( ZCAP-DZCAP<=x2 && x2<=ZCAP ) {
     // the field linearly decreses in z direction (this is provisory, better electrode have to be implemented)
     if (x1<(RCAP/UNIT_LENGTH)) { //in cyl coords x1 is r, x2 is z
-      us[iBPHI] = (BWALL*x1/(RCAP/UNIT_LENGTH)) * ( 1 - (x2 - (ZCAP-DZCAP))/DZCAP );
+      us[iBPHI] = (BWALL*x1/(RCAP/UNIT_LENGTH)) * ( 1 - (x2 - (ZCAP-DZCAP)/UNIT_LENGTH)/(DZCAP/UNIT_LENGTH) );
     } else {
       us[iBPHI] = BWALL * ( 1 - (x2 - (ZCAP-DZCAP)/UNIT_LENGTH)/(DZCAP/UNIT_LENGTH) );
     }
@@ -51,9 +55,7 @@ void Init (double *us, double x1, double x2, double x3)
   // us[iBPHI] = 0.0;
 
   us[iBZ] = us[iBR] = 0.0;
-
   us[iVPHI] = us[iVZ] = us[iVR] = 0.0;
-  us[RHO] = 10.0;
 
   T = T0;
   #if EOS==IDEAL
@@ -204,8 +206,10 @@ i=0          |________________________(axis)
     }
     KTOT_LOOP(k) {
       /*********************
-      Corner point
+      Corner point (I write 3 possible algorithms to see which is better,
+                    decomment the one you like!)
       *********************/
+      /****ALGORITHM 1 *****/
       // // I should not change the grid size near the capillary end!
       // diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
       // // I compute cos(theta) and sin(theta)
@@ -224,17 +228,42 @@ i=0          |________________________(axis)
       // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
       // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
 
+      /****ALGORITHM 2 *****/
+      // /***********************/
+      // /*I try to set 0 speed on corner ghost cell (experimental)*/
+      // /***********************/
+      // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
+      // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = 0.0;
+      // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = 0.0;
+      // /******************/
+      // /*Also enforcing zero orthgonal velocity to wall in corner point (experimental!)*/
+      // /******************/
+      // d->Vc[iVR][k][idx_zcap][idx_rcap] = 0.0;
+      // d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = 0.0;
+
+      /****ALGORITHM 3 *****/
       /***********************/
-      /*I try to set 0 speed on corner ghost cell (experimental)*/
+      /* Corner ghost cell reflects the cell just below*/
       /***********************/
-      d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
+      // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = d->Vc[RHO][k][idx_zcap][idx_rcap];
+      // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
+      // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = d->Vc[iVZ][k][idx_zcap][idx_rcap];
+      // /***********************/
+      // /* While the cell on the right is enforced to have zero velocity along z */
+      // /***********************/
+      // d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = 0.0;
+
+      /****ALGORITHM 4 *****/
+      /***********************/
+      /* Ghost cell has 0 speed (and rho is the average of the 2 neighbouring inside
+      the domain) and the neighbouring cells reverse their orthogonal speeds*/
+      /***********************/
+      d->Vc[iVR][k][idx_zcap][idx_rcap] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
+      d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = -(d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1]);
+      d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]\
+                                            + d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
       d->Vc[iVR][k][idx_zcap][idx_rcap+1] = 0.0;
       d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = 0.0;
-      /******************/
-      /*Also enforcing zero orthgonal velocity to wall in corner point (experimental!)*/
-      /******************/
-      d->Vc[iVR][k][idx_zcap][idx_rcap] = 0.0;
-      d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = 0.0;
 
       //magnetic field
       d->Vc[iBPHI][k][idx_zcap][idx_rcap+1] = 0.0;
