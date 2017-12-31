@@ -15,6 +15,8 @@
 #define DZCAP 0.01 /*the electrodes are wide DZCAP cm*/
 #define ZCAP 0.05 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 
+#define MULTIPLE_GHOSTS NO
+
 /*Auxiliary function to set the temperature*/
 void setT(const Data *d, double T, int i, int j, int k);
 

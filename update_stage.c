@@ -33,6 +33,7 @@
 #include "pluto.h"
 static void SaveAMRFluxes (const State_1D *, double **, int, int, Grid *);
 static intList TimeStepIndexList();
+void ApplyMultipleGhosts(Data *);
 
 /* ********************************************************************* */
 void UpdateStage(const Data *d, Data_Arr UU, double **aflux,
@@ -141,6 +142,22 @@ void UpdateStage(const Data *d, Data_Arr UU, double **aflux,
 
     g_dir = dir;
     SetIndexes (&indx, grid);  /* -- set normal and transverse indices -- */
+
+    /*[Ema] Potrebbe essere una buona idea inserire qui una funzione che
+    adatta i valori in d per tenere conto di diverse condizioni al contorno,
+    ovvero ghost cells, che devono essere usate quando si integra scorrendo
+    in direzioni diverse? Ovvio che devo inserirla in un #ifdef INTERNL_BOUN..
+    e in un #ifdef con una MACRO creata da me per accendere/spegnere quel comportamento*/
+    /**********/
+    /*[Ema]: experimental: I set separate ghost cells for different direction.
+    This is an attempt to solve the problem of corner ghost cells inside
+    internal boundary, there one would require a double
+    (in 2D, or triple, in 3D) ghost cell.*/
+    #ifdef (INTERNAL_BOUNDARY == YES) && (MULTIPLE_GHOSTS == YES)
+     ApplyMultipleGhosts(d);
+    #endif
+    /** end of Ema's experimental part ********/
+
     ResetState (d, &state, grid);
 
     #if (RESISTIVITY == EXPLICIT) && !(defined STAGGERED_MHD)
@@ -226,15 +243,15 @@ void UpdateStage(const Data *d, Data_Arr UU, double **aflux,
    ------------------------------------------------------------------- */
 
   #if (ENTROPY_SWITCH)  && (RESISTIVITY == EXPLICIT)
-   EntropyOhmicHeating(d, UU, dt, grid);
+   EntropyOhmicHeating(d, UU, dt, grid);/*[Ema] I can't use entropy switch*/
   #endif
 
-  #ifdef SHEARINGBOX
+  #ifdef SHEARINGBOX /*[Ema] I don't need to use it*/
    SB_CorrectFluxes (UU, 0.0, dt, grid);
   #endif
 
   #ifdef STAGGERED_MHD
-   CT_Update(d, d->Vs, dt, grid);
+   CT_Update(d, d->Vs, dt, grid);/*[Ema] I can't use it*//*[Ema] I must not use it*/
   #endif
 
   #if DIMENSIONAL_SPLITTING == YES
@@ -489,4 +506,17 @@ intList TimeStepIndexList()
   cdt.nvar = i;
 
   return cdt;
+}
+
+/***********************************************
+* Author : Ema
+* date : 24/12/17
+* Purpose: Apply multiple ghost cells in internal boundary,
+*          which means overwrite the present Data *d in certain points with
+*          values which depends on the integration direction and are saved in some
+*          global variable
+*
+***********************************************/
+void ApplyMultipleGhosts(Data *d) {
+/*Something*/
 }
