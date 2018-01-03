@@ -154,7 +154,7 @@ void UpdateStage(const Data *d, Data_Arr UU, double **aflux,
     internal boundary, there one would require a double
     (in 2D, or triple, in 3D) ghost cell.*/
     #ifdef (INTERNAL_BOUNDARY == YES) && (MULTIPLE_GHOSTS == YES)
-     ApplyMultipleGhosts(d);
+      ApplyMultipleGhosts(d);
     #endif
     /** end of Ema's experimental part ********/
 
@@ -166,7 +166,12 @@ void UpdateStage(const Data *d, Data_Arr UU, double **aflux,
 
     TRANSVERSE_LOOP(indx,ip,i,j,k){
       g_i = i;  g_j = j;  g_k = k;
+      /*[Ema] since TRANSVERSE_LOOP has been called,
+      ip can be one of i,j,k depending on g_dir*/
       for ((*ip) = 0; (*ip) < indx.ntot; (*ip)++) {
+        /*[Ema] I am scanning over one of i,j,k keeping the other two fixed
+         (only for this turn in the transverse loop, then the other two change
+       and I scan the one again..)*/
         VAR_LOOP(nv) state.v[(*ip)][nv] = d->Vc[nv][k][j][i];
         state.flag[*ip] = d->flag[k][j][i];
         #ifdef STAGGERED_MHD
