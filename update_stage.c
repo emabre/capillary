@@ -35,7 +35,7 @@
 
 static void SaveAMRFluxes (const State_1D *, double **, int, int, Grid *);
 static intList TimeStepIndexList();
-void ApplyMultipleGhosts(Data *);
+void ApplyMultipleGhosts(Data *, int);
 
 /* ********************************************************************* */
 void UpdateStage(Data *d, Data_Arr UU, double **aflux,
@@ -156,7 +156,7 @@ void UpdateStage(Data *d, Data_Arr UU, double **aflux,
     internal boundary, there one would require a double
     (in 2D, or triple, in 3D) ghost cell.*/
     #if (INTERNAL_BOUNDARY == YES) && (MULTIPLE_GHOSTS == YES)
-      ApplyMultipleGhosts(d); // I must have defined an array (some pointers to..) of d_correction structure
+      ApplyMultipleGhosts(d, g_dir); // I must have defined an array (some pointers to..) of d_correction structure
     #endif
     /** end of Ema's experimental part ********/
 
@@ -523,12 +523,12 @@ intList TimeStepIndexList()
 *          values which depends on the integration direction
 *
 ***********************************************/
-void ApplyMultipleGhosts(Data *d) {
+void ApplyMultipleGhosts(Data *d, int direction) {
   int nv, pp, k,j,i;
-  for (pp = 0; pp < d_correction[g_dir].Npoints; pp++){
-    i = d_correction[g_dir].i[pp];
-    j = d_correction[g_dir].j[pp];
-    k = d_correction[g_dir].k[pp];
-    VAR_LOOP(nv) d->Vc[nv][k][j][i] = d_correction[g_dir].Vc[nv][pp];
+  for (pp = 0; pp < d_correction[direction].Npoints; pp++){
+    i = d_correction[direction].i[pp];
+    j = d_correction[direction].j[pp];
+    k = d_correction[direction].k[pp];
+    VAR_LOOP(nv) d->Vc[nv][k][j][i] = d_correction[direction].Vc[nv][pp];
   }
 }

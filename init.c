@@ -279,19 +279,40 @@ i=0          |________________________(axis)
       //temperature
       setT( d, TWALL, idx_rcap+1, j, k);
 
-      // I correct the bcs only in the z (x2) direction
-      d_correction[0].Npoints = 0;
+      // I repeat the usual configuration for the correction in r direction
+      d_correction[0].Npoints = 1*1*NX3_TOT;
+      d_correction[0].i = ARRAY_1D(d_correction[0].Npoints, int);
+      d_correction[0].j = ARRAY_1D(d_correction[0].Npoints, int);
+      d_correction[0].k = ARRAY_1D(d_correction[0].Npoints, int);
+      d_correction[0].Vc = ARRAY_2D( NVAR, d_correction[0].Npoints, double);
+      // I assign values to the correction:
+      KTOT_LOOP(k) {
+        d_correction[0].i[k] = idx_rcap+1;
+        d_correction[0].j[k] = idx_zcap;
+        d_correction[0].k[k] = k;
+        d_correction[0].Vc[iVR][k] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
+        d_correction[0].Vc[iVZ][k] = d->Vc[iVZ][k][idx_zcap][idx_rcap];
+        d_correction[0].Vc[RHO][k] = d->Vc[RHO][k][idx_zcap][idx_rcap];
+        #if EOS==IDEAL
+            #error double internal ghost not implemented for ideas eos
+        #elif EOS==PVTE_LAW
+            GetMu(TWALL, d_correction[0].Vc[RHO][k], &mu);
+        #endif
+        // I cannot correct the Temperature, I must set it same as in the normal
+        // *d structure
+        d_correction[0].Vc[PRS][k] = d_correction[0].Vc[RHO][k]*TWALL / (KELVIN*mu);
+        d_correction[0].Vc[iBZ][k] = 0.0;
+        d_correction[0].Vc[iBPHI][k] = 0.0;
+        d_correction[0].Vc[iBR][k] = 0.0;
+      }
+
       // In i and j directions I have only one point to fix,
       // but I probably have multiple points in k (NX3_TOT),
       // as I must consider the bcs.
       // If I don't correct all the points in k direction I might have
       // gradients in k direction and flow of matter, momentum, et cetera
       d_correction[1].Npoints = 1*1*NX3_TOT;
-      d_correction[2].Npoints = 0;
       // I initialize the vectors inside d_correction[1]: .i, .j, .k, .Vc
-      // d_correction[1].i = (int*) malloc(sizeof(int) * d_correction[1].Npoints);
-      // d_correction[1].j = (int*) malloc(sizeof(int) * d_correction[1].Npoints);
-      // d_correction[1].k = (int*) malloc(sizeof(int) * d_correction[1].Npoints);
       d_correction[1].i = ARRAY_1D(d_correction[1].Npoints, int);
       d_correction[1].j = ARRAY_1D(d_correction[1].Npoints, int);
       d_correction[1].k = ARRAY_1D(d_correction[1].Npoints, int);
@@ -316,6 +337,8 @@ i=0          |________________________(axis)
         d_correction[1].Vc[iBPHI][k] = 0.0;
         d_correction[1].Vc[iBR][k] = 0.0;
       }
+      // No correction for the k direction
+      d_correction[2].Npoints = 0;
     }
     /*********************
     Set the flag in the whole wall region
