@@ -1,7 +1,7 @@
 #ifndef GAMMA_TRANSP_H
 #define GAMMA_TRANSP_H
 
-#define MULTIPLE_GHOSTS NO
+#define MULTIPLE_GHOSTS YES
 
 /* ********************************************************************* */
 /*! [Ema]The Corr structure contains the correction to the solution 3D array

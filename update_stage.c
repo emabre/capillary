@@ -35,10 +35,9 @@
 
 static void SaveAMRFluxes (const State_1D *, double **, int, int, Grid *);
 static intList TimeStepIndexList();
-void ApplyMultipleGhosts(Data *, int);
 
 /* ********************************************************************* */
-void UpdateStage(Data *d, Data_Arr UU, double **aflux,
+void UpdateStage(const Data *d, Data_Arr UU, double **aflux,
                  Riemann_Solver *Riemann, double dt, Time_Step *Dts,
                  Grid *grid)
 /*!
@@ -523,7 +522,7 @@ intList TimeStepIndexList()
 *          values which depends on the integration direction
 *
 ***********************************************/
-void ApplyMultipleGhosts(Data *d, int direction) {
+void ApplyMultipleGhosts(const Data *d, int direction) {
   int nv, pp, k,j,i;
   for (pp = 0; pp < d_correction[direction].Npoints; pp++){
     i = d_correction[direction].i[pp];

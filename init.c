@@ -274,13 +274,15 @@ i=0          |________________________(axis)
       /*********************/
       // To the normal corner cell I give the correct reflective boundary for
       // the r direction
-      d->Vc[RHO][k][idx_zcap][idx_rcap+1] = d->Vc[RHO][k][idx_zcap][idx_rcap];
-      d->Vc[iVR][k][idx_zcap][idx_rcap+1] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
-      d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = d->Vc[iVZ][k][idx_zcap][idx_rcap];
-      //magnetic field
-      d->Vc[iBPHI][k][idx_zcap][idx_rcap+1] = 0.0;
-      //temperature
-      setT( d, TWALL, idx_rcap+1, j, k);
+      KTOT_LOOP(k) {
+        d->Vc[RHO][k][idx_zcap][idx_rcap+1] = d->Vc[RHO][k][idx_zcap][idx_rcap];
+        d->Vc[iVR][k][idx_zcap][idx_rcap+1] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
+        d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = d->Vc[iVZ][k][idx_zcap][idx_rcap];
+        //magnetic field
+        d->Vc[iBPHI][k][idx_zcap][idx_rcap+1] = 0.0;
+        //temperature
+        setT( d, TWALL, idx_rcap+1, j, k);
+      }
 
       // I repeat the usual configuration for the correction in r direction
       d_correction[0].Npoints = 1*1*NX3_TOT;
@@ -370,5 +372,9 @@ void setT(const Data *d, double T, int i, int j, int k) {
   #elif EOS==PVTE_LAW
     GetMu(T, d->Vc[RHO][k][j][i], &mu);
   #endif
+  // print1("\nKELVIN:%g", KELVIN);
+  // print("\nT:%g",T);
+  // print("\nd->Vc[RHO][%d]%d][%i]:%g",d->Vc[RHO][k][j][i],k,j,i);
+  // print("\nmu:%g",mu);
   d->Vc[PRS][k][j][i] = d->Vc[RHO][k][j][i]*T / (KELVIN*mu);
 }
