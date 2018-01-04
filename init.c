@@ -205,66 +205,69 @@ i=0          |________________________(axis)
         setT( d, TWALL, idx_rcap+1, j, k);
       }
     }
-    KTOT_LOOP(k) {
-      /*********************
-      Corner point (I write 3 possible algorithms to see which is better,
-                    decomment the one you like!)
-      *********************/
-      /****ALGORITHM 1 *****/
-      // // I should not change the grid size near the capillary end!
-      // diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
-      // // I compute cos(theta) and sin(theta)
-      // sinth = grid[0].dx_glob[idx_rcap+1] / diagonal;
-      // costh = grid[1].dx_glob[idx_zcap] / diagonal;
-      // //qr = 0.5*(rhoA*vrA + rhoB*vrB)
-      // qr = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVR][k][idx_zcap][idx_rcap];
-      // qr += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVR][k][idx_zcap+1][idx_rcap+1];
-      // qr = 0.5*qr;
-      // //qz =  0.5*(rhoA*vzA + rhoB*vzB)
-      // qz = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVZ][k][idx_zcap][idx_rcap];
-      // qz += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1];
-      // qz = 0.5*qz;
-      // // now I set the actual values
-      // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
-      // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
-      // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
+    #if MULTIPLE_GHOSTS != YES
+      KTOT_LOOP(k) {
+        /*********************
+        Corner point (I write 3 possible algorithms to see which is better,
+                      decomment the one you like!)
+        *********************/
+        /****ALGORITHM 1 *****/
+        // // I should not change the grid size near the capillary end!
+        // diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
+        // // I compute cos(theta) and sin(theta)
+        // sinth = grid[0].dx_glob[idx_rcap+1] / diagonal;
+        // costh = grid[1].dx_glob[idx_zcap] / diagonal;
+        // //qr = 0.5*(rhoA*vrA + rhoB*vrB)
+        // qr = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVR][k][idx_zcap][idx_rcap];
+        // qr += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVR][k][idx_zcap+1][idx_rcap+1];
+        // qr = 0.5*qr;
+        // //qz =  0.5*(rhoA*vzA + rhoB*vzB)
+        // qz = d->Vc[RHO][k][idx_zcap][idx_rcap]*d->Vc[iVZ][k][idx_zcap][idx_rcap];
+        // qz += d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]*d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1];
+        // qz = 0.5*qz;
+        // // now I set the actual values
+        // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
+        // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
+        // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
 
-      /****ALGORITHM 2 *****/
-      // /***********************/
-      // /*I try to set 0 speed on corner ghost cell (experimental)*/
-      // /***********************/
-      // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
-      // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = 0.0;
-      // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = 0.0;
-      // /******************/
-      // /*Also enforcing zero orthgonal velocity to wall in corner point (experimental!)*/
-      // /******************/
-      // d->Vc[iVR][k][idx_zcap][idx_rcap] = 0.0;
-      // d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = 0.0;
+        /****ALGORITHM 2 *****/
+        // /***********************/
+        // /*I try to set 0 speed on corner ghost cell (experimental)*/
+        // /***********************/
+        // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]+d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
+        // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = 0.0;
+        // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = 0.0;
+        // /******************/
+        // /*Also enforcing zero orthgonal velocity to wall in corner point (experimental!)*/
+        // /******************/
+        // d->Vc[iVR][k][idx_zcap][idx_rcap] = 0.0;
+        // d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = 0.0;
 
-      /****ALGORITHM 3 *****/
-      /***********************/
-      /* Corner ghost cell reflects the cell just below*/
-      /***********************/
-      // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = d->Vc[RHO][k][idx_zcap][idx_rcap];
-      // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
-      // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = d->Vc[iVZ][k][idx_zcap][idx_rcap];
-      // /***********************/
-      // /* While the cell on the right is enforced to have zero velocity along z */
-      // /***********************/
-      // d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = 0.0;
+        /****ALGORITHM 3 *****/
+        /***********************/
+        /* Corner ghost cell reflects the cell just below*/
+        /***********************/
+        // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = d->Vc[RHO][k][idx_zcap][idx_rcap];
+        // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
+        // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = d->Vc[iVZ][k][idx_zcap][idx_rcap];
+        // /***********************/
+        // /* While the cell on the right is enforced to have zero velocity along z */
+        // /***********************/
+        // d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = 0.0;
 
-      /****ALGORITHM 4 *****/
-      /***********************/
-      /* Ghost cell has 0 speed (and rho is the average of the 2 neighbouring inside
-      the domain) and the neighbouring cells reverse their orthogonal speeds*/
-      // /***********************/
-      // d->Vc[iVR][k][idx_zcap][idx_rcap] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
-      // d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = -(d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1]);
-      // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]\
-      //                                       + d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
-      // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = 0.0;
-      // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = 0.0;
+        /****ALGORITHM 4 *****/
+        /***********************/
+        /* Ghost cell has 0 speed (and rho is the average of the 2 neighbouring inside
+        the domain) and the neighbouring cells reverse their orthogonal speeds*/
+        /***********************/
+        d->Vc[iVR][k][idx_zcap][idx_rcap] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
+        d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = -(d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1]);
+        d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]\
+                                              + d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
+        d->Vc[iVR][k][idx_zcap][idx_rcap+1] = 0.0;
+        d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = 0.0;
+      }
+    #elif MULTIPLE_GHOSTS == YES
 
       /****ALGORITHM 5 *****/
       /* Define multiple ghosts on the corner wall cell! */
@@ -339,7 +342,8 @@ i=0          |________________________(axis)
       }
       // No correction for the k direction
       d_correction[2].Npoints = 0;
-    }
+    #endif
+
     /*********************
     Set the flag in the whole wall region
     **********************/
