@@ -15,8 +15,6 @@
 #define DZCAP 0.01 /*the electrodes are wide DZCAP cm*/
 #define ZCAP 0.05 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 
-#define MULTIPLE_GHOSTS NO
-
 /*Auxiliary function to set the temperature*/
 void setT(const Data *d, double T, int i, int j, int k);
 
@@ -89,6 +87,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   // double T,mu;/*Temperature in K and mean particle weight, for the usage of macro "KELVIN" see page 45 of the manual*/
   // double mu_all[NX3_TOT][NX2_TOT][NX1_TOT]; /*mean particle weight in the whole domain*/
   double qz,qr,diagonal,sinth,costh;
+  double mu;
 
   /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
   t = g_time; /*at the moment unused*/
@@ -259,19 +258,64 @@ i=0          |________________________(axis)
       /***********************/
       /* Ghost cell has 0 speed (and rho is the average of the 2 neighbouring inside
       the domain) and the neighbouring cells reverse their orthogonal speeds*/
-      /***********************/
-      d->Vc[iVR][k][idx_zcap][idx_rcap] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
-      d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = -(d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1]);
-      d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]\
-                                            + d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
-      d->Vc[iVR][k][idx_zcap][idx_rcap+1] = 0.0;
-      d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = 0.0;
+      // /***********************/
+      // d->Vc[iVR][k][idx_zcap][idx_rcap] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
+      // d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1] = -(d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1]);
+      // d->Vc[RHO][k][idx_zcap][idx_rcap+1] = 0.5*(d->Vc[RHO][k][idx_zcap][idx_rcap]\
+      //                                       + d->Vc[RHO][k][idx_zcap+1][idx_rcap+1]);
+      // d->Vc[iVR][k][idx_zcap][idx_rcap+1] = 0.0;
+      // d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = 0.0;
 
+      /****ALGORITHM 5 *****/
+      /* Define multiple ghosts on the corner wall cell! */
+      /*********************/
+      // To the normal corner cell I give the correct reflective boundary for
+      // the r direction
+      d->Vc[RHO][k][idx_zcap][idx_rcap+1] = d->Vc[RHO][k][idx_zcap][idx_rcap];
+      d->Vc[iVR][k][idx_zcap][idx_rcap+1] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
+      d->Vc[iVZ][k][idx_zcap][idx_rcap+1] = d->Vc[iVZ][k][idx_zcap][idx_rcap];
       //magnetic field
       d->Vc[iBPHI][k][idx_zcap][idx_rcap+1] = 0.0;
-
       //temperature
       setT( d, TWALL, idx_rcap+1, j, k);
+
+      // I correct the bcs only in the z (x2) direction
+      d_correction[0].Npoints = 0;
+      // In i and j directions I have only one point to fix,
+      // but I probably have multiple points in k (NX3_TOT),
+      // as I must consider the bcs.
+      // If I don't correct all the points in k direction I might have
+      // gradients in k direction and flow of matter, momentum, et cetera
+      d_correction[1].Npoints = 1*1*NX3_TOT;
+      d_correction[2].Npoints = 0;
+      // I initialize the vectors inside d_correction[1]: .i, .j, .k, .Vc
+      // d_correction[1].i = (int*) malloc(sizeof(int) * d_correction[1].Npoints);
+      // d_correction[1].j = (int*) malloc(sizeof(int) * d_correction[1].Npoints);
+      // d_correction[1].k = (int*) malloc(sizeof(int) * d_correction[1].Npoints);
+      d_correction[1].i = ARRAY_1D(d_correction[1].Npoints, int);
+      d_correction[1].j = ARRAY_1D(d_correction[1].Npoints, int);
+      d_correction[1].k = ARRAY_1D(d_correction[1].Npoints, int);
+      d_correction[1].Vc = ARRAY_2D( NVAR, d_correction[1].Npoints, double);
+      // I assign values to the correction:
+      KTOT_LOOP(k) {
+        d_correction[1].i[k] = idx_rcap+1;
+        d_correction[1].j[k] = idx_zcap;
+        d_correction[1].k[k] = k;
+        d_correction[1].Vc[iVR][k] = d->Vc[iVR][k][idx_zcap+1][idx_rcap+1];
+        d_correction[1].Vc[iVZ][k] = -(d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1]);
+        d_correction[1].Vc[RHO][k] = d->Vc[RHO][k][idx_zcap+1][idx_rcap+1];
+        #if EOS==IDEAL
+            #error double internal ghost not implemented for ideas eos
+        #elif EOS==PVTE_LAW
+            GetMu(TWALL, d_correction[1].Vc[RHO][k], &mu);
+        #endif
+        // I cannot correct the Temperature, I must set it same as in the normal
+        // *d structure
+        d_correction[1].Vc[PRS][k] = d_correction[1].Vc[RHO][k]*TWALL / (KELVIN*mu);
+        d_correction[1].Vc[iBZ][k] = 0.0;
+        d_correction[1].Vc[iBPHI][k] = 0.0;
+        d_correction[1].Vc[iBR][k] = 0.0;
+      }
     }
     /*********************
     Set the flag in the whole wall region

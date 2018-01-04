@@ -67,6 +67,8 @@ int idx_rcap = 0;
 int idx_zcap = 0;
 int idx_start_electr = 0;
 
+Corr d_correction[3] = { {},{},{} };
+
 double Gamma_i(int i, double xe, double w){
     //Returns the value of the parameter "capital gamma (xe,w)" with subscript i. See Ref [1] for info
     int J;

@@ -10,6 +10,12 @@ __I should also check thet I improved correctly the temperature computation also
 ## *Internal boundary*
 When using internal boundary you must not alter the staggered magnetic field values, which means you cannot use (if I understand currectly) STAGGERED_MHD.
 
+## Change in the definition/declaration of the UpdateStage() function and in the "prototypes.h" file.
+I removed the "const" specifier in front of the "Data \*d" entry in the UpdateStage() function.
+This is useful for modifying the Data structure to apply multiple ghosts on a single internal cell.
+To do so, I also had to change the function prototype in prototypes.h.
+Thus I edited the file prototypes.h in the original Source folder, since copying it into my simulation directory doesn't really work, the compiler gives the precedence always to the one in the origin src folder!
+
 ## To summarize:
 **Do not use:**
 + Entropy switch

@@ -36,7 +36,7 @@
 
 /* [End] user-defined constants (do not change this line) */
 
-/* -- supplementary constants (user editable) -- */
+/* -- supplementary constants (user editable) -- */ 
 
 #define  INITIAL_SMOOTHING         NO
 #define  WARNING_MESSAGES          YES
@@ -47,4 +47,3 @@
 #define  LIMITER                   DEFAULT
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
-#define  VTK_VECTOR_DUMP           YES /*To have v and B as vectors...*/
