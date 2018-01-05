@@ -2,7 +2,7 @@
 #include "gamma_transp.h"
 #include "prototypes.h"
 
-#define WRITE_T_MU_NE_IONIZ
+#define WRITE_T_MU_NE_IONIZ YES
 
 /* *************************************************************** */
 void ComputeUserVar (const Data *d, Grid *grid)
@@ -19,7 +19,7 @@ void ComputeUserVar (const Data *d, Grid *grid)
   int i, j, k;
   double ***interBound;
 
-  #ifdef WRITE_T_MU_NE_IONIZ
+  #if WRITE_T_MU_NE_IONIZ==YES
     double ***T, ***ioniz, ***mu, ***ne;
     double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
     int nv;
@@ -47,14 +47,14 @@ void ComputeUserVar (const Data *d, Grid *grid)
     vz_c_z = GetUserVar("vz_c_z");
     rho_c_z = GetUserVar("rho_c_z");
     rho_c_r = GetUserVar("rho_c_r");
-    #ifdef WRITE_T_MU_NE_IONIZ
+    #if WRITE_T_MU_NE_IONIZ == YES
       T_c_z= GetUserVar("T_c_z");
       T_c_r= GetUserVar("T_c_r");
     #endif
   #endif
   // export Internal boundary flags
   interBound = GetUserVar("interBound");
-  #ifdef WRITE_T_MU_NE_IONIZ
+  #if WRITE_T_MU_NE_IONIZ == YES
     mu = GetUserVar("mu");
     T = GetUserVar("T");
     #if EOS==PVTE_LAW
@@ -75,7 +75,7 @@ void ComputeUserVar (const Data *d, Grid *grid)
   }
 
   // export T and mu ne and ionization degree
-  #ifdef WRITE_T_MU_NE_IONIZ
+  #if WRITE_T_MU_NE_IONIZ==YES
     DOM_LOOP(k,j,i){
       #if EOS==IDEAL
         mu[k][j][i] = MeanMolecularWeight(d->Vc);
@@ -100,16 +100,16 @@ void ComputeUserVar (const Data *d, Grid *grid)
     ApplyMultipleGhosts(&d_corrected_z, 1);
 
     DOM_LOOP(k,j,i){
-      vr_c_r[k][j][i] = d_corrected_r.Vc[iVR][k][j][i];
-      vr_c_z[k][j][i] = d_corrected_z.Vc[iVR][k][j][i];
-      vz_c_r[k][j][i] = d_corrected_r.Vc[iVZ][k][j][i];
-      vz_c_z[k][j][i] = d_corrected_z.Vc[iVZ][k][j][i];
-      rho_c_r[k][j][i] = d_corrected_r.Vc[RHO][k][j][i];
-      rho_c_z[k][j][i] = d_corrected_z.Vc[RHO][k][j][i];
+      vr_c_r[k][j][i] = d_corrected_r.Vc[iVR][k][j][i]*UNIT_VELOCITY;
+      vr_c_z[k][j][i] = d_corrected_z.Vc[iVR][k][j][i]*UNIT_VELOCITY;
+      vz_c_r[k][j][i] = d_corrected_r.Vc[iVZ][k][j][i]*UNIT_VELOCITY;
+      vz_c_z[k][j][i] = d_corrected_z.Vc[iVZ][k][j][i]*UNIT_VELOCITY;
+      rho_c_r[k][j][i] = d_corrected_r.Vc[RHO][k][j][i]*UNIT_DENSITY;
+      rho_c_z[k][j][i] = d_corrected_z.Vc[RHO][k][j][i]*UNIT_DENSITY;
     }
 
     // I take the corrected T
-    #ifdef WRITE_T_MU_NE_IONIZ
+    #if WRITE_T_MU_NE_IONIZ==YES
       DOM_LOOP(k,j,i){
         #if EOS==IDEAL
           mu_aux = MeanMolecularWeight(d_corrected_r.Vc);

@@ -99,7 +99,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     idx_zcap = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, ZCAP/UNIT_LENGTH);
     idx_start_electr = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, (ZCAP-DZCAP)/UNIT_LENGTH);
 
-    print1("idx_rcap: %d, idx_zcap: %d, idx_start_electr\n",idx_rcap,idx_zcap, idx_start_electr);
+    print1("idx_rcap: %d, idx_zcap: %d, idx_start_electr: %d\n",idx_rcap,idx_zcap, idx_start_electr);
 
     //print1("grid[0].gbeg:%d, grid[0].gend:%d\n",grid[0].gbeg,grid[0].gend );
     //print1("grid[0].x_glob:%g,grid[0].gend-grid[0].gbeg:%d,rcap%g\n",grid[0].x_glob,grid[0].gend-grid[0].gbeg,RCAP);
@@ -317,7 +317,6 @@ i=0          |________________________(axis)
       // If I don't correct all the points in k direction I might have
       // gradients in k direction and flow of matter, momentum, et cetera
       d_correction[1].Npoints = 1*1*NX3_TOT;
-      // I initialize the vectors inside d_correction[1]: .i, .j, .k, .Vc
       d_correction[1].i = ARRAY_1D(d_correction[1].Npoints, int);
       d_correction[1].j = ARRAY_1D(d_correction[1].Npoints, int);
       d_correction[1].k = ARRAY_1D(d_correction[1].Npoints, int);
