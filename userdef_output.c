@@ -94,8 +94,14 @@ void ComputeUserVar (const Data *d, Grid *grid)
   #endif
 
   #if MULTIPLE_GHOSTS==YES
-    d_corrected_r = *d;
-    d_corrected_z = *d;
+    // memcpy(&d_corrected_r, d, sizeof(*d));
+    // memcpy(&d_corrected_z, d, sizeof(*d));
+    // d_corrected_r = *d;
+    // d_corrected_z = *d;
+    alloc_Data(&d_corrected_r);
+    alloc_Data(&d_corrected_z);
+    copy_Data_Vc(&d_corrected_z, d);
+    copy_Data_Vc(&d_corrected_r, d);
     ApplyMultipleGhosts(&d_corrected_r, 0);
     ApplyMultipleGhosts(&d_corrected_z, 1);
 
@@ -122,7 +128,7 @@ void ComputeUserVar (const Data *d, Grid *grid)
           GetMu(T_c_r[k][j][i], v[RHO], &(mu_aux));
         #endif
       }
-
+//aszascs
       DOM_LOOP(k,j,i){
         #if EOS==IDEAL
           mu_aux = MeanMolecularWeight(d_corrected_z.Vc);

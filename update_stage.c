@@ -35,7 +35,7 @@
 
 static void SaveAMRFluxes (const State_1D *, double **, int, int, Grid *);
 static intList TimeStepIndexList();
-
+void ApplyMultipleGhosts(const Data*, int);
 /* ********************************************************************* */
 void UpdateStage(const Data *d, Data_Arr UU, double **aflux,
                  Riemann_Solver *Riemann, double dt, Time_Step *Dts,
@@ -515,7 +515,7 @@ intList TimeStepIndexList()
 }
 
 /***********************************************
-* Author : Ema
+* Author :  Ema
 * date : 03/01/18
 * Purpose: Apply multiple ghost cells in internal boundary,
 *          which means overwrite the present Data *d in certain points with
