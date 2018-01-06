@@ -202,15 +202,16 @@ i=0          |________________________(axis)
         // magnetic field
         d->Vc[iBPHI][k][idx_zcap][i] = 0.0;
         //temperature
-        setT( d, TWALL, idx_rcap+1, j, k);
+        // setT( d, TWALL, idx_rcap+1, j, k);
+        setT( d, TWALL, i, idx_zcap, k);
       }
     }
+    /*********************
+    Corner point (I write some possible algorithms to see which is better,
+                  decomment the one you like!)
+    *********************/
     #if MULTIPLE_GHOSTS != YES
       KTOT_LOOP(k) {
-        /*********************
-        Corner point (I write 3 possible algorithms to see which is better,
-                      decomment the one you like!)
-        *********************/
         /****ALGORITHM 1 *****/
         // // I should not change the grid size near the capillary end!
         // diagonal = sqrt( pow(grid[0].dx_glob[idx_rcap+1],2) + pow(grid[1].dx_glob[idx_zcap],2) );
@@ -281,7 +282,8 @@ i=0          |________________________(axis)
         //magnetic field
         d->Vc[iBPHI][k][idx_zcap][idx_rcap+1] = 0.0;
         //temperature
-        setT( d, TWALL, idx_rcap+1, j, k);
+        // setT( d, TWALL, idx_rcap+1, j, k);
+        setT( d, TWALL, idx_rcap+1, idx_zcap, k); //[Ema?] appena cambiato, vedere se è ok
       }
 
       // I repeat the usual configuration for the correction in r direction
@@ -297,6 +299,7 @@ i=0          |________________________(axis)
         d_correction[0].k[k] = k;
         d_correction[0].Vc[iVR][k] = -(d->Vc[iVR][k][idx_zcap][idx_rcap]);
         d_correction[0].Vc[iVZ][k] = d->Vc[iVZ][k][idx_zcap][idx_rcap];
+        d_correction[0].Vc[iVPHI][k] = 0.0;
         d_correction[0].Vc[RHO][k] = d->Vc[RHO][k][idx_zcap][idx_rcap];
         #if EOS==IDEAL
             #error double internal ghost not implemented for ideas eos
@@ -328,6 +331,7 @@ i=0          |________________________(axis)
         d_correction[1].k[k] = k;
         d_correction[1].Vc[iVR][k] = d->Vc[iVR][k][idx_zcap+1][idx_rcap+1];
         d_correction[1].Vc[iVZ][k] = -(d->Vc[iVZ][k][idx_zcap+1][idx_rcap+1]);
+        d_correction[0].Vc[iVPHI][k] = 0.0;
         d_correction[1].Vc[RHO][k] = d->Vc[RHO][k][idx_zcap+1][idx_rcap+1];
         #if EOS==IDEAL
             #error double internal ghost not implemented for ideas eos
