@@ -129,6 +129,7 @@ void UpdateStage(const Data *d, Data_Arr UU, double **aflux,
        if (GetPV_Temperature(v, &(T[k][j][i]) )!=0) {
          print1("UpdateStage:[Ema] Error computing temperature!");
        }
+       T[k][j][i] = T[k][j][i] / KELVIN;
      #else
        print1("UpdateStage:[Ema] Error computing temperature, this EOS not implemented!")
      #endif

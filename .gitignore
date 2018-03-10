@@ -5,3 +5,4 @@ pluto.log
 *.vtk
 *.out
 makefile
+.directory
