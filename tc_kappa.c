@@ -35,10 +35,11 @@ void TC_kappa(double *v, double x1, double x2, double x3,
 
   /***************************************************/
   // simplified formula present in the documentation
-  *kpar = 5.6e-7*T*T*sqT;
-  *knor = 5.6e-7*T*T*sqT;
+  //*kpar = 5.6e-7*T*T*sqT;
+  //*knor = 5.6e-7*T*T*sqT;
   /***************************************************/
-
+  *kpar = g_inputParam[KAPPA_GAU];
+  *knor = g_inputParam[KAPPA_GAU];
   /***************************************************/
 // [Ema] adimensionalization (it should be correct, I didn't change it)
   *kpar *= CONST_mp*mu/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);

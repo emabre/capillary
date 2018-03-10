@@ -5,15 +5,15 @@
 #include "pluto.h"
 #include "gamma_transp.h"
 
-#define BWALL 2.758e-1
+#define BWALL 1.0e-10 // a very low number
 // #define BWALL 1.1*2.758e-1 // old : 0.1*2.758e-1
-#define T0 5000.0
-#define TWALL 5000.0
-#define DENS0 2.5e-6
+#define T0 7000.0
+#define TWALL 7000.0
+#define DENS0 2.5e-7
 // #define DENS0 2.5e-7
-#define RCAP 0.03
+#define RCAP 0.05
 #define DZCAP 0.01 /*the electrodes are wide DZCAP cm*/
-#define ZCAP 0.05 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
+#define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 
 /*Auxiliary function to set the temperature*/
 void setT(const Data *d, double T, int i, int j, int k);

@@ -8,7 +8,7 @@
 #define  TIME_STEPPING           RK2
 #define  DIMENSIONAL_SPLITTING   YES
 #define  NTRACER                 0
-#define  USER_DEF_PARAMETERS     3
+#define  USER_DEF_PARAMETERS     4
 
 /* -- physics dependent declarations -- */
 
@@ -26,6 +26,7 @@
 #define  ETAX_GAU                0
 #define  ETAY_GAU                1
 #define  ETAZ_GAU                2
+#define  KAPPA_GAU               3
 
 /* [Beg] user-defined constants (do not change this line) */
 
