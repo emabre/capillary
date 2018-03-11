@@ -69,6 +69,10 @@ void UpdateStage(const Data *d, Data_Arr UU, double **aflux,
    end_dir = DIMENSIONS-1;
   #endif
 
+  #if EOS==PVTE_LAW
+    double v[NVAR];
+  #endif
+
   cdt_list = TimeStepIndexList();
 
 /* --------------------------------------------------------------
