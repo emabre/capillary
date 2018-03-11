@@ -9,11 +9,16 @@
 // #define BWALL 1.1*2.758e-1 // old : 0.1*2.758e-1
 #define T0 7000.0
 #define TWALL 7000.0
-#define DENS0 2.5e-7
+#define DENS0 2.5e-6
 // #define DENS0 2.5e-7
 #define RCAP 0.05
 #define DZCAP 0.01 /*the electrodes are wide DZCAP cm*/
 #define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
+
+// Some usefile constant values in ADIMENSIONAL UNITS
+double const zcap=ZCAP/UNIT_LENGTH;
+double const dzcap=DZCAP/UNIT_LENGTH;
+double const rcap=RCAP/UNIT_LENGTH;
 
 /*Auxiliary function to set the temperature*/
 void setT(const Data *d, double T, int i, int j, int k);
@@ -34,21 +39,21 @@ void Init (double *us, double x1, double x2, double x3)
   #endif
 
   us[RHO] = (0.1*DENS0/UNIT_DENSITY);
-  if (x2<(ZCAP-DZCAP)/UNIT_LENGTH) {
-    if (x1<(RCAP/UNIT_LENGTH)) { //in cyl coords x1 is r, x2 is z
-      us[iBPHI] = BWALL*x1/(RCAP/UNIT_LENGTH);
+  if (x2 < zcap-dzcap) {
+    if (x1 < rcap) { //in cyl coords x1 is r, x2 is z
+      us[iBPHI] = BWALL*x1/rcap;
       us[RHO] = DENS0/UNIT_DENSITY;
     } else {
       us[iBPHI] = BWALL;
     }
-  } else if ( ZCAP-DZCAP<=x2 && x2<=ZCAP ) {
+  } else if ( zcap-dzcap <= x2 && x2 <= zcap ) {
     // the field linearly decreses in z direction (this is provisory, better electrode have to be implemented)
-    if (x1<(RCAP/UNIT_LENGTH)) { //in cyl coords x1 is r, x2 is z
-      us[iBPHI] = (BWALL*x1/(RCAP/UNIT_LENGTH)) * ( 1 - (x2 - (ZCAP-DZCAP)/UNIT_LENGTH)/(DZCAP/UNIT_LENGTH) );
+    if (x1 < rcap) { //in cyl coords x1 is r, x2 is z
+      us[iBPHI] = (BWALL*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     } else {
-      us[iBPHI] = BWALL * ( 1 - (x2 - (ZCAP-DZCAP)/UNIT_LENGTH)/(DZCAP/UNIT_LENGTH) );
+      us[iBPHI] = BWALL * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
     }
-  } else if (x2>ZCAP) {
+  } else if (x2 > zcap) {
     // No field outside capillary
     us[iBPHI] = 0.0;
   }
@@ -95,14 +100,13 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   if (idx_rcap==0 && idx_zcap==0) {
     // print1("inidici prima di algoritmo ricerca bordi interni\n");
     /* I find the indexes of the cells closest to the capillary bounds*/
-    idx_rcap = find_idx_closest(grid[0].x_glob, grid[0].gend-grid[0].gbeg+1, RCAP/UNIT_LENGTH);
-    idx_zcap = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, ZCAP/UNIT_LENGTH);
-    idx_start_electr = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, (ZCAP-DZCAP)/UNIT_LENGTH);
+    idx_rcap = find_idx_closest(grid[0].x_glob, grid[0].gend-grid[0].gbeg+1, rcap);
+    idx_zcap = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, zcap);
+    idx_start_electr = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, zcap-dzcap);
 
     print1("idx_rcap: %d, idx_zcap: %d, idx_start_electr: %d\n",idx_rcap,idx_zcap, idx_start_electr);
 
     //print1("grid[0].gbeg:%d, grid[0].gend:%d\n",grid[0].gbeg,grid[0].gend );
-    //print1("grid[0].x_glob:%g,grid[0].gend-grid[0].gbeg:%d,rcap%g\n",grid[0].x_glob,grid[0].gend-grid[0].gbeg,RCAP);
 
     /* Capillary:
                               j=idx_start_electr
@@ -183,7 +187,7 @@ i=0          |________________________(axis)
       for (j=idx_start_electr; j<=idx_zcap; j++) {
         // Sistemare meglio, usare le posizioni dei punti dove davvero inizia
         //l'elettrodo e le altre cose, anzichè le macro
-        // d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL*(1-(grid[1].x_glob[j]-(ZCAP-DZCAP)/UNIT_LENGTH)/(DZCAP/UNIT_LENGTH) );
+        // d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL*(1-(grid[1].x_glob[j]-(zcap-dzcap))/dzcap );
         d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL*\
             (1-(grid[1].x_glob[j]-grid[1].x_glob[idx_start_electr])/ \
             (grid[1].x_glob[idx_zcap]-grid[1].x_glob[idx_start_electr]));

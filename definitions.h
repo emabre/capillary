@@ -16,8 +16,8 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             SUPER_TIME_STEPPING
-#define  THERMAL_CONDUCTION      SUPER_TIME_STEPPING
+#define  RESISTIVITY             NO //SUPER_TIME_STEPPING
+#define  THERMAL_CONDUCTION      SUPER_TIME_STEPPING //SUPER_TIME_STEPPING
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 

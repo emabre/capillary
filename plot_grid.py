@@ -57,48 +57,56 @@ for line in df:
             UNIT_LENGTH = float(line.split()[2])
 
 # <codecell>
-# Plot
-if x3.shape[0]!=1:
-    raise ValueError("I cannot plot as the grid is not 2D")
-
+# Some computations
+# Ratio between adiacent Dx's
+ratio_x1 = (x1[1:,1]-x1[1:,0])/(x1[:-1,1]-x1[:-1,0])
+ratio_x2 = (x2[1:,1]-x2[1:,0])/(x2[:-1,1]-x2[:-1,0])
+# Meshlines
 x1min = x1[0,0]
 x1max = x1[-1,1]
 x2min = x2[0,0]
 x2max = x2[-1,1]
-
-fig, ax = plt.subplots(nrows = 2)
-
-# ax.axvline(x1[0,0], ymin=x2min, ymax=x2max)
-# for ii in range(Np[0]):
-#     ax.axvline(x1[ii,1], ymin=x2min, ymax=x2max)
-# ax.axhline(x2[0,0], x1min, x1max)
-# for ii in range(Np[1]):
-#     ax.axhline(x2[ii,1], x1min, x1max)
 lines_x1 = [x1[0,0]] + [x1[ii,1] for ii in range(Np[0])]
 lines_x1 = np.array(lines_x1)
 lines_x2 = [x2[0,0]] + [x2[ii,1] for ii in range(Np[1])]
 lines_x2 = np.array(lines_x2)
 
-for ii in range(Np[0]):
-    ax[0].plot([lines_x1[ii], lines_x1[ii]], [lines_x2[0],lines_x2[-1]], 'k', lw='0.5')
-for ii in range(Np[1]):
-    ax[0].plot([lines_x1[0],lines_x1[-1]], [lines_x2[ii], lines_x2[ii]], 'k', lw='0.5')
-ax[0].set_xlabel("x1 / UNIT_LENGTH")
-ax[0].set_ylabel("x2 / UNIT_LENGTH")
+# <codecell>
+# Plot
+if x3.shape[0]!=1:
+    raise ValueError("I cannot plot as the grid is not 2D")
 
+fig1, ax1 = plt.subplots()
+fig2, ax2 = plt.subplots()
+
+for ii in range(Np[0]):
+    ax1.plot([lines_x1[ii], lines_x1[ii]], [lines_x2[0],lines_x2[-1]], 'k', lw='0.5')
+for ii in range(Np[1]):
+    ax1.plot([lines_x1[0],lines_x1[-1]], [lines_x2[ii], lines_x2[ii]], 'k', lw='0.5')
+ax1.set_xlabel("x1 / UNIT_LENGTH")
+ax1.set_ylabel("x2 / UNIT_LENGTH")
+# plt.axis('equal')
+
+## Plot in cgs
 lines_x1_cgs = UNIT_LENGTH*lines_x1
 lines_x2_cgs = UNIT_LENGTH*lines_x2
 
 for ii in range(Np[0]):
-    ax[1].plot([lines_x1_cgs[ii], lines_x1_cgs[ii]],
+    ax2.plot([lines_x1_cgs[ii], lines_x1_cgs[ii]],
                [lines_x2_cgs[0],lines_x2_cgs[-1]],
                'k', lw='0.5')
 for ii in range(Np[1]):
-    ax[1].plot([lines_x1_cgs[0],lines_x1_cgs[-1]],
+    ax2.plot([lines_x1_cgs[0],lines_x1_cgs[-1]],
                [lines_x2_cgs[ii], lines_x2_cgs[ii]],
                'k', lw='0.5')
-ax[1].set_xlabel("x1 / cm")
-ax[1].set_ylabel("x2 / cm")
+ax2.set_xlabel("x1 / cm")
+ax2.set_ylabel("x2 / cm")
+# plt.axis('equal')
 
+# Plot of the ratios of adiacent DeltaX
+fig_r, ax_r = plt.subplots()
+ax_r.plot(ratio_x1, label=r'$\Delta x1_i/\Delta x1_{i+1}$')
+ax_r.plot(ratio_x2, label=r'$\Delta x2_i/\Delta x2_{i+1}$')
+ax_r.legend()
 
 plt.show()
