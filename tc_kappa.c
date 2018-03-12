@@ -2,6 +2,8 @@
 #include "gamma_transp.h"
 #include "current_table.h"
 
+#define KAPPAMAX 1e24
+
 void TC_kappa(double *v, double x1, double x2, double x3,
               double *kpar, double *knor, double *phi)
 {
@@ -20,6 +22,12 @@ void TC_kappa(double *v, double x1, double x2, double x3,
 
   // k = thermCond_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
   k = thermCond_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
+
+  #ifdef KAPPAMAX
+    if (k > KAPPAMAX) {
+      k = KAPPAMAX;
+    }
+  #endif
 
   *knor = k;
   *kpar = k; //This should be useless

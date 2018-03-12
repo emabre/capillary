@@ -2,6 +2,8 @@
 #include "gamma_transp.h"
 #include "current_table.h"
 
+#define RESMAX 1.0e-8
+
 void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double *eta)
 {
   const double eta0 = 4*CONST_PI/(CONST_c*CONST_c)*UNIT_VELOCITY*UNIT_LENGTH;/*unit of eta for adimensionalization*/
@@ -19,6 +21,13 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
 
   // res = elRes_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
   res = elRes_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
+  
+  #ifdef RESMAX
+    // This is a test limiter
+    if (res > RESMAX) {
+      res = RESMAX;
+    }
+  #endif
 
   // print1("\nT:%g, z:%g, elRes:%g, eta0:%g", T, z, res, eta0);
 
