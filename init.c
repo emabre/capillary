@@ -5,8 +5,9 @@
 #include "pluto.h"
 #include "gamma_transp.h"
 #include "capillary_wall.h"
+#include "current_table.h"
 
-#define BWALL 1.0e-10 // a very low number
+#define BWALL 1.0e-10 // B at the 
 // #define BWALL 1.1*2.758e-1 // old : 0.1*2.758e-1
 #define T0 7000.0
 #define TWALL 7000.0
@@ -31,6 +32,15 @@ void Init (double *us, double x1, double x2, double x3)
  *********************************************************************** */
 {
   double T,mu;/*Temperature in K and mean particle weight*/
+  double curr, Bwall; //Bwall is in code units
+  double unit_Mfield;
+
+  unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+
+  curr = current_from_time(0.0);
+  // print1("Current from tab: %g", curr);
+  // Mag field at the capillary wall, in code units
+  Bwall = (BIOTSAV_GAUSS_S_A(curr, RCAP))/unit_Mfield;
 
   #if GEOMETRY != CYLINDRICAL
    #error geometry not valid
@@ -42,17 +52,17 @@ void Init (double *us, double x1, double x2, double x3)
   us[RHO] = (0.1*DENS0/UNIT_DENSITY);
   if (x2 < zcap-dzcap) {
     if (x1 < rcap) { //in cyl coords x1 is r, x2 is z
-      us[iBPHI] = BWALL*x1/rcap;
+      us[iBPHI] = Bwall*x1/rcap;
       us[RHO] = DENS0/UNIT_DENSITY;
     } else {
-      us[iBPHI] = BWALL;
+      us[iBPHI] = Bwall;
     }
   } else if ( zcap-dzcap <= x2 && x2 <= zcap ) {
     // the field linearly decreses in z direction (this is provisory, better electrode have to be implemented)
     if (x1 < rcap) { //in cyl coords x1 is r, x2 is z
-      us[iBPHI] = (BWALL*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+      us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     } else {
-      us[iBPHI] = BWALL * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
+      us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
     }
   } else if (x2 > zcap) {
     // No field outside capillary
@@ -88,15 +98,22 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
  *********************************************************************** */
 {
   int  i, j, k;
-  double t;
+  double t_sec, curr, Bwall; //Bwall is in code units, t_sec is in seconds
   int  vsign[NVAR]; /*vector containing signs which will be set by Flipsign*/
   // double T,mu;/*Temperature in K and mean particle weight, for the usage of macro "KELVIN" see page 45 of the manual*/
   // double mu_all[NX3_TOT][NX2_TOT][NX1_TOT]; /*mean particle weight in the whole domain*/
   double qz,qr,diagonal,sinth,costh;
   double mu;
+  double unit_Mfield;
+
+  unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
 
   /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
-  t = g_time; /*at the moment unused*/
+  t_sec = g_time*(UNIT_LENGTH/UNIT_VELOCITY);
+
+  curr = current_from_time(t_sec);
+  // print1("\nCurrent from tab: %g", curr);
+  Bwall = BIOTSAV_GAUSS_S_A(curr, RCAP)/unit_Mfield;
 
   if (idx_rcap==0 && idx_zcap==0) {
     // print1("inidici prima di algoritmo ricerca bordi interni\n");
@@ -182,17 +199,17 @@ i=0          |________________________(axis)
       }
       // magnetic field on capillary wall
       for (j=0; j<idx_start_electr; j++) {
-        d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL;
+        d->Vc[iBPHI][k][j][idx_rcap+1] = Bwall;
       }
       // magnetic field on electrode (provisory)
       for (j=idx_start_electr; j<=idx_zcap; j++) {
         // Sistemare meglio, usare le posizioni dei punti dove davvero inizia
         //l'elettrodo e le altre cose, anzichè le macro
-        // d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL*(1-(grid[1].x_glob[j]-(zcap-dzcap))/dzcap );
-        d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL*\
+        // d->Vc[iBPHI][k][j][idx_rcap+1] = Bwall*(1-(grid[1].x_glob[j]-(zcap-dzcap))/dzcap );
+        d->Vc[iBPHI][k][j][idx_rcap+1] = Bwall*\
             (1-(grid[1].x_glob[j]-grid[1].x_glob[idx_start_electr])/ \
             (grid[1].x_glob[idx_zcap]-grid[1].x_glob[idx_start_electr]));
-        // d->Vc[iBPHI][k][j][idx_rcap+1] = BWALL;
+        // d->Vc[iBPHI][k][j][idx_rcap+1] = Bwall;
       }
     }
     /***********************

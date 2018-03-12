@@ -1,47 +1,43 @@
 #include "pluto.h"
 #include "gamma_transp.h"
+#include "current_table.h"
 
 void TC_kappa(double *v, double x1, double x2, double x3,
               double *kpar, double *knor, double *phi)
 {
-  double mu, T, sqT;
-  double gamma1Bob=1; /*Just for now, as I do not want to debug too much*/
-  double ne, ioniz, freq_coll_e;
-  double const q_elem4 = Q_ELEM*Q_ELEM*Q_ELEM*Q_ELEM;
+  double mu, z, T;
+  double k;
+  double unit_Mfield;
 
-  //T = 20000; //[Ema] almost 2eV
-  GetPV_Temperature(v, &T);
+  unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
 
-  #if EOS==IDEAL
-      mu = MeanMolecularWeight(v);
-  #elif EOS==PVTE_LAW
-      GetMu(T, v[RHO], &mu);
-  #endif
+  if (GetPV_Temperature(v, &(T) )!=0) {
+    print1("Resistive_eta:[Ema] Error computing temperature!");
+  }
+  // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
+  GetMu(T, v[RHO], &mu);
+  z = 1/mu - 1;
 
-  sqT  = sqrt(T);
+  // k = thermCond_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
+  k = thermCond_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
 
-  // /***************************************************/
-  // // Bobrova/esaulov's formulas (so that I can compare the results with the one published)
-  // ioniz = 1/mu - 1;
-  // ne = ioniz * v[RHO] / CONST_mp;
-  // /* Collision frequency of electrons according to Esaulov/Bobrova*/
-  // freq_coll_e = 4*sqrt(2*CONST_PI)/3*q_elem4/sqrt(CONST_me)*ne/(T*T*sqT)*(cl_ei(ne,T)+cl_en(ioniz,T));
-  // *knor = ne*T/(CONST_me*freq_coll_e)*gamma1Bob;
-  // // This kpar expression might be uncorrect,
-  // // but it is unused in the axis-symmetric approx
-  // // with B = (0,Bphi,0)
-  // *kpar = ne*T/(CONST_me*freq_coll_e)*gamma1Bob;
-  // /***************************************************/
+  *knor = k;
+  *kpar = k; //This should be useless
 
   /***************************************************/
   // simplified formula present in the documentation
   //*kpar = 5.6e-7*T*T*sqT;
   //*knor = 5.6e-7*T*T*sqT;
   /***************************************************/
-  *kpar = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
-  *knor = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
   /***************************************************/
-// [Ema] adimensionalization (it should be correct, I didn't change it)
+  // Fexed value from pluto.ini
+  //*kpar = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
+  //*knor = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
+  /***************************************************/
+
+  /***************************************************/
+  /* [Ema] adimensionalization (it should be correct, I didn't change it)*/
+  /**************************************************/
   *kpar *= CONST_mp*mu/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
   *knor *= CONST_mp*mu/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
   /***************************************************/
