@@ -4,6 +4,7 @@
 /* ///////////////////////////////////////////////////////////////////// */
 #include "pluto.h"
 #include "gamma_transp.h"
+#include "capillary_wall.h"
 
 #define BWALL 1.0e-10 // a very low number
 // #define BWALL 1.1*2.758e-1 // old : 0.1*2.758e-1

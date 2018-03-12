@@ -26,7 +26,7 @@
 #define  ETAX_GAU                0
 #define  ETAY_GAU                1
 #define  ETAZ_GAU                2
-#define  KAPPA_GAUBOB            3  // "..GAUBOB" because it is in gau units with Bob convention(kB not included)
+#define  KAPPA_GAUBOB            3
 
 /* [Beg] user-defined constants (do not change this line) */
 

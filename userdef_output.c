@@ -1,5 +1,6 @@
 #include "pluto.h"
 #include "gamma_transp.h"
+#include "capillary_wall.h"
 #include "prototypes.h"
 
 #define WRITE_T_MU_NE_IONIZ YES

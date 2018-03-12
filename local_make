@@ -1,2 +1,2 @@
-OBJ += gamma_transp.o
-HEADERS += gamma_transp.h
+OBJ += gamma_transp.o capillary_wall.o
+HEADERS += gamma_transp.h capillary_wall.h
