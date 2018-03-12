@@ -1,3 +1,3 @@
 #!/bin/bash
 
-rm -rf *.vtk *.dbl *.out *.tab *.log
+rm -rf out/*.vtk out/*.dbl out/*.out out/*.tab out/*.log

@@ -38,8 +38,8 @@ void TC_kappa(double *v, double x1, double x2, double x3,
   //*kpar = 5.6e-7*T*T*sqT;
   //*knor = 5.6e-7*T*T*sqT;
   /***************************************************/
-  *kpar = g_inputParam[KAPPA_GAU];
-  *knor = g_inputParam[KAPPA_GAU];
+  *kpar = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
+  *knor = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
   /***************************************************/
 // [Ema] adimensionalization (it should be correct, I didn't change it)
   *kpar *= CONST_mp*mu/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
@@ -48,7 +48,8 @@ void TC_kappa(double *v, double x1, double x2, double x3,
 
   *phi = 1; //[Ema] this should be useless with the saturation of the thermal conduction off
 
-    //this is just a check of good compilation of an additiona file
-    //gammaBob = Gamma_i(3,0.01,0.3);
+  if (*kpar>1e15 || *knor>1e15) {
+      print1("\nDid you take the wrong convention for kappa?\n");
+  }
 
 }

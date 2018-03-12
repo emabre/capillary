@@ -16,8 +16,8 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             NO //SUPER_TIME_STEPPING
-#define  THERMAL_CONDUCTION      SUPER_TIME_STEPPING //SUPER_TIME_STEPPING
+#define  RESISTIVITY             SUPER_TIME_STEPPING
+#define  THERMAL_CONDUCTION      SUPER_TIME_STEPPING
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -26,7 +26,7 @@
 #define  ETAX_GAU                0
 #define  ETAY_GAU                1
 #define  ETAZ_GAU                2
-#define  KAPPA_GAU               3
+#define  KAPPA_GAUBOB            3  // "..GAUBOB" because it is in gau units with Bob convention(kB not included)
 
 /* [Beg] user-defined constants (do not change this line) */
 
@@ -48,4 +48,4 @@
 #define  LIMITER                   DEFAULT
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
-#define  VTK_VECTOR_DUMP           YES /*To have v and B as vectors...*/
+#define  SHOW_TIME_STEPS           YES
