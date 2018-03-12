@@ -72,6 +72,10 @@ lines_x2 = [x2[0,0]] + [x2[ii,1] for ii in range(Np[1])]
 lines_x2 = np.array(lines_x2)
 
 # <codecell>
+# Print some info
+print("Number of grid cells: {}".format(Np[0]*Np[1]*Np[2]))
+
+# <codecell>
 # Plot
 if x3.shape[0]!=1:
     raise ValueError("I cannot plot as the grid is not 2D")

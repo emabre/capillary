@@ -49,3 +49,4 @@
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
 #define  SHOW_TIME_STEPS           YES
+#define  VTK_VECTOR_DUMP           YES
