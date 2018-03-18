@@ -187,7 +187,12 @@ void UpdateStage(const Data *d, Data_Arr UU, double **aflux,
       }
       CheckNaN (state.v, 0, indx.ntot-1,0);
       States  (&state, indx.beg - 1, indx.end + 1, grid);
-      Riemann (&state, indx.beg - 1, indx.end, Dts->cmax, grid);
+      /*[Ema] I skip the Riemann solver if we are in "Frozen Fluid" setting*/
+      #ifdef FREEZE_FLUID
+        ZeroHypFlux (&state, indx.beg - 1, indx.end, Dts->cmax, grid);
+      #else
+        Riemann (&state, indx.beg - 1, indx.end, Dts->cmax, grid);
+      #endif
       #ifdef STAGGERED_MHD
        CT_StoreEMF (&state, indx.beg - 1, indx.end, grid);
       #endif
