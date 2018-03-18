@@ -33,6 +33,7 @@
 #include "pluto.h"
 #include "gamma_transp.h"
 #include "capillary_wall.h"
+#include "freeze_fluid.h"
 
 static void SaveAMRFluxes (const State_1D *, double **, int, int, Grid *);
 static intList TimeStepIndexList();

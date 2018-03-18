@@ -16,8 +16,8 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             SUPER_TIME_STEPPING
-#define  THERMAL_CONDUCTION      SUPER_TIME_STEPPING
+#define  RESISTIVITY             NO
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -49,4 +49,4 @@
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
 #define  SHOW_TIME_STEPS           YES
-#define  FREEZE_FLUID
+//#define  FREEZE_FLUID

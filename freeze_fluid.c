@@ -17,8 +17,7 @@ void ZeroHypFlux (const State_1D *state, int beg, int end,
  * \param[in]     grid    pointer to array of Grid structures.
  *
  *********************************************************************** */
-{
-  int    nv, i, xdface;
+  int    nv, i;
   double scrh;
   double *vL, *vR, *uL, *uR, *SR, *SL;
   static double **VL, **VR, **UL, **UR;
