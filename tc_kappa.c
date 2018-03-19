@@ -11,37 +11,38 @@ void TC_kappa(double *v, double x1, double x2, double x3,
   double k;
   double unit_Mfield;
 
-  unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+  if (g_inputParam[KAPPA_GAUBOB] > 0) {
+    
+    // Fixed value from pluto.ini
+    *kpar = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
+    *knor = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
 
-  if (GetPV_Temperature(v, &(T) )!=0) {
-    print1("Resistive_eta:[Ema] Error computing temperature!");
-  }
-  // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
-  GetMu(T, v[RHO], &mu);
-  z = 1/mu - 1;
+  } else {
 
-  // k = thermCond_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
-  k = thermCond_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
-
-  #ifdef KAPPAMAX
-    if (k > KAPPAMAX) {
-      k = KAPPAMAX;
+    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+    if (GetPV_Temperature(v, &(T) )!=0) {
+      print1("Resistive_eta:[Ema] Error computing temperature!");
     }
-  #endif
+    // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
+    GetMu(T, v[RHO], &mu);
+    z = 1/mu - 1;
 
-  *knor = k;
-  *kpar = k; //This should be useless
+    // k = thermCond_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
+    k = thermCond_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
 
-  /***************************************************/
-  // simplified formula present in the documentation
-  //*kpar = 5.6e-7*T*T*sqT;
-  //*knor = 5.6e-7*T*T*sqT;
-  /***************************************************/
-  /***************************************************/
-  // Fexed value from pluto.ini
-  //*kpar = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
-  //*knor = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
-  /***************************************************/
+    #ifdef KAPPAMAX
+      if (k > KAPPAMAX) {
+        k = KAPPAMAX;
+      }
+    #endif
+
+    *knor = k;
+    *kpar = k; //This should be useless
+
+    // simplified formula present in the documentation
+    //*kpar = 5.6e-7*T*T*sqT;
+    //*knor = 5.6e-7*T*T*sqT;
+  }
 
   /***************************************************/
   /* [Ema] adimensionalization (it should be correct, I didn't change it)*/
@@ -54,6 +55,7 @@ void TC_kappa(double *v, double x1, double x2, double x3,
 
   if (*kpar>1e15 || *knor>1e15) {
       print1("\nDid you take the wrong convention for kappa?\n");
+      QUIT_PLUTO(1);
   }
 
 }
