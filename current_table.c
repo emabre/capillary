@@ -24,6 +24,7 @@ double interp_lin_table(double xpoint, double *x, double *y, const int N){
 
   if (xpoint<x[0] || xpoint>x[N-1]) {
     print1("\n[Ema]Error! Data ouside table!");
+    print1("\nxpoint=%d, x[0]=%d", xpoint, x[0]);
     QUIT_PLUTO(1);
   }
 
