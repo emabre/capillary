@@ -11,7 +11,7 @@ void TC_kappa(double *v, double x1, double x2, double x3,
   double k;
   double unit_Mfield;
 
-  if (g_inputParam[KAPPA_GAUBOB] > 0) {
+  if (g_inputParam[KAPPA_GAUBOB] > 0.0) {
     
     // Fixed value from pluto.ini
     *kpar = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
@@ -21,7 +21,7 @@ void TC_kappa(double *v, double x1, double x2, double x3,
 
     unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
     if (GetPV_Temperature(v, &(T) )!=0) {
-      print1("Resistive_eta:[Ema] Error computing temperature!");
+      print1("\nResistive_eta:[Ema] Error computing temperature!");
     }
     // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
     GetMu(T, v[RHO], &mu);
