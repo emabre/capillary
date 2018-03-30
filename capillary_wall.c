@@ -74,3 +74,24 @@ void copy_Data_Vc(Data *d_target, const Data *d_source) {
     VAR_LOOP (nv) d_target->Vc[nv][k][j][i] = d_source->Vc[nv][k][j][i];
   }
 }
+
+/*Free the memory of a Data element*/
+void free_Data(Data *data) {
+  // print1 ("\n> Memory allocation\n");
+  FreeArray4D ((void *) data->Vc);
+  FreeArray4D ((void *) data->Uc);
+
+  #ifdef STAGGERED_MHD
+    #error deallocation of Vs is not yet implemented 
+  #endif
+
+  #if UPDATE_VECTOR_POTENTIAL == YES
+    #error deallocation of Ax1, Ax2, Ax3 is not yet implemented
+  #endif
+
+  #if RESISTIVITY != NO
+    FreeArray4D ((void *) data->J);
+  #endif
+
+  FreeArray3D ((void *) data->flag);
+}
