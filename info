@@ -1,0 +1,23 @@
+Studio effetto strano (righe di T nella mappa bidimensionale) vicino ad elettrodo (DZCAP... proprio sopra a DZCAP.. pare sia così):
+Caso 1:
+    -no resistenza
+    -si conduzione
+    -fluido in moto
+procede bene (fino a circa 500ns, quando lo ho bloccato intenzionalmente)
+Caso 2:
+    -si resitenza
+    -si conduzione
+    -fluido in moto
+    -courant parameter abbassato (da 0.5 a 0.1)
+procede male (righe al primo dump (1ns))
+Caso 3:
+    -si resistenza
+    -si conduzione
+    -fluido bloccato (tra l'altro pare che sia davvero bloccato! Bene!)
+procede male, al primo dump ho righe (1ns).. notare che compaiono prima che l'output dica:
+"error computing temperature", quindi il problema non è (credo) un problema legato al calcolo di T dall'energia totale (ovvero non c'è energia cinetica troppo grande..!).
+
+
+DA FARE:
+- output per J fatto bene (jx e jy... magari come vettore??)
+- calcolo di gamma per il caso pvte_law nella funzione dove era calcolato male

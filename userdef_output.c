@@ -5,7 +5,7 @@
 #include "prototypes.h"
 
 #define WRITE_T_MU_NE_IONIZ YES
-#define WRITE_J NO
+#define WRITE_J YES
 
 #if WRITE_J == YES
   void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***J);
