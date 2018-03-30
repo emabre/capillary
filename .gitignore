@@ -6,3 +6,4 @@ pluto.log
 *.out
 makefile
 .directory
+.vscode/*

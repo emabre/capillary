@@ -5,10 +5,10 @@
 #include "prototypes.h"
 
 #define WRITE_T_MU_NE_IONIZ YES
-#define WRITE_J YES
+#define WRITE_J1D YES
 
-#if WRITE_J == YES
-  void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***J);
+#if WRITE_J1D == YES
+  void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D);
 #endif
 
 /* *************************************************************** */
@@ -26,8 +26,8 @@ void ComputeUserVar (const Data *d, Grid *grid)
   int i, j, k;
   double ***interBound;
 
-  #if WRITE_J == YES
-    double ***J;
+  #if WRITE_J1D == YES
+    double ***Jz1D;
   #endif
 
   #if WRITE_T_MU_NE_IONIZ==YES
@@ -73,8 +73,8 @@ void ComputeUserVar (const Data *d, Grid *grid)
       ne = GetUserVar("ne");
     #endif
   #endif
-  #if WRITE_J == YES
-    J = GetUserVar("J");
+  #if WRITE_J1D == YES
+    Jz1D = GetUserVar("Jz1D");
   #endif
 
 /******************************************************/
@@ -157,8 +157,8 @@ void ComputeUserVar (const Data *d, Grid *grid)
       }
     #endif
   #endif
-  #if WRITE_J == YES
-    ComputeJ1DforOutput(d, grid, J);
+  #if WRITE_J1D == YES
+    ComputeJ1DforOutput(d, grid, Jz1D);
   #endif
 }
 /* ************************************************************* */
@@ -179,8 +179,8 @@ void ChangeDumpVar ()
 
 }
 
-#if WRITE_J == YES
-void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***J){
+#if WRITE_J1D == YES
+void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D){
   int i, j, k;
   // double Jstagg[NX3_TOT-1][NX2_TOT-1][NX1_TOT-1];
   double *r, ***B;
@@ -197,108 +197,19 @@ void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***J){
 
   DOM_LOOP(k,j,i){
     if (i == IBEG){
-      J[k][j][i] = 2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
+      Jz1D[k][j][i] = 2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
     }
     else if (i == IEND){
-      J[k][j][i] = 2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
+      Jz1D[k][j][i] = 2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
     } else {
       Jleft = 2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
       Jright = 2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
-      J[k][j][i] = 0.5*(Jleft+Jright);
+      Jz1D[k][j][i] = 0.5*(Jleft+Jright);
     }
-    // Now I make J dimensional
-    J[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
+    // Now I make Jz1D dimensional
+    Jz1D[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
   }
 
-  // box.ib =       0; box.ie = NX1_TOT-1-IOFFSET;
-  // box.jb = JOFFSET; box.je = NX2_TOT-1-JOFFSET;
-  // box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
-  //
-  // BOX_LOOP(&box,k,j,i){
-  //   Jstagg[k][j][i] = 2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i+1]*r[i+1])/(r[i+1]-r[i]);
-  //   // print1("\nstep : i:%d, j:%d, k:%d",i,j,k);
-  // }
-  //
-  // KTOT_LOOP(k) JTOT_LOOP(j) {
-  //   J[k][j][0] = Jstagg[k][j][0];
-  //   J[k][j][NX1_TOT-1] = Jstagg[k][j][NX1_TOT-1-IOFFSET];
-  // }
-  // BOX_LOOP(&box,k,j,i){
-  //   J[k][j][i+1] = 0.5*(Jstagg[k][j][i+1] + Jstagg[k][j][i]);
-  // }
-
 }
-
-// -------------------------------------
-// int  i, j, k;
-// static int first_call = 1;
-// double *dx1, *dx2, *dx3;
-// double *r, *rp, *th, *thp;
-// double ***Bx1, ***Bx2, ***Bx3;
-// double ***Jx1, ***Jx2, ***Jx3;
-// double dx1_Bx2 = 0.0, dx2_Bx1 = 0.0;
-// double dx2_Bx3 = 0.0, dx3_Bx2 = 0.0;
-// double dx1_Bx3 = 0.0, dx3_Bx1 = 0.0;
-// double d12, d21, d13, d31, d23, d32;
-// double h3;
-// static double ***a23Bx3, ***a13Bx3, ***a12Bx2;
-// RBox box;
-//
-//
-// B = d->Vc[iBPHI];
-// dr = grid[IDIR].dx;
-//
-//
-// if (first_call){
-//   a12Bx2 = Bx2;
-//   a23Bx3 = Bx3;
-//   a13Bx3 = Bx3;
-//   #if GEOMETRY == CYLINDRICAL && COMPONENTS == 3
-//    a13Bx3 = ARRAY_3D(NX3_MAX, NX2_MAX, NX1_MAX, double);
-//   first_call = 0;
-// }
-//
-//  r   = grid[IDIR].x; rp  = grid[IDIR].xr;
-//
-// /* ----------------------------------------------------
-//     IDIR: Compute {Jx1, Jx2, Jx3} at i+1/2,j,k faces.
-//    ---------------------------------------------------- */
-//
-//   box.ib =       0; box.ie = NX1_TOT-1-IOFFSET;
-//   box.jb = JOFFSET; box.je = NX2_TOT-1-JOFFSET;
-//   box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
-//
-//   BOX_LOOP(&box,k,j,i){
-//
-//     #if GEOMETRY == CYLINDRICAL
-//      d32 = d31 = 0.0;
-//      d13 = 2.0/(fabs(r[i+1])*r[i+1] - fabs(r[i])*r[i]);
-//     #elif GEOMETRY == POLAR
-//      d23 = d21 = 1.0/(rp[i]*dx2[j]);
-//      d12 = 2.0/(fabs(r[i+1])*r[i+1] - fabs(r[i])*r[i]);
-//     #elif GEOMETRY == SPHERICAL
-//      h3  = rp[i]*sin(th[j]);
-//
-//      D_EXPAND(d12 = 1.0/(rp[i]*dx1[i]); d13 = 1.0/(rp[i]*dx1[i]);   ,
-//               d21 = 1.0/(rp[i]*dx2[j]); d23 = 1.0/(h3*dx2[j]);      ,
-//               d32 = 1.0/(h3*dx3[k]);    d31 = 1.0/(h3*dx3[k]);)
-//     #endif
-//
-//     #if COMPONENTS == 3
-//      dx2_Bx3 = 0.5*(CDIFF_X2(a23Bx3,k,j,i) + CDIFF_X2(a23Bx3,k,j,i+1))*d23;
-//      dx3_Bx2 = 0.5*(CDIFF_X3(Bx2,k,j,i)    + CDIFF_X3(Bx2,k,j,i+1)  )*d32;
-//      Jx1[k][j][i] = (dx2_Bx3 - dx3_Bx2);
-//
-//      dx3_Bx1 = 0.5*(CDIFF_X3(Bx1,k,j,i) + CDIFF_X3(Bx1,k,j,i+1))*d31;
-//      dx1_Bx3 = FDIFF_X1(a13Bx3,k,j,i)*d13;
-//      Jx2[k][j][i] = (dx3_Bx1 - dx1_Bx3);
-//     #endif
-//
-//     dx1_Bx2 = FDIFF_X1(a12Bx2,k,j,i)*d12;
-//     dx2_Bx1 = 0.5*(CDIFF_X2(Bx1,k,j,i) + CDIFF_X2(Bx1,k,j,i+1))*d21;
-//     Jx3[k][j][i] = (dx1_Bx2 - dx2_Bx1);
-//   }
-
-
 
 #endif
