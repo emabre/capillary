@@ -21,3 +21,11 @@ procede male, al primo dump ho righe (1ns).. notare che compaiono prima che l'ou
 DA FARE:
 - output per J fatto bene (jx e jy... magari come vettore??)
 - calcolo di gamma per il caso pvte_law nella funzione dove era calcolato male
+
+
+ALTRE INFO:
+le scrivo qui perchè non so se sono generali:
+Pare che DOM_LOOP faccia un ciclo partendo dall'indice 2 fino all'indice 2+dimX,
+dove dimX (variabile inventata da me ora) è il numero di celle di mesh in direzione X (X=i,j,k)
+Immagino quindi che lasci due spazi per le ghost cells presso tutti i bordi (i alto e basso, j alto e basso
+k alto e basso).

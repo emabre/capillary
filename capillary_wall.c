@@ -40,6 +40,10 @@ int find_idx_closest(double *vec, int Nvec, double v){
 
 /*Allocate space for a Data element*/
 void alloc_Data(Data *data) {
+  /*******************************************************************
+   *  What follows has been copied from initialize.c, lines: 448-472 *
+   *******************************************************************/
+
   // print1 ("\n> Memory allocation\n");
   data->Vc = ARRAY_4D(NVAR, NX3_TOT, NX2_TOT, NX1_TOT, double);
   data->Uc = ARRAY_4D(NX3_TOT, NX2_TOT, NX1_TOT, NVAR, double);

@@ -5,7 +5,7 @@
 #include "prototypes.h"
 
 #define WRITE_T_MU_NE_IONIZ YES
-#define WRITE_J1D YES
+#define WRITE_J1D NO
 #define WRITE_J YES
 
 #if WRITE_J1D == YES
@@ -127,7 +127,8 @@ void ComputeUserVar (const Data *d, Grid *grid)
     // d_corrected_z = *d;
     alloc_Data(&d_corrected_r);
     alloc_Data(&d_corrected_z);
-    print1("\nRicordati di deallocare d_corrected_r e ..._z !");
+    // print1("\nRicordati di deallocare d_corrected_r e ..._z !");
+
     copy_Data_Vc(&d_corrected_z, d);
     copy_Data_Vc(&d_corrected_r, d);
     ApplyMultipleGhosts(&d_corrected_r, 0);
@@ -174,9 +175,14 @@ void ComputeUserVar (const Data *d, Grid *grid)
   #if WRITE_J1D == YES
     ComputeJ1DforOutput(d, grid, Jz1D);
   #endif
+  
   #if WRITE_J == YES
     ComputeJforOutput(d, grid, Jr, Jz);
   #endif
+
+  
+  free_Data(&d_corrected_r);
+  free_Data(&d_corrected_r);
 }
 /* ************************************************************* */
 void ChangeDumpVar ()
@@ -236,12 +242,12 @@ void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D){
 #endif
 void ComputeJforOutput(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
   int i,j,k;
-  int dir;
+  // int dir;
   double ****J_isweep, ****J_jsweep, ****J_isweep_avg, ****J_jsweep_avg;
-  Data *d_temp;
+  Data d_temp;
   RBox box;
   
-  alloc_Data(d_temp);
+  alloc_Data(&d_temp);
 
   J_isweep = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
   J_jsweep = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
@@ -252,26 +258,24 @@ void ComputeJforOutput(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
  // see capillary_wall.c/void alloc_Data(Data *data).
  // Copy d->B[][][] inside d_temp->B..
   TOT_LOOP(k, j, i) {
-    d_temp->J[IDIR][k][j][i] = d->J[IDIR][k][j][i];
-    d_temp->J[JDIR][k][j][i] = d->J[JDIR][k][j][i];
-    d_temp->J[KDIR][k][j][i] = d->J[KDIR][k][j][i];
+    d_temp.J[IDIR][k][j][i] = d->J[IDIR][k][j][i];
+    d_temp.J[JDIR][k][j][i] = d->J[JDIR][k][j][i];
+    d_temp.J[KDIR][k][j][i] = d->J[KDIR][k][j][i];
   }
 
   // call twice GetCurrent
-  GetCurrent (d_temp, IDIR, grid);
+  GetCurrent (&d_temp, IDIR, grid);
   TOT_LOOP(k, j, i) {
     J_isweep[IDIR][k][j][i] = d->J[IDIR][k][j][i];
     J_isweep[JDIR][k][j][i] = d->J[JDIR][k][j][i];
     J_isweep[KDIR][k][j][i] = d->J[KDIR][k][j][i];
   }
-  // TOT_LOOP(k, j, i) J_IDIR[k][j][i] = d_temp->J[IDIR][k][j][i];
-  GetCurrent (d_temp, JDIR, grid);
+  GetCurrent (&d_temp, JDIR, grid);
   TOT_LOOP(k, j, i) {
     J_jsweep[IDIR][k][j][i] = d->J[IDIR][k][j][i];
     J_jsweep[JDIR][k][j][i] = d->J[JDIR][k][j][i];
     J_jsweep[KDIR][k][j][i] = d->J[KDIR][k][j][i];
   }
-  // TOT_LOOP(k, j, i) J_JDIR[k][j][i] = d_temp->J[JDIR][k][j][i];
 
   // Average d_temp->J inside J
   // Average along i direction
@@ -279,20 +283,22 @@ void ComputeJforOutput(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
   box.jb = JOFFSET; box.je = NX2_TOT-1-JOFFSET;
   box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
   BOX_LOOP(&box,k,j,i){
-    J_isweep_avg[IDIR][k][j][i] = 0.5 * (J_isweep[IDIR][k][j][i] + J_isweep[IDIR][k][j][i+1]);
-    J_isweep_avg[JDIR][k][j][i] = 0.5 * (J_isweep[JDIR][k][j][i] + J_isweep[JDIR][k][j][i+1]);
+    J_isweep_avg[IDIR][k][j][i+1] = 0.5 * (J_isweep[IDIR][k][j][i] + J_isweep[IDIR][k][j][i+1]);
+    J_isweep_avg[JDIR][k][j][i+1] = 0.5 * (J_isweep[JDIR][k][j][i] + J_isweep[JDIR][k][j][i+1]);
   }
   // Average along j direction
   box.ib = IOFFSET; box.ie = NX1_TOT-1-IOFFSET;
   box.jb =       0; box.je = NX2_TOT-1-JOFFSET;
   box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
   BOX_LOOP(&box,k,j,i){
-    J_jsweep_avg[IDIR][k][j][i] = 0.5 * (J_jsweep[IDIR][k][j][i] + J_jsweep[IDIR][k][j][i+1]);
-    J_jsweep_avg[JDIR][k][j][i] = 0.5 * (J_jsweep[JDIR][k][j][i] + J_jsweep[JDIR][k][j][i+1]);
+    J_jsweep_avg[IDIR][k][j+1][i] = 0.5 * (J_jsweep[IDIR][k][j][i] + J_jsweep[IDIR][k][j+1][i]);
+    J_jsweep_avg[JDIR][k][j+1][i] = 0.5 * (J_jsweep[JDIR][k][j][i] + J_jsweep[JDIR][k][j+1][i]);
   }
-  TOT_LOOP(k, j, i) {
-    Ji[k][j][i] =  0.5*(J_jsweep_avg[IDIR][k][j][i] + J_isweep_avg[IDIR][k][j][i]);
-    Jj[k][j][i] =  0.5*(J_jsweep_avg[JDIR][k][j][i] + J_isweep_avg[JDIR][k][j][i]);
+
+  // Average of the two averages
+  DOM_LOOP(k, j, i) {
+    Ji[k][j][i] =  0.5 * (J_jsweep_avg[IDIR][k][j][i] + J_isweep_avg[IDIR][k][j][i]);
+    Jj[k][j][i] =  0.5 * (J_jsweep_avg[JDIR][k][j][i] + J_isweep_avg[JDIR][k][j][i]);
   }
 
   // Deallocate all data allocated in this function

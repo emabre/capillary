@@ -35,5 +35,6 @@ int find_idx_closest(double *vec, int Nvec, double v);
 
 void alloc_Data(Data *data);
 void copy_Data_Vc(Data *d_target, const Data *d_source);
+void free_Data(Data *data);
 
 #endif
