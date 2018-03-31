@@ -47,7 +47,8 @@ void ComputeUserVar (const Data *d, Grid *grid)
 
   #if MULTIPLE_GHOSTS==YES
     double mu_aux; /*Auxiliary variable*/
-    Data d_corrected_r, d_corrected_z;
+    //Data d_corrected_r, d_corrected_z;
+    Data *d_corrected_r, *d_corrected_z;
     double ***vr_c_r, ***vr_c_z;
     double ***vz_c_r, ***vz_c_z;
     double ***rho_c_r, ***rho_c_z;
@@ -121,26 +122,34 @@ void ComputeUserVar (const Data *d, Grid *grid)
   #endif
 
   #if MULTIPLE_GHOSTS==YES
-    // memcpy(&d_corrected_r, d, sizeof(*d));
-    // memcpy(&d_corrected_z, d, sizeof(*d));
-    // d_corrected_r = *d;
-    // d_corrected_z = *d;
-    alloc_Data(&d_corrected_r);
-    alloc_Data(&d_corrected_z);
+    // alloc_Data(&d_corrected_r);
+    // alloc_Data(&d_corrected_z);
+    d_corrected_r = alloc_Data();
+    d_corrected_z = alloc_Data();
     // print1("\nRicordati di deallocare d_corrected_r e ..._z !");
 
-    copy_Data_Vc(&d_corrected_z, d);
-    copy_Data_Vc(&d_corrected_r, d);
-    ApplyMultipleGhosts(&d_corrected_r, 0);
-    ApplyMultipleGhosts(&d_corrected_z, 1);
+    // copy_Data_Vc(&d_corrected_z, d);
+    // copy_Data_Vc(&d_corrected_r, d);
+    // ApplyMultipleGhosts(&d_corrected_r, 0);
+    // ApplyMultipleGhosts(&d_corrected_z, 1);
+    copy_Data_Vc(d_corrected_z, d);
+    copy_Data_Vc(d_corrected_r, d);
+    ApplyMultipleGhosts(d_corrected_r, 0);
+    ApplyMultipleGhosts(d_corrected_z, 1);
 
     DOM_LOOP(k,j,i){
-      vr_c_r[k][j][i] = d_corrected_r.Vc[iVR][k][j][i]*UNIT_VELOCITY;
-      vr_c_z[k][j][i] = d_corrected_z.Vc[iVR][k][j][i]*UNIT_VELOCITY;
-      vz_c_r[k][j][i] = d_corrected_r.Vc[iVZ][k][j][i]*UNIT_VELOCITY;
-      vz_c_z[k][j][i] = d_corrected_z.Vc[iVZ][k][j][i]*UNIT_VELOCITY;
-      rho_c_r[k][j][i] = d_corrected_r.Vc[RHO][k][j][i]*UNIT_DENSITY;
-      rho_c_z[k][j][i] = d_corrected_z.Vc[RHO][k][j][i]*UNIT_DENSITY;
+      // vr_c_r[k][j][i] = d_corrected_r.Vc[iVR][k][j][i]*UNIT_VELOCITY;
+      // vr_c_z[k][j][i] = d_corrected_z.Vc[iVR][k][j][i]*UNIT_VELOCITY;
+      // vz_c_r[k][j][i] = d_corrected_r.Vc[iVZ][k][j][i]*UNIT_VELOCITY;
+      // vz_c_z[k][j][i] = d_corrected_z.Vc[iVZ][k][j][i]*UNIT_VELOCITY;
+      // rho_c_r[k][j][i] = d_corrected_r.Vc[RHO][k][j][i]*UNIT_DENSITY;
+      // rho_c_z[k][j][i] = d_corrected_z.Vc[RHO][k][j][i]*UNIT_DENSITY;
+      vr_c_r[k][j][i] = d_corrected_r->Vc[iVR][k][j][i]*UNIT_VELOCITY;
+      vr_c_z[k][j][i] = d_corrected_z->Vc[iVR][k][j][i]*UNIT_VELOCITY;
+      vz_c_r[k][j][i] = d_corrected_r->Vc[iVZ][k][j][i]*UNIT_VELOCITY;
+      vz_c_z[k][j][i] = d_corrected_z->Vc[iVZ][k][j][i]*UNIT_VELOCITY;
+      rho_c_r[k][j][i] = d_corrected_r->Vc[RHO][k][j][i]*UNIT_DENSITY;
+      rho_c_z[k][j][i] = d_corrected_z->Vc[RHO][k][j][i]*UNIT_DENSITY;
     }
 
     // I take the corrected T
@@ -150,7 +159,8 @@ void ComputeUserVar (const Data *d, Grid *grid)
           mu_aux = MeanMolecularWeight(d_corrected_r.Vc);
           T_c_r[k][j][i] = d_corrected_r.Vc[PRS][k][j][i]/d_corrected_r.Vc[RHO][k][j][i]*KELVIN*mu_aux;
         #elif EOS==PVTE_LAW
-          for (nv=NVAR; nv--;) v[nv] = d_corrected_r.Vc[nv][k][j][i];
+          // for (nv=NVAR; nv--;) v[nv] = d_corrected_r.Vc[nv][k][j][i];
+          for (nv=NVAR; nv--;) v[nv] = d_corrected_r->Vc[nv][k][j][i];
           if (GetPV_Temperature(v, &(T_c_r[k][j][i]) )!=0) {
             print1("ComputeUserVar:[Ema] Error computing temperature!");
           }
@@ -163,7 +173,8 @@ void ComputeUserVar (const Data *d, Grid *grid)
           mu_aux = MeanMolecularWeight(d_corrected_z.Vc);
           T_c_z[k][j][i] = d_corrected_z.Vc[PRS][k][j][i]/d_corrected_z.Vc[RHO][k][j][i]*KELVIN*mu_aux;
         #elif EOS==PVTE_LAW
-          for (nv=NVAR; nv--;) v[nv] = d_corrected_z.Vc[nv][k][j][i];
+          // for (nv=NVAR; nv--;) v[nv] = d_corrected_z.Vc[nv][k][j][i];
+          for (nv=NVAR; nv--;) v[nv] = d_corrected_z->Vc[nv][k][j][i];
           if (GetPV_Temperature(v, &(T_c_z[k][j][i]) )!=0) {
             print1("ComputeUserVar:[Ema] Error computing temperature!");
           }
@@ -181,8 +192,10 @@ void ComputeUserVar (const Data *d, Grid *grid)
   #endif
 
   
-  free_Data(&d_corrected_r);
-  free_Data(&d_corrected_r);
+  // free_Data(&d_corrected_r);
+  // free_Data(&d_corrected_r);
+  free_Data(d_corrected_r);
+  free_Data(d_corrected_r);
 }
 /* ************************************************************* */
 void ChangeDumpVar ()
@@ -236,7 +249,7 @@ void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D){
 }
 #endif
 
-#if WRITE_J == YES
+#if WRITE_J ==  YES
 #if DIMENSIONS != 2
   #error ComputeJforOutput works only in 2D
 #endif
@@ -244,10 +257,11 @@ void ComputeJforOutput(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
   int i,j,k;
   // int dir;
   double ****J_isweep, ****J_jsweep, ****J_isweep_avg, ****J_jsweep_avg;
-  Data d_temp;
+  Data* d_temp;
   RBox box;
   
-  alloc_Data(&d_temp);
+  // alloc_Data(&d_temp);
+  d_temp = alloc_Data();
 
   J_isweep = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
   J_jsweep = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
@@ -258,19 +272,24 @@ void ComputeJforOutput(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
  // see capillary_wall.c/void alloc_Data(Data *data).
  // Copy d->B[][][] inside d_temp->B..
   TOT_LOOP(k, j, i) {
-    d_temp.J[IDIR][k][j][i] = d->J[IDIR][k][j][i];
-    d_temp.J[JDIR][k][j][i] = d->J[JDIR][k][j][i];
-    d_temp.J[KDIR][k][j][i] = d->J[KDIR][k][j][i];
+    // d_temp.J[IDIR][k][j][i] = d->J[IDIR][k][j][i];
+    // d_temp.J[JDIR][k][j][i] = d->J[JDIR][k][j][i];
+    // d_temp.J[KDIR][k][j][i] = d->J[KDIR][k][j][i];
+    d_temp->J[IDIR][k][j][i] = d->J[IDIR][k][j][i];
+    d_temp->J[JDIR][k][j][i] = d->J[JDIR][k][j][i];
+    d_temp->J[KDIR][k][j][i] = d->J[KDIR][k][j][i];
   }
 
   // call twice GetCurrent
-  GetCurrent (&d_temp, IDIR, grid);
+  // GetCurrent (&d_temp, IDIR, grid);
+  GetCurrent (d_temp, IDIR, grid);
   TOT_LOOP(k, j, i) {
     J_isweep[IDIR][k][j][i] = d->J[IDIR][k][j][i];
     J_isweep[JDIR][k][j][i] = d->J[JDIR][k][j][i];
     J_isweep[KDIR][k][j][i] = d->J[KDIR][k][j][i];
   }
-  GetCurrent (&d_temp, JDIR, grid);
+  // GetCurrent (&d_temp, JDIR, grid);
+  GetCurrent (d_temp, JDIR, grid);
   TOT_LOOP(k, j, i) {
     J_jsweep[IDIR][k][j][i] = d->J[IDIR][k][j][i];
     J_jsweep[JDIR][k][j][i] = d->J[JDIR][k][j][i];
@@ -302,7 +321,8 @@ void ComputeJforOutput(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
   }
 
   // Deallocate all data allocated in this function
-  free_Data(&d_temp);
+  // free_Data(&d_temp);
+  free_Data(d_temp);
   FreeArray4D ((void *) J_isweep);
   FreeArray4D ((void *) J_jsweep);
   FreeArray4D ((void *) J_isweep_avg);

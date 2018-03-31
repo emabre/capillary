@@ -33,7 +33,8 @@ Corr extern d_correction[3];
 
 int find_idx_closest(double *vec, int Nvec, double v);
 
-void alloc_Data(Data *data);
+// void alloc_Data(Data *data);
+Data* alloc_Data();
 void copy_Data_Vc(Data *d_target, const Data *d_source);
 void free_Data(Data *data);
 
