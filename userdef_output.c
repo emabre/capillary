@@ -6,7 +6,7 @@
 
 #define WRITE_T_MU_NE_IONIZ YES
 #define WRITE_J1D NO
-#define WRITE_J YES
+#define WRITE_J NO
 
 #if WRITE_J1D == YES
   void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D);
