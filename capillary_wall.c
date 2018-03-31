@@ -5,7 +5,7 @@
 //debug macro
 // #define DBG_FIND_CLOSEST
 
-int idx_rcap = 0;
+int idx_rcap = 0 ;
 int idx_zcap = 0;
 int idx_start_electr = 0;
 

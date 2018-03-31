@@ -193,9 +193,9 @@ void ComputeUserVar (const Data *d, Grid *grid)
 
   
   // free_Data(&d_corrected_r);
-  // free_Data(&d_corrected_r);
+  // free_Data(&d_corrected_z);
   free_Data(d_corrected_r);
-  free_Data(d_corrected_r);
+  free_Data(d_corrected_z);
 }
 /* ************************************************************* */
 void ChangeDumpVar ()
@@ -256,17 +256,21 @@ void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D){
 void ComputeJforOutput(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
   int i,j,k;
   // int dir;
-  double ****J_isweep, ****J_jsweep, ****J_isweep_avg, ****J_jsweep_avg;
+  // double ****J_isweep, ****J_jsweep, ****J_isweep_avg, ****J_jsweep_avg;
+  double J_isweep[3][NX3_TOT][NX2_TOT][NX1_TOT];
+  double J_jsweep[3][NX3_TOT][NX2_TOT][NX1_TOT];
+  double J_isweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
+  double J_jsweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
   Data* d_temp;
   RBox box;
   
   // alloc_Data(&d_temp);
   d_temp = alloc_Data();
 
-  J_isweep = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
-  J_jsweep = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
-  J_isweep_avg = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
-  J_jsweep_avg = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
+  // J_isweep = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
+  // J_jsweep = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
+  // J_isweep_avg = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
+  // J_jsweep_avg = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
 
  // I do a TOT_LOOP as J is defined in the same way as Vc (in therms of memory),
  // see capillary_wall.c/void alloc_Data(Data *data).
@@ -323,9 +327,9 @@ void ComputeJforOutput(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
   // Deallocate all data allocated in this function
   // free_Data(&d_temp);
   free_Data(d_temp);
-  FreeArray4D ((void *) J_isweep);
-  FreeArray4D ((void *) J_jsweep);
-  FreeArray4D ((void *) J_isweep_avg);
-  FreeArray4D ((void *) J_jsweep_avg);
+  // FreeArray4D ((void *) J_isweep);
+  // FreeArray4D ((void *) J_jsweep);
+  // FreeArray4D ((void *) J_isweep_avg);
+  // FreeArray4D ((void *) J_jsweep_avg);
 }
 #endif
