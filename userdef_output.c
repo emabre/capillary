@@ -5,15 +5,20 @@
 #include "prototypes.h"
 
 #define WRITE_T_MU_NE_IONIZ YES
-#define WRITE_J1D NO
-#define WRITE_J NO
+#define WRITE_J1D YES
+#define WRITE_J2D YES
 
 #if WRITE_J1D == YES
   void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D);
 #endif
 
-#if WRITE_J == YES
-  void ComputeJforOutput(const Data *d, Grid *grid, double ***Ji, double ***Jj);
+#if WRITE_J_OLD == YES
+  void ComputeJforOutput_old(const Data *d, Grid *grid, double ***Ji, double ***Jj);
+#endif
+
+#if WRITE_J2D == YES
+  void ComputeJ2DforOutput(const Data *d, Grid *grid, double ***Jr, double ***Jz, double ***Jphi);
+  void GetCurrentForOutput(const Data *d, int dir, Grid *grid, double ***Jr, double ***Jz, double ***Jphi);
 #endif
 
 /* *************************************************************** */
@@ -37,6 +42,11 @@ void ComputeUserVar (const Data *d, Grid *grid)
   #if WRITE_J == YES
     double ***Jr;
     double ***Jz;
+  #endif
+  #if  WRITE_J2D == YES
+    double ***Jr;
+    double ***Jz;
+    double ***Jphi;
   #endif
 
   #if WRITE_T_MU_NE_IONIZ==YES
@@ -85,6 +95,11 @@ void ComputeUserVar (const Data *d, Grid *grid)
   #endif
   #if WRITE_J1D == YES
     Jz1D = GetUserVar("Jz1D");
+  #endif
+  #if WRITE_J2D == YES
+    Jr = GetUserVar("Jr");
+    Jz = GetUserVar("Jz");
+    Jphi = GetUserVar("Jphi");
   #endif
   #if WRITE_J == YES
     Jr = GetUserVar("Jr");
@@ -186,8 +201,12 @@ void ComputeUserVar (const Data *d, Grid *grid)
   #if WRITE_J1D == YES
     ComputeJ1DforOutput(d, grid, Jz1D);
   #endif
+
+  #if WRITE_J2D == YES
+    ComputeJ2DforOutput(d, grid, Jr, Jz, Jphi);
+  #endif
   
-  #if WRITE_J == YES
+  #if WRITE_J_OLD == YES
     ComputeJforOutput(d, grid, Jr, Jz);
   #endif
 
@@ -214,6 +233,253 @@ void ChangeDumpVar ()
 
 
 }
+
+#if WRITE_J2D
+
+  void ComputeJ2DforOutput(const Data *d, Grid *grid, double ***Jr, double ***Jz, double ***Jphi) {
+    #if DIMENSIONS != 2
+      #error ComputeJ2DforOutput works only in 2D
+    #endif
+    #if GEOMETRY != CYLINDRICAL
+      #error ComputeJ2DforOutput works only for cylindrical geometry
+    #endif
+
+    int i,j,k;
+    double J_isweep[3][NX3_TOT][NX2_TOT][NX1_TOT];
+    double J_jsweep[3][NX3_TOT][NX2_TOT][NX1_TOT];
+    double J_isweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
+    double J_jsweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
+    RBox box;
+    double unit_Mfield;
+
+    // I do a TOT_LOOP as J is defined in the same way as Vc (in therms of memory),
+    // see capillary_wall.c/void alloc_Data(Data *data).
+
+      // call twice GetCurrent
+      GetCurrentForOutput (d, IDIR, grid, Jr, Jz, Jphi);
+      TOT_LOOP(k, j, i) {
+        J_isweep[IDIR][k][j][i] = d->J[IDIR][k][j][i];
+        J_isweep[JDIR][k][j][i] = d->J[JDIR][k][j][i];
+        J_isweep[KDIR][k][j][i] = d->J[KDIR][k][j][i];
+      }
+      GetCurrentForOutput (d, JDIR, grid, Jr, Jz, Jphi);
+      TOT_LOOP(k, j, i) {
+        J_jsweep[IDIR][k][j][i] = d->J[IDIR][k][j][i];
+        J_jsweep[JDIR][k][j][i] = d->J[JDIR][k][j][i];
+        J_jsweep[KDIR][k][j][i] = d->J[KDIR][k][j][i];
+      }
+
+      // Average d_temp->J inside J
+      // Average along i direction
+      box.ib =       0; box.ie = NX1_TOT-1-IOFFSET;
+      box.jb = JOFFSET; box.je = NX2_TOT-1-JOFFSET;
+      box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
+      BOX_LOOP(&box,k,j,i){
+        J_isweep_avg[IDIR][k][j][i+1] = 0.5 * (J_isweep[IDIR][k][j][i] + J_isweep[IDIR][k][j][i+1]);
+        J_isweep_avg[JDIR][k][j][i+1] = 0.5 * (J_isweep[JDIR][k][j][i] + J_isweep[JDIR][k][j][i+1]);
+      }
+      // Average along j direction
+      box.ib = IOFFSET; box.ie = NX1_TOT-1-IOFFSET;
+      box.jb =       0; box.je = NX2_TOT-1-JOFFSET;
+      box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
+      BOX_LOOP(&box,k,j,i){
+        J_jsweep_avg[IDIR][k][j+1][i] = 0.5 * (J_jsweep[IDIR][k][j][i] + J_jsweep[IDIR][k][j+1][i]);
+        J_jsweep_avg[JDIR][k][j+1][i] = 0.5 * (J_jsweep[JDIR][k][j][i] + J_jsweep[JDIR][k][j+1][i]);
+      }
+
+      // Average of the two averages
+      DOM_LOOP(k, j, i) {
+        Jr[k][j][i] =  0.5 * (J_jsweep_avg[IDIR][k][j][i] + J_isweep_avg[IDIR][k][j][i]);
+        Jz[k][j][i] =  0.5 * (J_jsweep_avg[JDIR][k][j][i] + J_isweep_avg[JDIR][k][j][i]);
+      }
+      // Dimensionalization
+      unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+      DOM_LOOP(k, j, i) {
+        Jr[k][j][i] =  Jr[k][j][i]*unit_Mfield*CONST_c/(CONST_PI*4)/UNIT_LENGTH;
+        Jz[k][j][i] =  Jz[k][j][i]*unit_Mfield*CONST_c/(CONST_PI*4)/UNIT_LENGTH;
+      }
+  }
+
+  /*-------------------------------------------------------------------------
+  void GetCurrentForOutput (..)
+  What follows has been copied from GetCurrent() removing parts which did not 
+  refer to 2D+CYLINDRICAL GEOMETRY + CELL CENTERED MHD,
+  I also removed if cycle on the allocation of ***a23Bx3, ***a13Bx3, ***a13Bx3 and
+  changed their names to ***a23Bx3_local, ***a13Bx3_local, ***a13Bx3_local (in order not 
+  to confuse/mess up the global variables ***a23Bx3, ***a13Bx3, ***a12Bx3)
+  ----------------------------------------------------------------------------*/
+  void GetCurrentForOutput (const Data *d, int dir, Grid *grid, double ***Jr, double ***Jz, double ***Jphi)
+  { 
+    int  i, j, k;
+    double *dx1, *dx2, *dx3;
+    double *r, *rp;
+    double ***Bx1, ***Bx2, ***Bx3;
+    double ***Jx1, ***Jx2, ***Jx3;
+    double dx1_Bx2 = 0.0, dx2_Bx1 = 0.0;
+    double dx2_Bx3 = 0.0, dx3_Bx2 = 0.0;
+    double dx1_Bx3 = 0.0, dx3_Bx1 = 0.0;
+    double d12, d21, d13, d31, d23, d32;
+    double ***a23Bx3_local, ***a13Bx3_local, ***a12Bx3_local;
+    RBox box;
+
+  /* ------------------------------------------------------------------
+    1. Set pointer shortcuts.
+        The primary magnetic field will be the cell-centered field.
+        
+        Note: in 2+1/2 dimensions, we also need Jx1 and Jx2 which
+              contribute to the total energy equation but not
+              to the induction equation.
+              For this reason, we set  Bx3 to be equal to the \b
+              cell centered value.
+    ---------------------------------------------------------------- */
+
+    EXPAND(Bx1 = d->Vc[BX1];    ,
+          Bx2 = d->Vc[BX2];    ,
+          Bx3 = d->Vc[BX3];)
+
+    //[Ema] Just because I am lazy and I do not want to change the names in the whol function
+    Jx1 = Jr; 
+    Jx2 = Jz;
+    Jx3 = Jphi;
+
+    dx1 = grid[IDIR].dx;
+    dx2 = grid[JDIR].dx;
+    dx3 = grid[KDIR].dx;
+
+  /* ----------------------------------------------------------------
+    2. Allocate static memory areas for the three arrays
+        a13Bx3_local, a23Bx3_local, a12Bx3_local if necessary. Otherwise, they will
+        just be shortcuts to the default magnetic field arrays.
+    ---------------------------------------------------------------- */
+
+      a12Bx3_local = Bx2;
+      a23Bx3_local = Bx3;
+      // a13Bx3_local = Bx3;
+      // #if GEOMETRY == CYLINDRICAL && COMPONENTS == 3
+      // cambia, possibilemnte usa un vettore allocato tipo array[N][N][N]
+      a13Bx3_local = ARRAY_3D(NX3_MAX, NX2_MAX, NX1_MAX, double);
+      // #endif
+  /* --------------------------------------------------------------
+    3. Construct goemetrical coefficients and arrays
+    -------------------------------------------------------------- */
+
+    // #if GEOMETRY == CYLINDRICAL
+    r   = grid[IDIR].x; rp  = grid[IDIR].xr;
+    // #if COMPONENTS == 3
+      TOT_LOOP(k,j,i) a13Bx3_local[k][j][i] = Bx3[k][j][i]*fabs(r[i]);
+    // #endif
+    // #endif
+
+  /* ------------------------------------------------------------- */
+  /*!
+    4b. For cell-centered MHD, we compute the three components of
+          currents at a cell interface.
+    -------------------------------------------------------------- */
+
+    if (dir == IDIR){
+
+    /* ----------------------------------------------------
+        IDIR: Compute {Jx1, Jx2, Jx3} at i+1/2,j,k faces.
+      ---------------------------------------------------- */
+
+      box.ib =       0; box.ie = NX1_TOT-1-IOFFSET;
+      box.jb = JOFFSET; box.je = NX2_TOT-1-JOFFSET;
+      box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
+
+      BOX_LOOP(&box,k,j,i){
+
+        d12 = d13 = 1.0/dx1[i];
+        d21 = d23 = 1.0/dx2[j]; 
+        d31 = d32 = 1.0/dx3[k];    
+        
+        // #if GEOMETRY == CYLINDRICAL
+        d32 = d31 = 0.0;
+        d13 = 2.0/(fabs(r[i+1])*r[i+1] - fabs(r[i])*r[i]);  
+        // #endif
+
+        // #if COMPONENTS == 3
+        dx2_Bx3 = 0.5*(CDIFF_X2(a23Bx3_local,k,j,i) + CDIFF_X2(a23Bx3_local,k,j,i+1))*d23;
+        dx3_Bx2 = 0.5*(CDIFF_X3(Bx2,k,j,i)    + CDIFF_X3(Bx2,k,j,i+1)  )*d32;
+        Jx1[k][j][i] = (dx2_Bx3 - dx3_Bx2);
+
+        dx3_Bx1 = 0.5*(CDIFF_X3(Bx1,k,j,i) + CDIFF_X3(Bx1,k,j,i+1))*d31;
+        dx1_Bx3 = FDIFF_X1(a13Bx3_local,k,j,i)*d13;
+        Jx2[k][j][i] = (dx3_Bx1 - dx1_Bx3);
+        // #endif
+
+        dx1_Bx2 = FDIFF_X1(a12Bx3_local,k,j,i)*d12;
+        dx2_Bx1 = 0.5*(CDIFF_X2(Bx1,k,j,i) + CDIFF_X2(Bx1,k,j,i+1))*d21;
+        Jx3[k][j][i] = (dx1_Bx2 - dx2_Bx1);
+      }
+      
+    }else if (dir == JDIR){
+
+    /* ----------------------------------------------------
+        JDIR: Compute {Jx1, Jx2, Jx3} at i,j+1/2,k faces.
+      ---------------------------------------------------- */
+
+      box.ib = IOFFSET; box.ie = NX1_TOT-1-IOFFSET;
+      box.jb =       0; box.je = NX2_TOT-1-JOFFSET;
+      box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
+
+      BOX_LOOP(&box,k,j,i){
+        d12 = d13 = 1.0/dx1[i];
+        d21 = d23 = 1.0/dx2[j];
+        d31 = d32 = 1.0/dx3[k];
+
+        // #if GEOMETRY == CYLINDRICAL
+        d32 = d31 = 0.0; /* axisymmetry */
+        d13 = 1.0/(r[i]*dx1[i]); 
+        // #endif
+        
+        // #if COMPONENTS == 3
+        dx2_Bx3 = FDIFF_X2(a23Bx3_local,k,j,i)*d23;
+        dx3_Bx2 = 0.5*(CDIFF_X3(Bx2,k,j,i) + CDIFF_X3(Bx2,k,j+1,i))*d32;
+        Jx1[k][j][i] = (dx2_Bx3 - dx3_Bx2);
+
+        dx3_Bx1 = 0.5*(CDIFF_X3(Bx1,k,j,i)    + CDIFF_X3(Bx1,k,j+1,i))*d31;
+        dx1_Bx3 = 0.5*(CDIFF_X1(a13Bx3_local,k,j,i) + CDIFF_X1(a13Bx3_local,k,j+1,i))*d13;
+        Jx2[k][j][i] = (dx3_Bx1 - dx1_Bx3);
+        // #endif
+        dx1_Bx2 = 0.5*(CDIFF_X1(a12Bx3_local,k,j,i) + CDIFF_X1(a12Bx3_local,k,j+1,i))*d12;
+        dx2_Bx1 = FDIFF_X2(Bx1,k,j,i)*d21;
+        Jx3[k][j][i] = (dx1_Bx2 - dx2_Bx1);
+      }
+
+    }else if (dir == KDIR) {
+
+    /* ----------------------------------------------------
+        KDIR: Compute {Jx1, Jx2, Jx3} at i,j,k+1/2 faces.
+      ---------------------------------------------------- */
+
+      box.ib = IOFFSET; box.ie = NX1_TOT-1-IOFFSET;
+      box.jb = JOFFSET; box.je = NX2_TOT-1-JOFFSET;
+      box.kb =       0; box.ke = NX3_TOT-1-KOFFSET;
+
+      BOX_LOOP(&box,k,j,i){
+        d12 = d13 = 1.0/dx1[i];
+        d21 = d23 = 1.0/dx2[j];
+        d31 = d32 = 1.0/dx3[k];
+        
+        // #if COMPONENTS == 3
+        dx2_Bx3 = 0.5*(CDIFF_X2(a23Bx3_local,k,j,i) + CDIFF_X2(a23Bx3_local,k+1,j,i))*d23;
+        dx3_Bx2 = FDIFF_X3(Bx2,k,j,i)*d32;
+        Jx1[k][j][i] = (dx2_Bx3 - dx3_Bx2);
+
+        dx3_Bx1 = FDIFF_X3(Bx1,k,j,i)*d31;
+        dx1_Bx3 = 0.5*(CDIFF_X1(a13Bx3_local,k,j,i) + CDIFF_X1(a13Bx3_local,k+1,j,i))*d13;
+        Jx2[k][j][i] = (dx3_Bx1 - dx1_Bx3);
+        // #endif
+        dx1_Bx2 = 0.5*(CDIFF_X1(a12Bx3_local,k,j,i) + CDIFF_X1(a12Bx3_local,k+1,j,i))*d12;
+        dx2_Bx1 = 0.5*(CDIFF_X2(Bx1,k,j,i)    + CDIFF_X2(Bx1,k+1,j,i))*d21;
+        Jx3[k][j][i] = (dx1_Bx2 - dx2_Bx1);
+      }
+    }
+
+    // [Ema]I free the array, as I allocate it every time
+    FreeArray3D ((void *) a13Bx3_local);
+  }
+#endif
 
 #if WRITE_J1D == YES
 void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D){
@@ -249,11 +515,11 @@ void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D){
 }
 #endif
 
-#if WRITE_J ==  YES
+#if WRITE_J_OLD ==  YES
 #if DIMENSIONS != 2
   #error ComputeJforOutput works only in 2D
 #endif
-void ComputeJforOutput(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
+void ComputeJforOutput_old(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
   int i,j,k;
   // int dir;
   // double ****J_isweep, ****J_jsweep, ****J_isweep_avg, ****J_jsweep_avg;
