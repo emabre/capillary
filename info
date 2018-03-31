@@ -30,7 +30,14 @@ dove dimX (variabile inventata da me ora) è il numero di celle di mesh in direz
 Immagino quindi che lasci due spazi per le ghost cells presso tutti i bordi (i alto e basso, j alto e basso
 k alto e basso).
 
-FORSE È MEGLIO NON USARE GetCurrent()? perchè chissà cosa fa.. forse tocca anche delle variabili globali,
+FORSE È MEGLIO NON USARE GetCurrent() PER FARE OUTPUT? perchè chissà cosa fa.. forse tocca anche delle variabili globali,
 e poi tanto la densità di corrente che calcolo io non sarà mai uguale a quella usata nel codice,
 tanto vale fare una funzinoe apposita per l'output, e magari stamparmi la corrente calcolata
 all'interno del codice solo per fare debugging
+
+FORSE E' MEGLIO CAMBIARE LA FILOSOFIA DEL SETTING DELLE CONDIZIONI AL CONTORNO:
+UNA VOLTA TROVATI GLI INDICI PIÙ VICINI AI PUNTI DI INTERESSI (FINE CAPILLARE, INIZIO ELETTRODO..)
+SI RIDEFINISCONO I VALORI DI QUELLE POSIZIONI IN MODO DA FARLE COINCIDERE CON I CENTRI DELLE celle
+CORRISPONDENTI A QUEGLI INDICI APPENA TROVATI. NON È BANALE DA FARE PERCHÈ BISOGNA CONTROLLARE
+CHE NON SUCCEDA CHE POI CALCOLANDO DELLE DIFFERENZE (CON LA CONFICURAZIONE ATTUALE) NON SI INCAPPI IN
+QUALCHE ZERO (E DIVISIONE PER 0)

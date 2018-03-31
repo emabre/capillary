@@ -224,14 +224,6 @@ void ChangeDumpVar ()
  *************************************************************** */
 {
   Image *image;
-  // SetDumpVar("bphi", VTK_OUTPUT, YES);
-  // SetDumpVar("r_coordI", VTK_OUTPUT, YES);
-  // SetDumpVar("r_coordJ", VTK_OUTPUT, YES);
-  // SetDumpVar("r_coordK", VTK_OUTPUT, YES);
-  // SetDumpVar("rho_ema", VTK_OUTPUT, YES);
-  // SetDumpVar("bx3", VTK_OUTPUT, YES);
-
-
 }
 
 #if WRITE_J2D
@@ -295,9 +287,19 @@ void ChangeDumpVar ()
       // Dimensionalization
       unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
       DOM_LOOP(k, j, i) {
-        Jr[k][j][i] =  Jr[k][j][i]*unit_Mfield*CONST_c/(CONST_PI*4)/UNIT_LENGTH;
-        Jz[k][j][i] =  Jz[k][j][i]*unit_Mfield*CONST_c/(CONST_PI*4)/UNIT_LENGTH;
+        Jr[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
+        Jz[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
       }
+
+      #if MULTIPLE_GHOSTS == YES
+        // I put to zero the current density where I don't need it
+        DOM_LOOP(k,j,i){
+        if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY)) {
+          Jr[k][j][i] = 0.0;
+          Jz[k][j][i] = 0.0;
+        }
+      #endif
+  }
   }
 
   /*-------------------------------------------------------------------------

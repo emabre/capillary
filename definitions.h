@@ -48,3 +48,4 @@
 #define  LIMITER                   DEFAULT
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
+#define  VTK_VECTOR_DUMP           YES

@@ -17,7 +17,7 @@
 #define DZCAP 0.1 /*the electrodes are wide DZCAP cm*/
 #define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 
-// Some usefile constant values in ADIMENSIONAL UNITS
+// Some useful constant values in ADIMENSIONAL UNITS
 double const zcap=ZCAP/UNIT_LENGTH;
 double const dzcap=DZCAP/UNIT_LENGTH;
 double const rcap=RCAP/UNIT_LENGTH;
@@ -55,20 +55,21 @@ void Init (double *us, double x1, double x2, double x3)
       us[iBPHI] = Bwall*x1/rcap;
       us[RHO] = DENS0/UNIT_DENSITY;
     } else {
-      us[iBPHI] = Bwall;
+      // us[iBPHI] = Bwall;
+      us[iBPHI] = 0.0;
     }
   } else if ( zcap-dzcap <= x2 && x2 <= zcap ) {
     // the field linearly decreses in z direction (this is provisory, better electrode have to be implemented)
     if (x1 < rcap) { //in cyl coords x1 is r, x2 is z
       us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     } else {
-      us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
+      // us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
+      us[iBPHI] = 0.0;
     }
   } else if (x2 > zcap) {
     // No field outside capillary
     us[iBPHI] = 0.0;
   }
-  // us[iBPHI] = 0.0;
 
   us[iBZ] = us[iBR] = 0.0;
   us[iVPHI] = us[iVZ] = us[iVR] = 0.0;
@@ -136,7 +137,8 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
 i=idx_rcap+1 |****(ghosts)*****o*******|
 i=idx_rcap   |                        j=idx_zcap+1 (first outside, not ghost)
              |
-i=0          |________________________(axis)
+             |
+i=0          o-------------------------------->(axis)
             j=0    -> z
     // I should not change the grid size exacly on the capillary end!
     */
@@ -206,10 +208,9 @@ i=0          |________________________(axis)
         // Sistemare meglio, usare le posizioni dei punti dove davvero inizia
         //l'elettrodo e le altre cose, anzichè le macro
         // d->Vc[iBPHI][k][j][idx_rcap+1] = Bwall*(1-(grid[1].x_glob[j]-(zcap-dzcap))/dzcap );
-        d->Vc[iBPHI][k][j][idx_rcap+1] = Bwall*\
+        d->Vc[iBPHI][k][j][idx_rcap+1] = Bwall* \
             (1-(grid[1].x_glob[j]-grid[1].x_glob[idx_start_electr])/ \
             (grid[1].x_glob[idx_zcap]-grid[1].x_glob[idx_start_electr]));
-        // d->Vc[iBPHI][k][j][idx_rcap+1] = Bwall;
       }
     }
     /***********************
