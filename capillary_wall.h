@@ -25,7 +25,7 @@ typedef struct CORR{
   int Npoints; // number of points to be corrected (pp will be always <=Npoints-1)
 } Corr;
 
-int extern idx_rcap, idx_zcap, idx_start_electr;
+//int extern idx_rcap, idx_zcap, idx_start_electr;
 
 // For correcting the internal boundary and putting a double ghost on the wall
 // corner cell at the capillary exit
