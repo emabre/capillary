@@ -6,7 +6,7 @@ void WriteCurrForDebug (char *file_basename, Data *d,
 double unit_J, unit_Mfield;
 char *J_name, *file_name;
 Data_Arr J;
-Grid grid_shifted;
+Grid grid_curr;
 FILE *fvtk;
 //This variable keeps trace of the number of times this function has been called
 static int curr_debug_idx=-1;
@@ -36,8 +36,8 @@ sprintf(file_name,"%s.%d.vtk", file_basename, curr_debug_idx);
 fvtk  = OpenBinaryFile(file_name, SZ_Float_Vect, "w");
 
 // Write J to vtk
-WriteVTK_Header (fvtk, &grid_shifted);
-WriteVTK_Vector (fvtk, J, unit_J, J_name, &grid_shifted);
+WriteVTK_Header (fvtk, &grid_curr); NO! rifare anche questa funzione perchè lei usa DOM_LOOP e altr macro, che per me non vanno bene
+WriteVTK_Vector (fvtk, J, unit_J, J_name, &grid_curr);
 
 fclose(fvtk);
 }
