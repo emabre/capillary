@@ -22,6 +22,9 @@ double const zcap=ZCAP/UNIT_LENGTH;
 double const dzcap=DZCAP/UNIT_LENGTH;
 double const rcap=RCAP/UNIT_LENGTH;
 
+// Actual values used inside the simulation for zcap, rcap, dzcap;
+double zcap_real, rcap_real, dzcap_real;
+
 /*Auxiliary function to set the temperature*/
 void setT(const Data *d, double T, int i, int j, int k);
 
@@ -153,16 +156,20 @@ i=0                 o-------------------------------->(axis)
     j_cap_inter_end = find_idx_closest(grid[1].xr_glob, grid[1].gend-grid[1].gbeg+1, zcap);
     j_elec_start = find_idx_closest(grid[1].xl_glob, grid[1].gend-grid[1].gbeg+1, zcap-dzcap);
 
+    rcap_real = grid[0].xr_glob[i_cap_inter_end];
+    zcap_real = grid[1].xr_glob[j_cap_inter_end];
+    dzcap_real = grid[1].xr_glob[j_cap_inter_end]-grid[1].xl_glob[j_elec_start];
+
     print1("\n\n-------------------------------------------------------------------------");
     print1("\nIndexes of remarkable internal bounary points:");
     print1("\ni_cap_inter_end: \t%d", i_cap_inter_end);
     print1("\nj_cap_inter_end: \t%d", j_cap_inter_end);
     print1("\nj_elec_start:    \t%d\n", j_elec_start);
     print1("\nRemarkable points:");
-    print1("\nCapillary radius,      set: %g; \tactual: %g \t(cm)", RCAP, grid[0].xr_glob[i_cap_inter_end]*UNIT_LENGTH);
-    print1("\nCapillary half length, set: %g; \tactual: %g \t(cm)", ZCAP, grid[1].xr_glob[j_cap_inter_end]*UNIT_LENGTH);
-    print1("\nElectrode length,      set: %g; \tactual: %g \t(cm)", DZCAP, (grid[1].xr_glob[j_cap_inter_end]-grid[1].xl_glob[j_elec_start])*UNIT_LENGTH);
-    print1("\n( electrode actual start: z=%g; \t(cm) )",grid[1].xl_glob[j_elec_start]*UNIT_LENGTH);
+    print1("\nCapillary radius,      set: %g; \tactual: %g \t(cm)", RCAP, rcap_real*UNIT_LENGTH);
+    print1("\nCapillary half length, set: %g; \tactual: %g \t(cm)", ZCAP, zcap_real*UNIT_LENGTH);
+    print1("\nElectrode length,      set: %g; \tactual: %g \t(cm)", DZCAP, dzcap_real*UNIT_LENGTH);
+    print1("\n( electrode actual start: z=%g; \t(cm) )",(zcap_real-dzcap_real)*UNIT_LENGTH);
     print1("\n---------------------------------------------------------------------------");
     print1("\n");
 
@@ -235,10 +242,11 @@ i=0                 o-------------------------------->(axis)
 
     /***********************
     Capillary wall r=cost
+    (for RHO, iVR, iVZ, T: I stop at j_cap_inter_end-1 to exclude the corner cell)
     ************************/
     KTOT_LOOP(k) {
-      // rho and v
-      for (j=0; j<=j_cap_inter_end-1; j++) { // I stop at j_cap_inter_end-1 to exclude the corner cell
+      // Fluid "Reflection"
+      for (j=0; j<=j_cap_inter_end-1; j++) {
         d->Vc[RHO][k][j][i_cap_inter_end+1] = d->Vc[RHO][k][j][i_cap_inter_end];
         d->Vc[iVR][k][j][i_cap_inter_end+1] = -(d->Vc[iVR][k][j][i_cap_inter_end]);
         d->Vc[iVZ][k][j][i_cap_inter_end+1] = d->Vc[iVZ][k][j][i_cap_inter_end];
@@ -247,33 +255,32 @@ i=0                 o-------------------------------->(axis)
       for (j=0; j<=j_cap_inter_end-1; j++) {
         setT( d, TWALL, i_cap_inter_end+1, j, k);
       }
-      // magnetic field on capillary wall
+      // Magnetic field on capillary wall (exclued electrode)
       for (j=0; j<j_elec_start; j++) {
         d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall;
       }
-      // magnetic field on electrode (provisory)
+      // Magnetic field on electrode
       for (j=j_elec_start; j<=j_cap_inter_end; j++) {
-        // Sistemare meglio, usare le posizioni dei punti dove davvero inizia
-        //l'elettrodo e le altre cose, anzichè le macro
-        // d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall*(1-(grid[1].x_glob[j]-(zcap-dzcap))/dzcap );
+        /* d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall* \
+             (1-(grid[1].x_glob[j]-grid[1].x_glob[j_elec_start])/ \
+             (grid[1].x_glob[j_cap_inter_end]-grid[1].x_glob[j_elec_start])); */
         d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall* \
-            (1-(grid[1].x_glob[j]-grid[1].x_glob[j_elec_start])/ \
-            (grid[1].x_glob[j_cap_inter_end]-grid[1].x_glob[j_elec_start]));
+               (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap );
       }
     }
     /***********************
     Capillary wall z=cost
+    (I start from i=i_cap_inter_end+2 to exclude corner cell)
     ************************/
     KTOT_LOOP(k) {
       for (i=i_cap_inter_end+2; i<NX1_TOT; i++) { // I start from i_cap_inter_end+2 to exclude the corner cell
-        // v and rho
+        // Fluid "Reflection"
         d->Vc[RHO][k][j_cap_inter_end][i] = d->Vc[RHO][k][j_cap_inter_end+1][i];
         d->Vc[iVR][k][j_cap_inter_end][i] = d->Vc[iVR][k][j_cap_inter_end+1][i];
         d->Vc[iVZ][k][j_cap_inter_end][i] = -(d->Vc[iVZ][k][j_cap_inter_end+1][i]);
-        // magnetic field
+        // Magnetic Field
         d->Vc[iBPHI][k][j_cap_inter_end][i] = 0.0;
-        //temperature
-        // setT( d, TWALL, i_cap_inter_end+1, j, k);
+        // Temperature
         setT( d, TWALL, i, j_cap_inter_end, k);
       }
     }
@@ -421,7 +428,7 @@ i=0                 o-------------------------------->(axis)
     #endif
 
     /*********************
-    Set the flag in the whole wall region
+     Set internal boundary flag on internal boundary points
     **********************/
     /*** At every step I must set the flag, at the program resets it automatically***/
     KTOT_LOOP(k) {
