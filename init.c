@@ -35,6 +35,12 @@ void Init (double *us, double x1, double x2, double x3)
   double curr, Bwall; //Bwall is in code units
   double unit_Mfield, dens0;
 
+  // Just a check that the geometrical settings makes sense:
+  if (DZCAP > ZCAP){
+    print1("\nElectrode is longer than whole capillary!");
+    QUIT_PLUTO(1);
+  }
+
   unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
   dens0 = (DENS0)/UNIT_DENSITY;
 
@@ -63,9 +69,10 @@ void Init (double *us, double x1, double x2, double x3)
     // the field linearly decreses in z direction (this is provisory, better electrode have to be implemented)
     if (x1 < rcap) { //in cyl coords x1 is r, x2 is z
       us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+      // us[iBPHI] = Bwall/2;
     } else {
-      // us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
-      us[iBPHI] = 400;
+      us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
+      // us[iBPHI] = 0.0;
     }
   } else if (x2 > zcap) {
     // No field outside capillary
@@ -118,24 +125,15 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   // print1("\nCurrent from tab: %g", curr);
   Bwall = BIOTSAV_GAUSS_S_A(curr, RCAP)/unit_Mfield;
 
+
   /**********************************
   ***********************************
-  Find the remarkable indexes (if they had not been found in previous calls)
+  Find the remarkable indexes (if this is the first call to this function)
   ***********************************
   ***********************************/
   if (first_call) {
-    // print1("inidici prima di algoritmo ricerca bordi interni\n");
-    /* I find the indexes of the cells closest to the capillary bounds*/
-    i_cap_inter_end = find_idx_closest(grid[0].x_glob, grid[0].gend-grid[0].gbeg+1, rcap);
-    j_cap_inter_end = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, zcap);
-    j_elec_start = find_idx_closest(grid[1].x_glob, grid[1].gend-grid[1].gbeg+1, zcap-dzcap);
-
-    print1("\ni_cap_inter_end: %d,\nj_cap_inter_end: %d,\nj_elec_start: %d\n",i_cap_inter_end,j_cap_inter_end, j_elec_start);
-
-    //print1("grid[0].gbeg:%d, grid[0].gend:%d\n",grid[0].gbeg,grid[0].gend );
-
     /* Capillary:
-                                     j=j_elec_start
+                                     j=j_elec_start (first cell belonging to electrode)
                                       :     j=j_cap_inter_end (ghost)
                r                      :      |
                ^    |                 :      *
@@ -149,6 +147,26 @@ i=0                 o-------------------------------->(axis)
                    j=0           -> z
     // I should not change the grid size exacly on the capillary end!
     */
+
+    /* I find the indexes of the cells closest to the capillary bounds*/
+    i_cap_inter_end = find_idx_closest(grid[0].xr_glob, grid[0].gend-grid[0].gbeg+1, rcap);
+    j_cap_inter_end = find_idx_closest(grid[1].xr_glob, grid[1].gend-grid[1].gbeg+1, zcap);
+    j_elec_start = find_idx_closest(grid[1].xl_glob, grid[1].gend-grid[1].gbeg+1, zcap-dzcap);
+
+    print1("\n\n-------------------------------------------------------------------------");
+    print1("\nIndexes of remarkable internal bounary points:");
+    print1("\ni_cap_inter_end: \t%d", i_cap_inter_end);
+    print1("\nj_cap_inter_end: \t%d", j_cap_inter_end);
+    print1("\nj_elec_start:    \t%d\n", j_elec_start);
+    print1("\nRemarkable points:");
+    print1("\nCapillary radius,      set: %g; \tactual: %g \t(cm)", RCAP, grid[0].xr_glob[i_cap_inter_end]*UNIT_LENGTH);
+    print1("\nCapillary half length, set: %g; \tactual: %g \t(cm)", ZCAP, grid[1].xr_glob[j_cap_inter_end]*UNIT_LENGTH);
+    print1("\nElectrode length,      set: %g; \tactual: %g \t(cm)", DZCAP, (grid[1].xr_glob[j_cap_inter_end]-grid[1].xl_glob[j_elec_start])*UNIT_LENGTH);
+    print1("\n( electrode actual start: z=%g; \t(cm) )",grid[1].xl_glob[j_elec_start]*UNIT_LENGTH);
+    print1("\n---------------------------------------------------------------------------");
+    print1("\n");
+
+    /* Set internal boundary flag on internal boundary points*/
     KTOT_LOOP(k) {
       for (j=0; j<=j_cap_inter_end; j++) {
         for (i=i_cap_inter_end+1; i<NX1_TOT; i++) {
@@ -156,6 +174,23 @@ i=0                 o-------------------------------->(axis)
         }
       }
     }
+
+    /* Flatten the variables to conveniente values in points
+       in internal boundary (except for "ghosts") */
+    /* WARNING!! IN CASE OF PRESSURE/TEMPERATURE TABLE INTERPOLATION ERROR, IT MIGHT
+       BE ADVISABLE TO CHANGE THE VALUES HERE!!*/
+    KTOT_LOOP(k) {
+      for (j=0; j<=j_cap_inter_end-1; j++){
+        for (i=i_cap_inter_end+2; i<NX1_TOT; i++) {
+          d->Vc[RHO][k][j][i] = 1e-2;
+          d->Vc[iVZ][k][j][i] = 1e-3;
+          d->Vc[iVR][k][j][i] = 1e-3;
+          d->Vc[PRS][k][j][i] = 1e-3;
+          d->Vc[iBPHI][k][j][i] = 1e-3;
+        }
+      }
+    }
+
     first_call = 0;
   }
 
