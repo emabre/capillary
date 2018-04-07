@@ -244,6 +244,8 @@ void ChangeDumpVar ()
     RBox box;
     double unit_Mfield;
 
+    print1("MEMENTO: \nattento a come fai la media delle J, siamo in geometria cilindrica, ricontrollare!");
+
     // I do a TOT_LOOP as J is defined in the same way as Vc (in therms of memory),
     // see capillary_wall.c/void alloc_Data(Data *data).
 
@@ -401,10 +403,10 @@ void ChangeDumpVar ()
 
         // #if COMPONENTS == 3
         dx2_Bx3 = 0.5*(CDIFF_X2(a23Bx3_local,k,j,i) + CDIFF_X2(a23Bx3_local,k,j,i+1))*d23;
-        dx3_Bx2 = 0.5*(CDIFF_X3(Bx2,k,j,i)    + CDIFF_X3(Bx2,k,j,i+1)  )*d32;
+        dx3_Bx2 = 0.5*(CDIFF_X3(Bx2,k,j,i)    + CDIFF_X3(Bx2,k,j,i+1)  )*d32; // Useless, it's 0
         Jx1[k][j][i] = (dx2_Bx3 - dx3_Bx2);
 
-        dx3_Bx1 = 0.5*(CDIFF_X3(Bx1,k,j,i) + CDIFF_X3(Bx1,k,j,i+1))*d31;
+        dx3_Bx1 = 0.5*(CDIFF_X3(Bx1,k,j,i) + CDIFF_X3(Bx1,k,j,i+1))*d31; // Useless, it's 0
         dx1_Bx3 = FDIFF_X1(a13Bx3_local,k,j,i)*d13;
         Jx2[k][j][i] = (dx3_Bx1 - dx1_Bx3);
         // #endif

@@ -41,3 +41,7 @@ SI RIDEFINISCONO I VALORI DI QUELLE POSIZIONI IN MODO DA FARLE COINCIDERE CON I 
 CORRISPONDENTI A QUEGLI INDICI APPENA TROVATI. NON È BANALE DA FARE PERCHÈ BISOGNA CONTROLLARE
 CHE NON SUCCEDA CHE POI CALCOLANDO DELLE DIFFERENZE (CON LA CONFICURAZIONE ATTUALE) NON SI INCAPPI IN
 QUALCHE ZERO (E DIVISIONE PER 0)
+
+Verifica valore di densità di corrente:
+Jz: nel mezzo del capillare pare che Jz sia calcolata bene,
+    tuttavia nelle celle in asse e in quelle subito vicino c'è un problema. Per esempio, se il vaore corretto di J sarebbe -1.9e13, in asse ho -1.27e13, e nella cella subito vicino all'asse c'è -2.07e13. Tuttavia Jz1D pare essere sempre corretto...
