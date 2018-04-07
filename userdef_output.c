@@ -6,7 +6,7 @@
 
 #define WRITE_T_MU_NE_IONIZ YES
 #define WRITE_J1D YES
-#define WRITE_J2D YES
+#define WRITE_J2D NO
 
 #if WRITE_J1D == YES
   void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D);
@@ -66,6 +66,8 @@ void ComputeUserVar (const Data *d, Grid *grid)
       double ***T_c_r, ***T_c_z;
     #endif
   #endif
+
+  print1("NX3_TOT=%d, NX2_TOT=%d, NX1_TOT=%d",NX3_TOT, NX2_TOT, NX1_TOT);
 
 /******************************************************/
 /*I allocate space for all the variables of the output*/
@@ -237,12 +239,30 @@ void ChangeDumpVar ()
     #endif
 
     int i,j,k;
-    double J_isweep[3][NX3_TOT][NX2_TOT][NX1_TOT];
-    double J_jsweep[3][NX3_TOT][NX2_TOT][NX1_TOT];
-    double J_isweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
-    double J_jsweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
+    // double J_isweep[3][NX3_TOT][NX2_TOT][NX1_TOT];
+    // double J_jsweep[3][NX3_TOT][NX2_TOT][NX1_TOT];
+    // double J_isweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
+    // double J_jsweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
+    double ****J_isweep, ****J_jsweep, ****J_isweep_avg, ****J_jsweep_avg;
+    double c_area_i, c_area_ip12, c_area_im12;
     RBox box;
     double unit_Mfield;
+
+    // print1("\n ComputeJ2DforOutput:NX3_TOT=%d, NX2_TOT=%d, NX1_TOT=%d",NX3_TOT, NX2_TOT, NX1_TOT);
+    J_isweep = ARRAY_4D(3, NX3_TOT, NX2_TOT, NX1_TOT, double);
+    J_jsweep = ARRAY_4D(3, NX3_TOT, NX2_TOT, NX1_TOT, double);
+    J_isweep_avg = ARRAY_4D(3, NX3_TOT, NX2_TOT, NX1_TOT, double);
+    J_jsweep_avg = ARRAY_4D(3, NX3_TOT, NX2_TOT, NX1_TOT, double);
+    TOT_LOOP(k, j, i) {
+      J_isweep[IDIR][k][j][i] = 0.0;
+      J_isweep[JDIR][k][j][i] = 0.0;
+      J_jsweep[IDIR][k][j][i]= 0.0;
+      J_jsweep[JDIR][k][j][i]= 0.0;
+      J_isweep_avg[IDIR][k][j][i]= 0.0;
+      J_isweep_avg[JDIR][k][j][i]= 0.0;
+      J_jsweep_avg[IDIR][k][j][i]= 0.0;
+      J_jsweep_avg[JDIR][k][j][i]= 0.0;
+    }
 
     print1("MEMENTO: \nattento a come fai la media delle J, siamo in geometria cilindrica, ricontrollare!");
 
@@ -263,14 +283,22 @@ void ChangeDumpVar ()
         J_jsweep[KDIR][k][j][i] = d->J[KDIR][k][j][i];
       }
 
-      // Average d_temp->J inside J
       // Average along i direction
       box.ib =       0; box.ie = NX1_TOT-1-IOFFSET;
       box.jb = JOFFSET; box.je = NX2_TOT-1-JOFFSET;
       box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
       BOX_LOOP(&box,k,j,i){
-        J_isweep_avg[IDIR][k][j][i+1] = 0.5 * (J_isweep[IDIR][k][j][i] + J_isweep[IDIR][k][j][i+1]);
-        J_isweep_avg[JDIR][k][j][i+1] = 0.5 * (J_isweep[JDIR][k][j][i] + J_isweep[JDIR][k][j][i+1]);
+        // J_isweep_avg[IDIR][k][j][i+1] = 0.5 * (J_isweep[IDIR][k][j][i] + J_isweep[IDIR][k][j][i+1]);
+        // J_isweep_avg[JDIR][k][j][i+1] = 0.5 * (J_isweep[JDIR][k][j][i] + J_isweep[JDIR][k][j][i+1]);
+        // Coefficient proportional to the area of competence of J(j,i)
+        c_area_i = grid[IDIR].xr_glob[i+1]*grid[IDIR].xr_glob[i+1] - grid[IDIR].xl_glob[i+1]*grid[IDIR].xl_glob[i+1];
+        // Coefficient proportional to the area of competence of J(j,i+1/2)
+        c_area_ip12 = grid[IDIR].xr_glob[i+1]*grid[IDIR].xr_glob[i+1] - grid[IDIR].x_glob[i+1]*grid[IDIR].x_glob[i+1];
+        // Coefficient proportional to the area of competence of J(j,i-1/2)
+        c_area_im12 = grid[IDIR].x_glob[i+1]*grid[IDIR].x_glob[i+1] - grid[IDIR].xl_glob[i+1]*grid[IDIR].xl_glob[i+1];
+        // Now I do the average
+        J_isweep_avg[IDIR][k][j][i+1] = (c_area_ip12*J_isweep[IDIR][k][j][i+1]-c_area_im12*J_isweep[IDIR][k][j][i])/c_area_i;
+        J_isweep_avg[JDIR][k][j][i+1] = (c_area_ip12*J_isweep[JDIR][k][j][i+1]-c_area_im12*J_isweep[JDIR][k][j][i])/c_area_i;
       }
       // Average along j direction
       box.ib = IOFFSET; box.ie = NX1_TOT-1-IOFFSET;
@@ -293,14 +321,12 @@ void ChangeDumpVar ()
         Jz[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
       }
 
-      #if MULTIPLE_GHOSTS == YES
-        // I put to zero the current density where I don't need it
-        DOM_LOOP(k,j,i){
-        if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY)) {
-          Jr[k][j][i] = 0.0;
-          Jz[k][j][i] = 0.0;
-        }
-      #endif
+      // I put to zero the current density where I don't need it
+      DOM_LOOP(k,j,i){
+      if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY)) {
+        Jr[k][j][i] = 0.0;
+        Jz[k][j][i] = 0.0;
+      }
   }
   }
 
