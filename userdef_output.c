@@ -5,11 +5,18 @@
 #include "prototypes.h"
 
 #define WRITE_T_MU_NE_IONIZ YES
-#define WRITE_J1D YES
+#define WRITE_J1D NO
 #define WRITE_J2D NO
+#define WRITE_J YES
 
 #if WRITE_J1D == YES
-  void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D);
+  void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz);
+#endif
+
+// This is a test
+#if WRITE_J == YES
+  void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz);
+  void ComputeJrforOutput(const Data *d, Grid *grid, double ***Jr);
 #endif
 
 #if WRITE_J_OLD == YES
@@ -36,12 +43,11 @@ void ComputeUserVar (const Data *d, Grid *grid)
   int i, j, k;
   double ***interBound;
 
-  #if WRITE_J1D == YES
-    double ***Jz1D;
+  #if WRITE_J1D == YES || WRITE_J == YES
+    double ***Jz;
   #endif
   #if WRITE_J == YES
     double ***Jr;
-    double ***Jz;
   #endif
   #if  WRITE_J2D == YES
     double ***Jr;
@@ -95,8 +101,8 @@ void ComputeUserVar (const Data *d, Grid *grid)
       ne = GetUserVar("ne");
     #endif
   #endif
-  #if WRITE_J1D == YES
-    Jz1D = GetUserVar("Jz1D");
+  #if WRITE_J1D == YES || WRITE_J == YES
+    Jz = GetUserVar("Jz");
   #endif
   #if WRITE_J2D == YES
     Jr = GetUserVar("Jr");
@@ -105,7 +111,6 @@ void ComputeUserVar (const Data *d, Grid *grid)
   #endif
   #if WRITE_J == YES
     Jr = GetUserVar("Jr");
-    Jz = GetUserVar("Jz");
   #endif
 
 /******************************************************/
@@ -200,8 +205,11 @@ void ComputeUserVar (const Data *d, Grid *grid)
       }
     #endif
   #endif
-  #if WRITE_J1D == YES
-    ComputeJ1DforOutput(d, grid, Jz1D);
+  #if WRITE_J1D == YES || WRITE_J
+    ComputeJ1DforOutput(d, grid, Jz);
+  #endif
+  #if WRITE_J
+    ComputeJrforOutput(d, grid, Jr);
   #endif
 
   #if WRITE_J2D == YES
@@ -511,38 +519,76 @@ void ChangeDumpVar ()
   }
 #endif
 
-#if WRITE_J1D == YES
-void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz1D){
-  int i, j, k;
-  // double Jstagg[NX3_TOT-1][NX2_TOT-1][NX1_TOT-1];
-  double *r, ***B;
-  double Jleft, Jright;
-  // RBox box;
-  double unit_Mfield;
+#if WRITE_J1D == YES || WRITE_J == YES
+  void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz){
+    int i, j, k;
+    double *r, ***B;
+    double Jleft, Jright;
+    // RBox box;
+    double unit_Mfield;
 
-  unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
 
-  r = grid[IDIR].x;
-  // x = grid[0].x_glob;
-  // print1("for 0, gbeg: %d, gend: %d", grid[IDIR].gbeg, grid[IDIR].gend);
-  B = d->Vc[iBPHI];
+    r = grid[IDIR].x;
+    // x = grid[0].x_glob;
+    // print1("for 0, gbeg: %d, gend: %d", grid[IDIR].gbeg, grid[IDIR].gend);
+    B = d->Vc[iBPHI];
 
-  DOM_LOOP(k,j,i){
-    if (i == IBEG){
-      Jz1D[k][j][i] = 2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
+    DOM_LOOP(k,j,i){
+      if (i == IBEG){
+        Jz[k][j][i] = -2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
+      }
+      else if (i == IEND){
+        Jz[k][j][i] = -2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
+      } else {
+        Jleft = -2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
+        Jright = -2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
+        Jz[k][j][i] = 0.5*(Jleft+Jright);
+      }
+      // Now I make Jz dimensional
+      Jz[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
+      // I put to zero the current density where I don't need it
+      DOM_LOOP(k,j,i){
+        if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY))
+          Jz[k][j][i] = 0.0;
+      }
     }
-    else if (i == IEND){
-      Jz1D[k][j][i] = 2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
-    } else {
-      Jleft = 2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
-      Jright = 2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
-      Jz1D[k][j][i] = 0.5*(Jleft+Jright);
-    }
-    // Now I make Jz1D dimensional
-    Jz1D[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
   }
+#endif
+#if WRITE_J == YES
+  void ComputeJrforOutput(const Data *d, Grid *grid, double ***Jr) {
+    int i, j, k;
+    double *z, ***B;
+    double Jleft, Jright;
+    // RBox box;
+    double unit_Mfield;
 
-}
+    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+
+    z = grid[JDIR].x;
+    // x = grid[0].x_glob;
+    // print1("for 0, gbeg: %d, gend: %d", grid[IDIR].gbeg, grid[IDIR].gend);
+    B = d->Vc[iBPHI];
+
+    DOM_LOOP(k,j,i){
+      if (i == IBEG){
+        Jr[k][j][i] = (B[k][j+1][i]-B[k][j][i])/(z[j+1]-z[j]);
+      }
+      else if (i == IEND){
+        Jr[k][j][i] = (B[k][j][i]-B[k][j-1][i])/(z[j+1]-z[j]);
+      } else {
+        Jleft = (B[k][j][i]-B[k][j-1][i])/(z[j]-z[j-1]);
+        Jright = (B[k][j+1][i]-B[k][j][i])/(z[j+1]-z[j]);
+        Jr[k][j][i] = 0.5*(Jleft+Jright);
+      }
+      // Now I make Jr dimensional
+      Jr[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
+    }
+    DOM_LOOP(k,j,i){
+      if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY))
+        Jr[k][j][i] = 0.0;
+    }
+  }
 #endif
 
 #if WRITE_J_OLD ==  YES
