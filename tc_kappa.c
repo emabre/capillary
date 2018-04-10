@@ -7,9 +7,15 @@
 void TC_kappa(double *v, double x1, double x2, double x3,
               double *kpar, double *knor, double *phi)
 {
-  double mu, z, T;
-  double k;
-  double unit_Mfield;
+  double mu=0.0, z=0.0, T=0.0;
+  double k=0.0;
+  // double unit_Mfield;
+
+  if (GetPV_Temperature(v, &(T) )!=0) {
+    print1("\nTC_kappa:[Ema] Error computing temperature!");
+  }
+  // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
+  GetMu(T, v[RHO], &mu);
 
   if (g_inputParam[KAPPA_GAUBOB] > 0.0) {
     
@@ -18,15 +24,9 @@ void TC_kappa(double *v, double x1, double x2, double x3,
     *knor = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
 
   } else {
-
-    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
-    if (GetPV_Temperature(v, &(T) )!=0) {
-      print1("\nResistive_eta:[Ema] Error computing temperature!");
-    }
-    // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
-    GetMu(T, v[RHO], &mu);
     z = 1/mu - 1;
 
+    // unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
     // k = thermCond_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
     k = thermCond_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
 

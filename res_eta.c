@@ -7,8 +7,8 @@
 void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double *eta)
 {
   const double eta0 = 4*CONST_PI/(CONST_c*CONST_c)*UNIT_VELOCITY*UNIT_LENGTH;/*unit of eta for adimensionalization*/
-  double mu, z, T;
-  double res;
+  double mu=0.0, z=0.0, T=0.0;
+  double res=0.0;
   // double unit_Mfield;
 
   if (g_inputParam[ETAX_GAU] > 0.0) {
