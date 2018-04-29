@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             EXPLICIT
-#define  THERMAL_CONDUCTION      EXPLICIT
+#define  THERMAL_CONDUCTION      SUPER_TIME_STEPPING
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
