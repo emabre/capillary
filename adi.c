@@ -16,8 +16,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         first_call=0;
 
         // Count the lines in the domain
-        Ni = CountLines(d, grid, IDIR);
-        Nj = CountLines(d, grid, JDIR);
+        // Ni = CountLines(d, grid, IDIR);
+        // Nj = CountLines(d, grid, JDIR);
+        Ni=2;
+        Nj=4;
 
         print1("\nNumber of lines in IDIR:%d", Ni);
         print1("\nNumber of lines in JDIR:%d", Nj);
@@ -54,42 +56,42 @@ void InitializeLines(Lines *lines, int N){
     lines->rbound = ARRAY_1D(N, Bcs);
 }
 
-int CountLines(Data *d, Grid *grid, int dir) {
-    int k,j,i;
-    int N=0;
-    int now_on_bound, this_on_bound;
+// int CountLines(Data *d, Grid *grid, int dir) {
+//     int k,j,i;
+//     int N=0;
+//     int now_on_bound, this_on_bound;
 
-    if (dir==IDIR) {
-        // I am sweeping i direction
-        KDOM_LOOP(k)
-            JDOM_LOOP(j){
-                now_on_bound = 1;
-                IDOM_LOOP(i) {
-                    this_on_bound = (int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY);
-                    if (!now_on_bound && this_on_bound)
-                        N++;
-                    now_on_bound = this_on_bound;
-                }
-                if (!now_on_bound) // this means the last line ends with the usual domain ghost cell
-                    N++;
-            }
-    } else if (dir == JDIR) {
-        KDOM_LOOP(k)
-            IDOM_LOOP(i){
-                now_on_bound = 1;
-                JDOM_LOOP(j) {
-                    this_on_bound = (int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY);
-                    if (!now_on_bound && this_on_bound)
-                        N++;
-                    now_on_bound = this_on_bound;
-                }
-            if (!now_on_bound) // this means the last line ends with the usual domain ghost cell
-                    N++;
-            }
-    } else {
-        print1("\nWrong choice for dir!");
-        QUIT_PLUTO(1);
-    }
+//     if (dir==IDIR) {
+//         // I am sweeping i direction
+//         KDOM_LOOP(k)
+//             JDOM_LOOP(j){
+//                 now_on_bound = 1;
+//                 IDOM_LOOP(i) {
+//                     this_on_bound = (int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY);
+//                     if (!now_on_bound && this_on_bound)
+//                         N++;
+//                     now_on_bound = this_on_bound;
+//                 }
+//                 if (!now_on_bound) // this means the last line ends with the usual domain ghost cell
+//                     N++;
+//             }
+//     } else if (dir == JDIR) {
+//         KDOM_LOOP(k)
+//             IDOM_LOOP(i){
+//                 now_on_bound = 1;
+//                 JDOM_LOOP(j) {
+//                     this_on_bound = (int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY);
+//                     if (!now_on_bound && this_on_bound)
+//                         N++;
+//                     now_on_bound = this_on_bound;
+//                 }
+//             if (!now_on_bound) // this means the last line ends with the usual domain ghost cell
+//                     N++;
+//             }
+//     } else {
+//         print1("\nWrong choice for dir!");
+//         QUIT_PLUTO(1);
+//     }
 
-    return N;    
-}
+//     return N;    
+// }

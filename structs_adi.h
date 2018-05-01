@@ -16,4 +16,4 @@ typedef struct LINES{
 } Lines;
 
 void initialize_Lines(Lines *, int);
-int CountLines(Data *d, Grid *grid, int dir);
+// int CountLines(Data *d, Grid *grid, int dir);

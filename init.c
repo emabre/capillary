@@ -7,8 +7,6 @@
 #include "capillary_wall.h"
 #include "current_table.h"
 
-// #define BWALL 1.0e-10 // B at the 
-// #define BWALL 1.1*2.758e-1 // old : 0.1*2.758e-1
 #define T0 4600.0
 #define TWALL 4600.0
 #define DENS0 2.5e-6
