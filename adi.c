@@ -5,84 +5,100 @@ and thermal conduction) terms with the Alternating Directino Implicit algorithm*
 #include "capillary_wall.h"
 
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
-    static int first_call=1;
-    int i,j,k, Ni, Nj;
-    static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
+  static int first_call=1;
+  int i,j,k;
+  static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
 
-    /**********************************
-    Find the remarkable indexes (if they had not been found before)
-    ***********************************/
-    if (capillary_not_set) {
-        if (SetRemarkableIdxs(grid)){
-            print1("\nError while setting remarkable points!");
-            QUIT_PLUTO(1);
-        }
+  /**********************************
+  Find the remarkable indexes (if they had not been found before)
+  ***********************************/
+  if (capillary_not_set) {
+    if (SetRemarkableIdxs(grid)){
+      print1("\nError while setting remarkable points!");
+      QUIT_PLUTO(1);
     }
+  }
+  if (first_call) {
+    GeometryADI(lines, grid);
+    first_call=0;
+  }
 
-    // print1("\nI am inside the adi function\n");
-    if (first_call) {
-        Ni=2;
-        Nj=4;
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
 
-        print1("\nNumber of lines in IDIR:%d", Ni);
-        print1("\nNumber of lines in JDIR:%d", Nj);
-        
-        InitializeLines(&lines[IDIR], Ni);
-        InitializeLines(&lines[JDIR], Nj);
-        first_call=0;
-    }
     
+
+    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+      // Include eta*J^2 source term
+      // ...
+    #endif
+
+  #endif
+
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+
+  #endif
 }
 
 
-/*Function to initialize lines, I hope this kind of initialization is ok and 
-there are no problems with data continuity and similar things*/
+/****************************************************************************
+Function to initialize lines, I hope this kind of initialization is ok and 
+there are no problems with data continuity and similar things
+*****************************************************************************/
 void InitializeLines(Lines *lines, int N){
-
-    lines->dom_line_idx = ARRAY_1D(N, int);
-    lines->lidx = ARRAY_1D(N, int);
-    lines->ridx = ARRAY_1D(N, int);
-    lines->N = N;
-    lines->lbound = ARRAY_1D(N, Bcs);
-    lines->rbound = ARRAY_1D(N, Bcs);
+  lines->dom_line_idx = ARRAY_1D(N, int);
+  lines->lidx = ARRAY_1D(N, int);
+  lines->ridx = ARRAY_1D(N, int);
+  lines->N = N;
+  lines->lbound = ARRAY_1D(N, Bcs);
+  lines->rbound = ARRAY_1D(N, Bcs);
 }
 
-// int CountLines(Data *d, Grid *grid, int dir) {
-//     int k,j,i;
-//     int N=0;
-//     int now_on_bound, this_on_bound;
+/****************************************************************************
+Function to build geometrical parameters belonging to lines
+*****************************************************************************/
+void GeometryADI(Lines *lines, Grid *grid){
+  int i,j;
 
-//     if (dir==IDIR) {
-//         // I am sweeping i direction
-//         KDOM_LOOP(k)
-//             JDOM_LOOP(j){
-//                 now_on_bound = 1;
-//                 IDOM_LOOP(i) {
-//                     this_on_bound = (int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY);
-//                     if (!now_on_bound && this_on_bound)
-//                         N++;
-//                     now_on_bound = this_on_bound;
-//                 }
-//                 if (!now_on_bound) // this means the last line ends with the usual domain ghost cell
-//                     N++;
-//             }
-//     } else if (dir == JDIR) {
-//         KDOM_LOOP(k)
-//             IDOM_LOOP(i){
-//                 now_on_bound = 1;
-//                 JDOM_LOOP(j) {
-//                     this_on_bound = (int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY);
-//                     if (!now_on_bound && this_on_bound)
-//                         N++;
-//                     now_on_bound = this_on_bound;
-//                 }
-//             if (!now_on_bound) // this means the last line ends with the usual domain ghost cell
-//                     N++;
-//             }
-//     } else {
-//         print1("\nWrong choice for dir!");
-//         QUIT_PLUTO(1);
-//     }
+  // Use the number of rows and cols internal to the domain to define adi lines
+  InitializeLines(&lines[IDIR], NX2); // I have NX2 lines sweeping the i-direction
+  InitializeLines(&lines[JDIR], NX1); // I have NX1 lines sweeping the j-direction
 
-//     return N;    
-// }
+  // A couple of cross-checks:
+  if (2*grid[JDIR].nghost+NX2 != NX2_TOT) {
+    print1("Something wrong with the line definition/not understood how the grid[DIR] is made!");
+    QUIT_PLUTO(1);
+  }
+  if (2*grid[IDIR].nghost+NX1 != NX1_TOT) {
+    print1("Something wrong with the line definition/not understood how the grid[JDIR] is made!");
+    QUIT_PLUTO(1);
+  }
+
+  // Use remarkable capillary indexes to define the lines
+  for (j=0;j<lines[IDIR].N;j++)
+    lines[IDIR].dom_line_idx[j] = j + grid[JDIR].nghost;
+  for (j=0;j<lines[IDIR].N;j++){
+    lines[IDIR].lidx[j] = grid[IDIR].nghost;
+    if (lines[IDIR].dom_line_idx[j] <= j_cap_inter_end){
+      lines[IDIR].ridx[j] = i_cap_inter_end;
+    } else {
+      lines[IDIR].ridx[j] = NX1_TOT - 1 - grid[IDIR].nghost;
+    }
+  }
+  for (i=0;i<lines[JDIR].N;i++)
+    lines[JDIR].dom_line_idx[i] = i + grid[IDIR].nghost;
+  for (i=0;i<lines[JDIR].N;i++){
+    lines[JDIR].ridx[i] = grid[JDIR].nghost;
+    if (lines[JDIR].dom_line_idx[i] <= i_cap_inter_end){
+      lines[JDIR].lidx[i] = grid[JDIR].nghost;
+    } else {
+      lines[JDIR].lidx[i] = j_cap_inter_end+1;
+    }
+  }
+}
+
+/****************************************************************************
+Function to build the bcs of lines
+*****************************************************************************/
+BoundaryADI() {
+  
+}

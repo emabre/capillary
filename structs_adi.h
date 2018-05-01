@@ -4,8 +4,9 @@
 #define NEUMANN_HOM  2
 
 typedef struct BCS{
-  int bc_kind;     /**< Kind of boundary condition*/
-  double bc_values[2];   /**< Values necessary to define the boundary condition*/
+  int bc_kind;     /**< Kind of boundary condition: 1=Dirichlet, 2=Hom.Neumann*/
+  double bc_values[2];   /**< Values necessary to define the boundary condition
+  // (in bc_values[] only element 0 is used now, in future maybe also 1, for Robin conditions)*/
 } Bcs;
 
 typedef struct LINES{
@@ -16,4 +17,4 @@ typedef struct LINES{
 } Lines;
 
 void initialize_Lines(Lines *, int);
-// int CountLines(Data *d, Grid *grid, int dir);
+void GeometryADI(Lines *lines, Grid *grid);
