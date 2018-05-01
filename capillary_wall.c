@@ -5,13 +5,66 @@
 //debug macro
 // #define DBG_FIND_CLOSEST
 
-// int idx_rcap = 0 ;
-// int idx_zcap = 0;
-// int idx_start_electr = 0;
+double const zcap = ZCAP/UNIT_LENGTH;
+double const dzcap = DZCAP/UNIT_LENGTH;
+double const rcap = RCAP/UNIT_LENGTH;
+// Actual values used inside the simulation for zcap, rcap, dzcap;
+double zcap_real, rcap_real, dzcap_real;
+int capillary_not_set = 1;
+int i_cap_inter_end, j_cap_inter_end, j_elec_start;
 
 Corr d_correction[3] = { {},{},{} };
 
+/******************************************************************/
+/* Sets the remarkable indexes of the grid for the capillary*/
+/******************************************************************/
+int SetRemarkableIdxs(Grid *grid){
+
+  /* Capillary:
+                                     j=j_elec_start (first cell belonging to electrode)
+                                      :     j=j_cap_inter_end (ghost)
+               r                      :      |
+               ^    |                 :      *
+               |    |       wall      :      *
+                    |                 v      *
+i=i_cap_inter_end+1 |****(ghosts)*****o*******|
+i=i_cap_inter_end   |                        j=j_cap_inter_end+1 (first outside, not ghost)
+                    |
+                    |
+i=0                 o-------------------------------->(axis)
+                   j=0           -> z
+    // I should not change the grid size exacly on the capillary end!
+    */
+
+  /* I find the indexes of the cells closest to the capillary bounds*/
+  i_cap_inter_end = find_idx_closest(grid[0].xr_glob, grid[0].gend-grid[0].gbeg+1, rcap);
+  j_cap_inter_end = find_idx_closest(grid[1].xr_glob, grid[1].gend-grid[1].gbeg+1, zcap);
+  j_elec_start = find_idx_closest(grid[1].xl_glob, grid[1].gend-grid[1].gbeg+1, zcap-dzcap);
+
+  rcap_real = grid[0].xr_glob[i_cap_inter_end];
+  zcap_real = grid[1].xr_glob[j_cap_inter_end];
+  dzcap_real = grid[1].xr_glob[j_cap_inter_end]-grid[1].xl_glob[j_elec_start];
+
+  print1("\n\n-------------------------------------------------------------------------");
+  print1("\nIndexes of remarkable internal bounary points:");
+  print1("\ni_cap_inter_end: \t%d", i_cap_inter_end);
+  print1("\nj_cap_inter_end: \t%d", j_cap_inter_end);
+  print1("\nj_elec_start:    \t%d\n", j_elec_start);
+  print1("\nRemarkable points:");
+  print1("\nCapillary radius,      set: %g; \tactual: %g \t(cm)", RCAP, rcap_real*UNIT_LENGTH);
+  print1("\nCapillary half length, set: %g; \tactual: %g \t(cm)", ZCAP, zcap_real*UNIT_LENGTH);
+  print1("\nElectrode length,      set: %g; \tactual: %g \t(cm)", DZCAP, dzcap_real*UNIT_LENGTH);
+  print1("\n( electrode actual start: z=%g; \t(cm) )",(zcap_real-dzcap_real)*UNIT_LENGTH);
+  print1("\n---------------------------------------------------------------------------");
+  print1("\n");
+  
+  capillary_not_set = 0;
+  return 0;
+}
+
+/******************************************************************/
 /*Finds the index of the element in vec closest to the value of v*/
+/******************************************************************/
 int find_idx_closest(double *vec, int Nvec, double v){
   int i, i_mindiff;
   double diff;

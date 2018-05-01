@@ -1,23 +1,26 @@
 /*Functions and utilities for integration of parabolic (currently resistive
 and thermal conduction) terms with the Alternating Directino Implicit algorithm*/
-
 #include "pluto.h"
 #include "structs_adi.h"
+#include "capillary_wall.h"
 
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     static int first_call=1;
     int i,j,k, Ni, Nj;
     static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
 
+    /**********************************
+    Find the remarkable indexes (if they had not been found before)
+    ***********************************/
+    if (capillary_not_set) {
+        if (SetRemarkableIdxs(grid)){
+            print1("\nError while setting remarkable points!");
+            QUIT_PLUTO(1);
+        }
+    }
+
     // print1("\nI am inside the adi function\n");
     if (first_call) {
-        // This part is not optimized, I don't care since it runs only once per code run
-        // print1("I do the first call loop");
-        first_call=0;
-
-        // Count the lines in the domain
-        // Ni = CountLines(d, grid, IDIR);
-        // Nj = CountLines(d, grid, JDIR);
         Ni=2;
         Nj=4;
 
@@ -26,20 +29,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         
         InitializeLines(&lines[IDIR], Ni);
         InitializeLines(&lines[JDIR], Nj);
-
-
-        // lines[0].dom_line_idx[3] = 4;
-
-        // Find out how the domain is made
-        // DOM_LOOP(k,j,i){
-        //     if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY)) {
-        //         interBound[k][j][i] = 33.3; //Just a conventional number
-        //     } else {
-        //         interBound[k][j][i] = 0.0; //Just a conventional number
-        //     }
-        // }
+        first_call=0;
     }
-    // print1("\nlines[0].dom_line_idx[3]=%d\n", lines[0].dom_line_idx[3]);
     
 }
 

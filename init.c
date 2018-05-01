@@ -7,24 +7,6 @@
 #include "capillary_wall.h"
 #include "current_table.h"
 
-#define T0 4600.0
-#define TWALL 4600.0
-#define DENS0 2.5e-6
-// #define DENS0 2.5e-7
-#define RCAP 0.05
-#define DZCAP 0.1 /*the electrodes are wide DZCAP cm*/
-// #define DZCAP 0.06
-#define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
-// #define ZCAP 0.2
-
-// Some useful constant values in ADIMENSIONAL UNITS
-double const zcap=ZCAP/UNIT_LENGTH;
-double const dzcap=DZCAP/UNIT_LENGTH;
-double const rcap=RCAP/UNIT_LENGTH;
-
-// Actual values used inside the simulation for zcap, rcap, dzcap;
-double zcap_real, rcap_real, dzcap_real;
-
 /*Auxiliary function to set the temperature*/
 void setT(const Data *d, double T, int i, int j, int k);
 
@@ -117,7 +99,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   double mu;
   double unit_Mfield;
   static int first_call=1;
-  static int i_cap_inter_end=-1, j_cap_inter_end=-1,j_elec_start=-1;
+  // static int i_cap_inter_end=-1, j_cap_inter_end=-1,j_elec_start=-1;
 
   unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
 
@@ -128,51 +110,16 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   // print1("\nCurrent from tab: %g", curr);
   Bwall = BIOTSAV_GAUSS_S_A(curr, RCAP)/unit_Mfield;
 
-
   /**********************************
-  ***********************************
-  Find the remarkable indexes (if this is the first call to this function)
-  ***********************************
+  Find the remarkable indexes (if they had not been found before)
   ***********************************/
+  if (capillary_not_set) {
+    if (SetRemarkableIdxs(grid)){
+      print1("\nError while setting remarkable points!");
+      QUIT_PLUTO(1);
+    }
+  }
   if (first_call) {
-    /* Capillary:
-                                     j=j_elec_start (first cell belonging to electrode)
-                                      :     j=j_cap_inter_end (ghost)
-               r                      :      |
-               ^    |                 :      *
-               |    |       wall      :      *
-                    |                 v      *
-i=i_cap_inter_end+1 |****(ghosts)*****o*******|
-i=i_cap_inter_end   |                        j=j_cap_inter_end+1 (first outside, not ghost)
-                    |
-                    |
-i=0                 o-------------------------------->(axis)
-                   j=0           -> z
-    // I should not change the grid size exacly on the capillary end!
-    */
-
-    /* I find the indexes of the cells closest to the capillary bounds*/
-    i_cap_inter_end = find_idx_closest(grid[0].xr_glob, grid[0].gend-grid[0].gbeg+1, rcap);
-    j_cap_inter_end = find_idx_closest(grid[1].xr_glob, grid[1].gend-grid[1].gbeg+1, zcap);
-    j_elec_start = find_idx_closest(grid[1].xl_glob, grid[1].gend-grid[1].gbeg+1, zcap-dzcap);
-
-    rcap_real = grid[0].xr_glob[i_cap_inter_end];
-    zcap_real = grid[1].xr_glob[j_cap_inter_end];
-    dzcap_real = grid[1].xr_glob[j_cap_inter_end]-grid[1].xl_glob[j_elec_start];
-
-    print1("\n\n-------------------------------------------------------------------------");
-    print1("\nIndexes of remarkable internal bounary points:");
-    print1("\ni_cap_inter_end: \t%d", i_cap_inter_end);
-    print1("\nj_cap_inter_end: \t%d", j_cap_inter_end);
-    print1("\nj_elec_start:    \t%d\n", j_elec_start);
-    print1("\nRemarkable points:");
-    print1("\nCapillary radius,      set: %g; \tactual: %g \t(cm)", RCAP, rcap_real*UNIT_LENGTH);
-    print1("\nCapillary half length, set: %g; \tactual: %g \t(cm)", ZCAP, zcap_real*UNIT_LENGTH);
-    print1("\nElectrode length,      set: %g; \tactual: %g \t(cm)", DZCAP, dzcap_real*UNIT_LENGTH);
-    print1("\n( electrode actual start: z=%g; \t(cm) )",(zcap_real-dzcap_real)*UNIT_LENGTH);
-    print1("\n---------------------------------------------------------------------------");
-    print1("\n");
-
     /* Set internal boundary flag on internal boundary points*/
     KTOT_LOOP(k) {
       for (j=0; j<=j_cap_inter_end; j++) {
@@ -181,7 +128,6 @@ i=0                 o-------------------------------->(axis)
         }
       }
     }
-
     /* Flatten the variables to conveniente values in points
        in internal boundary (except for "ghosts") */
     /* WARNING!! IN CASE OF PRESSURE/TEMPERATURE TABLE INTERPOLATION ERROR, IT MIGHT
@@ -197,7 +143,6 @@ i=0                 o-------------------------------->(axis)
         }
       }
     }
-
     first_call = 0;
   }
 

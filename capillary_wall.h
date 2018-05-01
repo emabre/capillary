@@ -3,6 +3,25 @@
 
 #define MULTIPLE_GHOSTS YES
 
+/**********************************************************/
+/* CAPILLARY DISCHARGE SETTINGS */
+#define T0 4600.0
+#define TWALL 4600.0
+#define DENS0 2.5e-6
+// #define DENS0 2.5e-7
+#define RCAP 0.05
+#define DZCAP 0.1 /*the electrodes are wide DZCAP cm*/
+// #define DZCAP 0.06
+#define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
+// #define ZCAP 0.2
+/**********************************************************/
+
+double extern const zcap, dzcap, rcap;
+// Actual values used inside the simulation for zcap, rcap, dzcap;
+double extern zcap_real, rcap_real, dzcap_real;
+int extern capillary_not_set;
+int extern i_cap_inter_end, j_cap_inter_end, j_elec_start;
+
 /* ********************************************************************* */
 /*! [Ema]The Corr structure contains the correction to the solution 3D array
  to apply when advancing different directions (useful to have multiple ghost cells
@@ -31,6 +50,7 @@ typedef struct CORR{
 // corner cell at the capillary exit
 Corr extern d_correction[3];
 
+int SetRemarkableIdxs(Grid *grid);
 int find_idx_closest(double *vec, int Nvec, double v);
 
 // void alloc_Data(Data *data);
