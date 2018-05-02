@@ -6,9 +6,16 @@ and thermal conduction) terms with the Alternating Directino Implicit algorithm*
 
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static int first_call=1;
-  int i,j,k;
+  int i,j,k, nv;
   static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
-  static double **Ip, **Im, **Jp, **Jm;
+  static double **Ip, **Im, **Jp, **Jm, **C;
+  static double **Ba1, **Ba2, **Bb1, **Bb2, **Ta1, **Ta2, **Tb1, **Tb2;
+  static double **T, **B;
+  static double **sourcea1, **sourcea2, **sourceb1, **sourceb2;
+  // static double **dEdT;
+  double dt;
+  double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
+  double ****V;
 
   // Find the remarkable indexes (if they had not been found before)
   if (capillary_not_set) {
@@ -24,15 +31,45 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     Im = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
     Jp = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
     Jm = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
+    C = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
+    Ba1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Ba2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Bb1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Bb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Ta1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Ta2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Tb1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Tb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    T = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    B = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    // dEdT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     first_call=0;
   }
 
-  BuildIJ(d, grid, Ip, Im, Jp, Jm);
+  // Build a handy magnetic field matrix
+  DOM_LOOP(k,j,i)
+    B[j][i] = d->Uc[BX3][k][j][i];
 
-  BoundaryADI(); // Get bcs at t
+  // Build the temperature matrix
+  #if EOS==IDEAL
+      DOM_LOOP(k,j,i) T[j][i] = d->Vc[PRS][k][j][i]/V[RHO][k][j][i];
+    #elif EOS==PVTE_LAW
+      DOM_LOOP(k,j,i) {
+        for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
+        if (GetPV_Temperature(v, &(T[j][i]) )!=0) {
+          print1("ParabolicRHS:[Ema] Error computing temperature!\n");
+        }
+        T[j][i] = T[j][i] / KELVIN;
+      }
+    #else
+      print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
+    #endif
+
   /**********************************
-   Explicit update sweeping IDIR
+   (a.1) Explicit update sweeping IDIR
   **********************************/
+  BoundaryADI(); // Get bcs at t
+  BuildIJ(d, grid, Ip, Im, Jp, Jm, C);
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
 
 
@@ -40,32 +77,34 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       // Include eta*J^2 source term
       // ...
     #endif
+    ExplicitUpdate( Ta1, T, Jp, Jm, C, lines, sourcea1, 0.5*dt, TDIFF);
 
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-
+    ExplicitUpdate( Ba1, B, Jp, Jm, C, lines, NULL, 0.5*dt, BDIFF);
   #endif
 
   /**********************************
-   Implicit update sweeping JDIR
+   (a.2) Implicit update sweeping JDIR
   **********************************/
   BoundaryADI(); // Get bcs at half step (not exaclty at t+0.5*dt)
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
 
-    
+  // sweep direction IDIR
+  // ..
+    #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+      #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+        // Include eta*J^2 source term
+        // ...
+      #endif
+      ImplicitUpdate( Ta2, Ta1, Jp, Jm, C, lines, sourcea2, 0.5*dt, TDIFF);
 
+    #endif
     #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-      // Include eta*J^2 source term
-      // ...
+      ImplicitUpdate( Ba2, Ba1, Jp, Jm, C, lines, NULL, 0.5*dt, BDIFF);
     #endif
 
-  #endif
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-
-  #endif
-
   /**********************************
-   Explicit update sweeping JDIR
+   (b.1) Explicit update sweeping JDIR
   **********************************/
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
 
@@ -82,7 +121,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #endif
 
   /**********************************
-   Implicit update sweeping IDIR
+   (b.2) Implicit update sweeping IDIR
   **********************************/
   BoundaryADI(); // Get bcs at t+dt
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
@@ -98,6 +137,24 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
 
   #endif
+
+  /***********************************
+   * Update data
+   * *********************************/
+
+  KDOM_LOOP(k) {
+    for (j=0;j<lines[IDIR].N;j++){
+      #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
+        d->Uc[k][j][i][BX3] = Bb2[j][i];
+      #endif
+      #if HAVE_ENERGY
+        #if (THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT) || \ 
+            (RESISTIVITY      == ALTERNATING_DIRECTION_IMPLICIT)
+          d->Uc[k][j][i][ENG] = InternalEnergyFunc(double *v (d->Vc[RHO][k][j][i]) , double Tb2[j][i]); // SISTEMA: "double *v (d->Vc[RHO][k][j][i])", dovrebbe essere un vettore 1D
+        #endif
+      #endif
+    }
+  }
 
 }
 
@@ -168,6 +225,22 @@ void BoundaryADI() {
 /****************************************************************************
 Function to build the Ip,Im,Jp,Jm
 *****************************************************************************/
-void BuildIJ(Data *d, Grid *grid, double **Ip, double **Im, double **Jp, double **Jm) {
+void BuildIJ(Data *d, Grid *grid, double **Ip, double **Im, double **Jp, double **Jm, double **C) {
   
+}
+
+/****************************************************************************
+Performs an implicit update of a diffusive problem (either for B or for T)
+*****************************************************************************/
+void ImplicitUpdate( double **v, double **rhs, double **Hp, double **Hm, double **C,
+                     Lines *lines, double **source, double dt, int diffkind) {
+
+}
+
+/****************************************************************************
+Performs an explicit update of a diffusive problem (either for B or for T)
+*****************************************************************************/
+void ExplicitUpdate( double **v, double **rhs, double **Hp, double **Hm, double **C,
+                     Lines *lines, double **source, double dt, int diffkind) {
+
 }
