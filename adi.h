@@ -1,7 +1,15 @@
 /* Contains some structures used for the adi method*/
 
+/*********************
+ * Some useful macros
+ * *******************/
 #define DIRICHLET    1
 #define NEUMANN_HOM  2
+
+#define LINES_LOOP(lines, l, j, i) \
+  for ((i)=lines.dom_line_idx[(l)=0]; (l)<lines.N; (i)=lines.dom_line_idx[++(l)]) \
+  for ((j)=lines.lidx[(l)]; (j)<=lines.ridx[(l)]; (j)++)
+/**********************/
 
 #if (THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT) && \
     (RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
