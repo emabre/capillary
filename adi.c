@@ -1,7 +1,7 @@
 /*Functions and utilities for integration of parabolic (currently resistive
 and thermal conduction) terms with the Alternating Directino Implicit algorithm*/
 #include "pluto.h"
-#include "structs_adi.h"
+#include "adi.h"
 #include "capillary_wall.h"
 
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
@@ -99,6 +99,6 @@ void GeometryADI(Lines *lines, Grid *grid){
 /****************************************************************************
 Function to build the bcs of lines
 *****************************************************************************/
-BoundaryADI() {
+void BoundaryADI() {
   
 }
