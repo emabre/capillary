@@ -8,21 +8,48 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static int first_call=1;
   int i,j,k;
   static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
+  static double **Ip, **Im, **Jp, **Jm;
 
-  /**********************************
-  Find the remarkable indexes (if they had not been found before)
-  ***********************************/
+  // Find the remarkable indexes (if they had not been found before)
   if (capillary_not_set) {
     if (SetRemarkableIdxs(grid)){
       print1("\nError while setting remarkable points!");
       QUIT_PLUTO(1);
     }
   }
+  // Build geometry and allocate some stuff
   if (first_call) {
     GeometryADI(lines, grid);
+    Ip = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
+    Im = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
+    Jp = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
+    Jm = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
     first_call=0;
   }
 
+  BuildIJ(d, grid, Ip, Im, Jp, Jm);
+
+  BoundaryADI(); // Get bcs at t
+  /**********************************
+   Explicit update sweeping IDIR
+  **********************************/
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+
+
+    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT  // Sure only if it is adi?? maybe it's ok even if it is sts or expl
+      // Include eta*J^2 source term
+      // ...
+    #endif
+
+  #endif
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+
+  #endif
+
+  /**********************************
+   Implicit update sweeping JDIR
+  **********************************/
+  BoundaryADI(); // Get bcs at half step (not exaclty at t+0.5*dt)
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
 
     
@@ -33,10 +60,45 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     #endif
 
   #endif
-
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
 
   #endif
+
+  /**********************************
+   Explicit update sweeping JDIR
+  **********************************/
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+
+    
+
+    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+      // Include eta*J^2 source term
+      // ...
+    #endif
+
+  #endif
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+
+  #endif
+
+  /**********************************
+   Implicit update sweeping IDIR
+  **********************************/
+  BoundaryADI(); // Get bcs at t+dt
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+
+    
+
+    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT // Sure only if it is adi?? maybe it's ok even if it is sts or expl
+      // Include eta*J^2 source term
+      // ...
+    #endif
+
+  #endif
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+
+  #endif
+
 }
 
 
@@ -87,7 +149,7 @@ void GeometryADI(Lines *lines, Grid *grid){
   for (i=0;i<lines[JDIR].N;i++)
     lines[JDIR].dom_line_idx[i] = i + grid[IDIR].nghost;
   for (i=0;i<lines[JDIR].N;i++){
-    lines[JDIR].ridx[i] = grid[JDIR].nghost;
+    lines[JDIR].ridx[i] = NX2_TOT - 1 - grid[JDIR].nghost;
     if (lines[JDIR].dom_line_idx[i] <= i_cap_inter_end){
       lines[JDIR].lidx[i] = grid[JDIR].nghost;
     } else {
@@ -100,5 +162,12 @@ void GeometryADI(Lines *lines, Grid *grid){
 Function to build the bcs of lines
 *****************************************************************************/
 void BoundaryADI() {
+  
+}
+
+/****************************************************************************
+Function to build the Ip,Im,Jp,Jm
+*****************************************************************************/
+void BuildIJ(Data *d, Grid *grid, double **Ip, double **Im, double **Jp, double **Jm) {
   
 }
