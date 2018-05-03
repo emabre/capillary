@@ -26,6 +26,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   // static double **dEdT;
   double dt;
   double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
+  /*Initial time before advancing the equations with the ADI method*/
+  double t_start = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
 
   // Find the remarkable indexes (if they had not been found before)
   if (capillary_not_set) {
@@ -96,7 +98,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
   BuildIJ(d, grid, Ip_T, Im_T, Jp_T, Jm_T, CT, BDIFF);
   BuildIJ(d, grid, Ip_B, Im_B, Jp_B, Jm_B, CB, TDIFF);
-  BoundaryADI(lines, d, grid); // Get bcs at t
+  BoundaryADI(lines, d, grid, t_start); // Get bcs at t
 
   /**********************************
    (a.1) Explicit update sweeping IDIR
@@ -120,7 +122,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   /**********************************
    (a.2) Implicit update sweeping JDIR
   **********************************/
-  BoundaryADI(lines, d, grid); // Get bcs at half step (not exaclty at t+0.5*dt)
+  BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     ImplicitUpdate (Ba2, Ba1, NULL, Jp_B, Jm_B, CB, &lines[JDIR],
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt);
@@ -160,7 +162,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   /**********************************
    (b.2) Implicit update sweeping IDIR
   **********************************/
-  BoundaryADI(); // Get bcs at t+dt
+  BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     ImplicitUpdate (Bb2, Bb1, NULL, Ip_B, Im_B, CB, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt);
@@ -213,22 +215,25 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     }
   }
 
-}
+}//
 
 /****************************************************************************
-Function to build the bcs of lines
+* Function to build the bcs of lines
+* In the current implementation of this function Data *d is not used
+* but I leave it there since before or later it might be needed
 *****************************************************************************/
-void BoundaryADI(Lines lines[2], const Data *d, Grid *grid) {
-  int l;
+void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
+  int i,j,l;
   double t_sec;
-  double Twall;
+  # if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+    double Twall;
+  #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     double Bwall;
     double curr, unit_Mfield;
   #endif
 
-  /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
-  t_sec = g_time*(UNIT_LENGTH/UNIT_VELOCITY);
+  t_sec = t*(UNIT_LENGTH/UNIT_VELOCITY);
 
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     // I compute the wall temperature
@@ -236,27 +241,35 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid) {
 
     // IDIR lines
     for (l=0; l<lines[IDIR].N; l++) {
+      j = lines[IDIR].dom_line_idx[l];
+      /* :::: Axis ::::*/
       lines[IDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
       lines[IDIR].lbound[TDIFF][l].values[0] = 0.0;
       // [Opt] (I can avoid making so many if..)
-      if (lines[IDIR].dom_line_idx <= j_cap_inter_end) {
+      if (j <= j_cap_inter_end) {
+        /* :::: Capillary wall :::: */
         lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
-        lines[IDIR].rbound[TDIFF][l].values[0] = TWALL / KELVIN;
+        lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
       } else {
-        lines[IDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
-        lines[IDIR].rbound[TDIFF][l].values[0] = 0.0;
+        /* :::: Outer domain boundary :::: */
+        lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
+        // IS THIS OK?? Before or later change here, and also in its equivalent in init.c
+        lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
       }
     }
     // JDIR lines
     for (l=0; l<lines[JDIR].N; l++) {
-      // [Opt] (I can avoid making so many if..)
-      if (lines[JDIR].dom_line_idx <= i_cap_inter_end){
+      i = lines[JDIR].dom_line_idx[l];
+      if (i <= i_cap_inter_end){
+        /* :::: Capillary internal (symmetry plane) ::::*/
         lines[JDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
         lines[JDIR].lbound[TDIFF][l].values[0] = 0.0;
       } else {
+        /* :::: Outer capillary wall ::::*/
         lines[JDIR].lbound[TDIFF][l].kind = DIRICHLET;
-        lines[JDIR].lbound[TDIFF][l].values[0] = TWALL / KELVIN;
+        lines[JDIR].lbound[TDIFF][l].values[0] = Twall;
       }
+      /* :::: Outer domain boundary ::::*/
       lines[JDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
       lines[JDIR].rbound[TDIFF][l].values[0] = 0.0;
     }
@@ -270,19 +283,40 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid) {
 
     // IDIR lines
     for (l=0; l<lines[IDIR].N; l++) {
+      j = lines[IDIR].dom_line_idx[l];
+      /* :::: Axis :::: */
       lines[IDIR].lbound[BDIFF][l].kind = DIRICHLET;
       lines[IDIR].lbound[BDIFF][l].values[0] = 0.0;
-      if (lines[IDIR].dom_line_idx <= j_elec_start) {
+      if ( j < j_elec_start) {
+        /* :::: Capillary wall (no electrode) :::: */
         lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
         lines[IDIR].rbound[BDIFF][l].values[0] = Bwall;
+      } else if (j >= j_elec_start && j <= j_cap_inter_end) {
+        /* :::: Electrode :::: */
+        lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall * \
+            (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap );
       } else {
-        qui invece il campo B deve degradare! Guarda come fatto in init
-
+        /* :::: Outer domain boundary :::: */
+        lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+        lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
       }
     }
     // JDIR lines
     for (l=0; l<lines[JDIR].N; l++) {
-
+      i = lines[JDIR].dom_line_idx[l];
+      if ( i <= i_cap_inter_end) {
+        /* :::: Capillary internal (symmetry plane) :::: */
+        lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;
+        lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
+      } else {
+        /* :::: Outer capillary wall :::: */
+        lines[JDIR].lbound[BDIFF][l].kind = DIRICHLET;
+        lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
+      }
+      /* :::: Outer domain boundary :::: */
+      lines[JDIR].rbound[BDIFF][l].kind = NEUMANN_HOM;
+      lines[JDIR].rbound[BDIFF][l].values[0] = 0.0;
     }
   #endif
 }

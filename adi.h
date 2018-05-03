@@ -45,7 +45,7 @@ typedef struct LINES{
 
 void InitializeLines (Lines *, int);
 void GeometryADI (Lines *lines, Grid *grid);
-void BoundaryADI();
+void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t);
 void ExplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt);
