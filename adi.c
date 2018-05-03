@@ -32,6 +32,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     Jp = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
     Jm = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
     C = ARRAY_3D(NADI, NX2_TOT, NX1_TOT, double);
+
+    sourcea1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    sourcea2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    sourceb1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    sourceb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+
     Ba1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     Ba2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     Bb1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -40,6 +46,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     Ta2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     Tb1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     Tb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+
     T = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     B = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     // dEdT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -76,6 +83,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT  // Sure only if it is adi?? maybe it's ok even if it is sts or expl
       // Include eta*J^2 source term
       // ...
+    #else
+      LINES_LOOP(j,i) {
+        sourcea1[j][i] = 0.0;
+      }
     #endif
     ExplicitUpdate( Ta1, T, Jp, Jm, C, lines, sourcea1, 0.5*dt, TDIFF);
 
@@ -148,9 +159,14 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         d->Uc[k][j][i][BX3] = Bb2[j][i];
       #endif
       #if HAVE_ENERGY
-        #if (THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT) || \ 
-            (RESISTIVITY      == ALTERNATING_DIRECTION_IMPLICIT)
+        #if (THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT)
           d->Uc[k][j][i][ENG] = InternalEnergyFunc(double *v (d->Vc[RHO][k][j][i]) , double Tb2[j][i]); // SISTEMA: "double *v (d->Vc[RHO][k][j][i])", dovrebbe essere un vettore 1D
+        #elif (RESISTIVITY      == ALTERNATING_DIRECTION_IMPLICIT) && \
+              (THERMAL_CONDUCTION != ALTERNATING_DIRECTION_IMPLICIT)
+          /* I am just using trapezi integration of source term,
+          but I could use something like cav-simps with very little effort
+          (I have already sourcea, sourceb, sourcec(?)!*/
+          d->Uc[k][j][i][ENG] += sourceb1[j][i]*dt
         #endif
       #endif
     }
