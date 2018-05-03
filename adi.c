@@ -326,14 +326,21 @@ Function to build the Ip,Im,Jp,Jm
 *****************************************************************************/
 void BuildIJ(const Data *d, Grid *grid, double **Ip, double **Im, double **Jp,
              double **Jm, double **C, int kind) {
+  int i,j;
+  double k; // something like a "diffusion parameter"(prop. to electr. resistivity or thermal conductivity)
 
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     if (kind==BDIFF) {
-
+      // devo dargli: vi, x1, x2, x3, &kpar, &knor, &phi
+      // ricordati che poi usi solo knor (ma a kpar non puoi dare NULL se no ti becchi un
+      // segmentation fault o peggio)
+      k = TC_kappa()
+      Jp[i][j] = 
     }
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     if (kind==TDIFF) {
+      k = average somehow tc_kapp
 
     }
   #endif
@@ -417,3 +424,15 @@ void GeometryADI(Lines *lines, Grid *grid){
     }
   }
 }
+
+
+
+/*******************************************************
+ * COSE DA FARE, ma che sono secondarie:
+ * 
+ * 1) Mettere un po' di cicli #if di controllo che la geometria
+ *    il modello (MHD) e altro siano ok.
+ * 2) Pensare alla compatabilità con STS o EXPL
+ * 3) Pensare ad un warning in caso di eta con componenti diverse tra loro
+ * 
+ ********************************************************/
