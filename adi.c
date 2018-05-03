@@ -3,6 +3,10 @@ and thermal conduction) terms with the Alternating Directino Implicit algorithm*
 #include "pluto.h"
 #include "adi.h"
 #include "capillary_wall.h"
+#include "current_table.h"
+
+// Remarkable comments:
+// [Opt] = it can be optimized (in terms of performance)
 
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static int first_call=1;
@@ -22,7 +26,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   // static double **dEdT;
   double dt;
   double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
-  double ****V;
 
   // Find the remarkable indexes (if they had not been found before)
   if (capillary_not_set) {
@@ -93,13 +96,14 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
   BuildIJ(d, grid, Ip_T, Im_T, Jp_T, Jm_T, CT, BDIFF);
   BuildIJ(d, grid, Ip_B, Im_B, Jp_B, Jm_B, CB, TDIFF);
-  BoundaryADI(); // Get bcs at t
+  BoundaryADI(lines, d, grid); // Get bcs at t
 
   /**********************************
    (a.1) Explicit update sweeping IDIR
   **********************************/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate( Ba1, B, Ip_B, Im_B, CB, &lines[IDIR], NULL, 0.5*dt);
+    ExplicitUpdate (Ba1, B, NULL, Ip_B, Im_B, CB, &lines[IDIR],
+                    lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT  // Sure only if it is adi?? maybe it's ok even if it is sts or expl
     // Include eta*J^2 source term using B
@@ -109,15 +113,17 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       sourcea1[j][i] = 0.0;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate( Ta1, T, Ip_T, Im_T, CT, &lines[IDIR], sourcea1, 0.5*dt);
+    ExplicitUpdate (Ta1, T, sourcea1, Ip_T, Im_T, CT, &lines[IDIR],
+                    lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt);
   #endif
 
   /**********************************
    (a.2) Implicit update sweeping JDIR
   **********************************/
-  BoundaryADI(); // Get bcs at half step (not exaclty at t+0.5*dt)
+  BoundaryADI(lines, d, grid); // Get bcs at half step (not exaclty at t+0.5*dt)
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate( Ba2, Ba1, Jp_B, Jm_B, CB, &lines[JDIR], NULL, 0.5*dt);
+    ImplicitUpdate (Ba2, Ba1, NULL, Jp_B, Jm_B, CB, &lines[JDIR],
+                    lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     // Build eta*J^2 source term using Ba2
@@ -127,14 +133,16 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       sourcea2[j][i] = 0.0;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate( Ta2, Ta1, Jp_T, Jm_T, CT, &lines[JDIR], sourcea2, 0.5*dt);
+    ImplicitUpdate (Ta2, Ta1, sourcea2, Jp_T, Jm_T, CT, &lines[JDIR],
+                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt);
   #endif
 
   /**********************************
    (b.1) Explicit update sweeping JDIR
   **********************************/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate(Bb1, Ba2, Jp_B, Jm_B, CB, lines, NULL, 0.5*dt);
+    ExplicitUpdate (Bb1, Ba2, NULL, Jp_B, Jm_B, CB, &lines[JDIR],
+                    lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt);
   #endif
   // /* -- This is USELESS as I already computed the source before, delete in future*/
   // #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
@@ -145,7 +153,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   //     sourceb1[j][i] = 0.0;
   // #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate(Tb1, Ta2, Jp_T, Jm_T, CT, lines, sourcea1, 0.5*dt);
+    ExplicitUpdate (Tb1, Ta2, sourcea1, Jp_T, Jm_T, CT, &lines[JDIR],
+                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt);
   #endif
 
   /**********************************
@@ -153,7 +162,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   **********************************/
   BoundaryADI(); // Get bcs at t+dt
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate(Bb2, Bb1, Ip_B, Im_B, CB, lines, NULL, 0.5*dt);
+    ImplicitUpdate (Bb2, Bb1, NULL, Ip_B, Im_B, CB, &lines[IDIR],
+                    lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT // Sure only if it is adi?? maybe it's ok even if it is sts or expl
     // Build eta*J^2 source term using Bb2
@@ -163,7 +173,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       sourceb2[j][i] = 0.0;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate(Tb2, Tb1, Ip_T, Im_T, CT, lines, sourcea1, 0.5*dt);
+    ImplicitUpdate (Tb2, Tb1, sourcea1, Ip_T, Im_T, CT, &lines[IDIR],
+                    lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt);
   #endif
 
   /***********************************
@@ -184,8 +195,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
           #elif EOS==PVTE_LAW
             DOM_LOOP(k,j,i) {
               for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
-              if (d->Uc[k][j][i][ENG] = InternalEnergyFunc(v, Tb2[j][i]))
-                print1("ADI:[Ema] Error computing internal energy!\n");
+                d->Uc[k][j][i][ENG] = InternalEnergyFunc(v, Tb2[j][i]);
             }
           #else
             print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!")
@@ -205,6 +215,114 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
 }
 
+/****************************************************************************
+Function to build the bcs of lines
+*****************************************************************************/
+void BoundaryADI(Lines lines[2], const Data *d, Grid *grid) {
+  int l;
+  double t_sec;
+  double Twall;
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+    double Bwall;
+    double curr, unit_Mfield;
+  #endif
+
+  /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
+  t_sec = g_time*(UNIT_LENGTH/UNIT_VELOCITY);
+
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+    // I compute the wall temperature
+    Twall = TWALL/KELVIN;
+
+    // IDIR lines
+    for (l=0; l<lines[IDIR].N; l++) {
+      lines[IDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
+      lines[IDIR].lbound[TDIFF][l].values[0] = 0.0;
+      // [Opt] (I can avoid making so many if..)
+      if (lines[IDIR].dom_line_idx <= j_cap_inter_end) {
+        lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
+        lines[IDIR].rbound[TDIFF][l].values[0] = TWALL / KELVIN;
+      } else {
+        lines[IDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
+        lines[IDIR].rbound[TDIFF][l].values[0] = 0.0;
+      }
+    }
+    // JDIR lines
+    for (l=0; l<lines[JDIR].N; l++) {
+      // [Opt] (I can avoid making so many if..)
+      if (lines[JDIR].dom_line_idx <= i_cap_inter_end){
+        lines[JDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
+        lines[JDIR].lbound[TDIFF][l].values[0] = 0.0;
+      } else {
+        lines[JDIR].lbound[TDIFF][l].kind = DIRICHLET;
+        lines[JDIR].lbound[TDIFF][l].values[0] = TWALL / KELVIN;
+      }
+      lines[JDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
+      lines[JDIR].rbound[TDIFF][l].values[0] = 0.0;
+    }
+  #endif
+
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+    // I compute the wall magnetic field
+    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+    curr = current_from_time(t_sec);
+    Bwall = BIOTSAV_GAUSS_S_A(curr, RCAP)/unit_Mfield;
+
+    // IDIR lines
+    for (l=0; l<lines[IDIR].N; l++) {
+      lines[IDIR].lbound[BDIFF][l].kind = DIRICHLET;
+      lines[IDIR].lbound[BDIFF][l].values[0] = 0.0;
+      if (lines[IDIR].dom_line_idx <= j_elec_start) {
+        lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall;
+      } else {
+        qui invece il campo B deve degradare! Guarda come fatto in init
+
+      }
+    }
+    // JDIR lines
+    for (l=0; l<lines[JDIR].N; l++) {
+
+    }
+  #endif
+}
+//
+/****************************************************************************
+Function to build the Ip,Im,Jp,Jm
+*****************************************************************************/
+void BuildIJ(const Data *d, Grid *grid, double **Ip, double **Im, double **Jp,
+             double **Jm, double **C, int kind) {
+
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+    if (kind==BDIFF) {
+
+    }
+  #endif
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+    if (kind==TDIFF) {
+
+    }
+  #endif
+  
+}
+
+/****************************************************************************
+Performs an implicit update of a diffusive problem (either for B or for T)
+*****************************************************************************/
+void ImplicitUpdate (double **v, double **rhs, double **source,
+                     double **Hp, double **Hm, double **C,
+                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt) {
+
+}
+//
+/****************************************************************************
+Performs an explicit update of a diffusive problem (either for B or for T)
+*****************************************************************************/
+void ExplicitUpdate (double **v, double **rhs, double **source,
+                     double **Hp, double **Hm, double **C,
+                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt) {
+
+}
 
 /****************************************************************************
 Function to initialize lines, I hope this kind of initialization is ok and 
@@ -212,7 +330,7 @@ there are no problems with data continuity and similar things
 *****************************************************************************/
 void InitializeLines(Lines *lines, int N){
   int i;
-  
+
   lines->dom_line_idx = ARRAY_1D(N, int);
   lines->lidx = ARRAY_1D(N, int);
   lines->ridx = ARRAY_1D(N, int);
@@ -264,35 +382,4 @@ void GeometryADI(Lines *lines, Grid *grid){
       lines[JDIR].lidx[i] = j_cap_inter_end+1;
     }
   }
-}
-
-/****************************************************************************
-Function to build the bcs of lines
-*****************************************************************************/
-void BoundaryADI() {
-  
-}
-
-/****************************************************************************
-Function to build the Ip,Im,Jp,Jm
-*****************************************************************************/
-void BuildIJ(Data *d, Grid *grid, double **Ip, double **Im, double **Jp,
-             double **Jm, double **C, int kind) {
-  
-}
-
-/****************************************************************************
-Performs an implicit update of a diffusive problem (either for B or for T)
-*****************************************************************************/
-void ImplicitUpdate( double **v, double **rhs, double **Hp, double **Hm, double **C,
-                     Lines *lines, double **source, double dt) {
-
-}
-
-/****************************************************************************
-Performs an explicit update of a diffusive problem (either for B or for T)
-*****************************************************************************/
-void ExplicitUpdate( double **v, double **rhs, double **Hp, double **Hm, double **C,
-                     Lines *lines, double **source, double dt) {
-
 }

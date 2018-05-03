@@ -26,13 +26,13 @@
   #define NADI  1
 #else
   /* I still put 1 bc in the type definition (for ease of programming)
-  but the bc_kind won't be allocated so it's practically no problem */
+  but the kind won't be allocated so it's practically no problem */
   #define NADI  1
 #endif
 
 typedef struct BCS{
-  int bc_kind;     /**< Kind of boundary condition: 1=Dirichlet, 2=Hom.Neumann*/
-  double bc_values[2];   /**< Values necessary to define the boundary condition
+  int kind;     /**< Kind of boundary condition: 1=Dirichlet, 2=Hom.Neumann*/
+  double values[2];   /**< Values necessary to define the boundary condition
   // (in bc_values[] only element [][0] is used now, in future maybe also [][1], for Robin conditions)*/
 } Bcs;
 
@@ -46,10 +46,12 @@ typedef struct LINES{
 void InitializeLines (Lines *, int);
 void GeometryADI (Lines *lines, Grid *grid);
 void BoundaryADI();
-void ExplicitUpdate (double **v, double **rhs, double **Hp, double **Hm, double **C,
-                     Lines *lines, double **source, double dt);
-void ImplicitUpdate (double **v, double **rhs, double **Hp, double **Hm, double **C,
-                     Lines *lines, double **source, double dt);
-void BuildIJ (Data *d, Grid *grid, double **Ip, double **Im, double **Jp, double **Jm,
+void ExplicitUpdate (double **v, double **rhs, double **source,
+                     double **Hp, double **Hm, double **C,
+                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt);
+void ImplicitUpdate (double **v, double **rhs, double **source,
+                     double **Hp, double **Hm, double **C,
+                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt);
+void BuildIJ (const Data *d, Grid *grid, double **Ip, double **Im, double **Jp, double **Jm,
              double **C, int kind);
 #endif

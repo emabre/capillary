@@ -32,7 +32,7 @@ double InternalEnergyFunc(double *v, double T)
  *  \param [in]   v   1D Array of primitive variables containing
  *                    density and species. Other variables are
  *                    ignored.
- *  \param [in]   T   Gas temperature
+ *  \param [in]   T   Gas temperature ([Ema] in Kelvin)
  *
  *  \return The gas internal energy (\c rhoe) in code units.
  ******************************************************************* */
@@ -73,7 +73,7 @@ exit(1);
 double SahaXFrac(double T, double rho)
 /*!
  * Use Saha equation to compute the degree of ionization.
- *
+ * ([Ema] it takes T in Kelvin)
  *
  *********************************************************************** */
 {

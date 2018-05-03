@@ -71,7 +71,7 @@ void Init (double *us, double x1, double x2, double x3)
   #if EOS==IDEAL
       mu = MeanMolecularWeight(us);
   #elif EOS==PVTE_LAW
-      GetMu(T, us[RHO], &mu);
+      GetMu(T, us[RHO], &mu); // GetMu takes T in Kelvin, no need to adim. T
   #endif
   us[PRS] = us[RHO]*T / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
 
@@ -327,7 +327,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         #if EOS==IDEAL
             #error double internal ghost not implemented for ideas eos
         #elif EOS==PVTE_LAW
-            GetMu(TWALL, d_correction[0].Vc[RHO][k], &mu);
+            GetMu(TWALL, d_correction[0].Vc[RHO][k], &mu); // No need to adim. T (GetMu takes T in K)
         #endif
         // I cannot correct the Temperature, I must set it same as in the normal
         // *d structure
