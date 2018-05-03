@@ -1,3 +1,5 @@
+#ifndef ADI_H
+#define ADI_H
 /* Contains some structures used for the adi method*/
 
 /*********************
@@ -30,16 +32,24 @@
 
 typedef struct BCS{
   int bc_kind;     /**< Kind of boundary condition: 1=Dirichlet, 2=Hom.Neumann*/
-  double bc_values[NADI][2];   /**< Values necessary to define the boundary condition
+  double bc_values[2];   /**< Values necessary to define the boundary condition
   // (in bc_values[] only element [][0] is used now, in future maybe also [][1], for Robin conditions)*/
 } Bcs;
 
 typedef struct LINES{
   int *dom_line_idx;     /**< Indexes (of rows or columns) corresponding to each line*/
-  Bcs *lbound,*rbound;   /**< Left and right boundary conditions */
+  Bcs *lbound[NADI],*rbound[NADI];   /**< Left and right boundary conditions */
   int *lidx, *ridx;      /**< Leftmost and rightmost indexes of the lines. */
   double N;              /**< Number of lines */
 } Lines;
 
-void InitializeLines(Lines *, int);
-void GeometryADI(Lines *lines, Grid *grid);
+void InitializeLines (Lines *, int);
+void GeometryADI (Lines *lines, Grid *grid);
+void BoundaryADI();
+void ExplicitUpdate (double **v, double **rhs, double **Hp, double **Hm, double **C,
+                     Lines *lines, double **source, double dt);
+void ImplicitUpdate (double **v, double **rhs, double **Hp, double **Hm, double **C,
+                     Lines *lines, double **source, double dt);
+void BuildIJ (Data *d, Grid *grid, double **Ip, double **Im, double **Jp, double **Jm,
+             double **C, int kind);
+#endif
