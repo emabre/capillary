@@ -25,7 +25,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static double **sourcea1, **sourcea2, **sourceb1, **sourceb2;
   // static double **dEdT;
   double dt;
-  double ****Uc; ****Vc;
+  double ****Uc, ****Vc;
   double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
   /*Initial time before advancing the equations with the ADI method*/
   double t_start = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
@@ -115,7 +115,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT  // Sure only if it is adi?? maybe it's ok even if it is sts or expl
-    // Include eta*J^2 source term using B
+    // Include eta*J^2 source term using B REMEMBER TO NORMALIZE
     // ...
   #else
     LINES_LOOP(lines[0], l, j, i)
@@ -135,7 +135,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    // Build eta*J^2 source term using Ba2
+    // Build eta*J^2 source term using Ba2 REMEMBER TO NORMALIZE
     // ...
   #else
     LINES_LOOP(lines[0], l, j, i)
@@ -155,7 +155,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #endif
   // /* -- This is USELESS as I already computed the source before, delete in future*/
   // #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-  //   // Build eta*J^2 source term using Ba2
+  //   // Build eta*J^2 source term using Ba2 REMEMBER TO NORMALIZE
   //   // ...
   // #else
   //   LINES_LOOP(lines[0], l, j, i)
@@ -175,7 +175,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT // Sure only if it is adi?? maybe it's ok even if it is sts or expl
-    // Build eta*J^2 source term using Bb2
+    // Build eta*J^2 source term using Bb2 REMEMBER TO NORMALIZE
     // ...
   #else
     LINES_LOOP(lines[0], l, j, i)
@@ -206,6 +206,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
             #error Not implemented for ideal eos (but it is easy to add it!)
           #elif EOS==PVTE_LAW
             for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+              /*[Opt] I should use a tabulation maybe!*/
               Uc[k][j][i][ENG] = InternalEnergyFunc(v, Tb2[j][i]);
           #else
             print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!")
@@ -345,6 +346,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
   double *zL, *zR;
   double *rL, *rR;
   double *ArR, *ArL;
+  double *dVr, *dVz;
   double *r, *z, *theta;
   double **dEdT;
 
@@ -366,8 +368,11 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
   zR = grid[JDIR].xr;
   ArR = grid[IDIR].A;
   ArL = grid[IDIR].A - 1;
+  dVr = grid[IDIR].dV;
+  dVz = grid[JDIR].dV;
   KDOM_LOOP(k) {
     LINES_LOOP(lines[0], l, j, i) {
+
       /* :::: Ip :::: */
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
@@ -395,76 +400,16 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
       TC_kappa( v, r[i], zL[j], theta[k], kpar, knor, phi);
       Jm[j][i] = (*knor)*inv_dzi[j-1];
+
+      funzione(dEdT): e ricorda di normalizzare bene se necessario;
+      
+      /* :::: CI :::: */
+      CI[j][i] = dEdT[j][i]*dVr[i];
+
+      /* :::: CJ :::: */
+      CJ[j][i] = dEdT[j][i]*dVz[j];
     }
   }
-
-  // /* Compute Jp, Jm */
-  // zL = grid[JDIR].xl;
-  // zR = grid[JDIR].xr;
-  // r = grid[IDIR].x;
-  // KDOM_LOOP(k) {
-  //   for (l=0; l<lines[JDIR].N; l++) {
-  //     i = lines[JDIR].dom_line_idx;
-
-  //     for (j=lines[JDIR].lidx; j<=lines[JDIR].lidx; j++) {
-        
-  //       /* :::: Jp :::: */
-  //       for (nv=0; nv<NVAR; nv++)
-  //         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
-  //       TC_kappa( v, r[i], zR[j], theta[k], kpar, knor, phi);
-  //       Jp[j][i] = (*knor)*inv_dzi[j];
-  //       /* [Opt] Here I could use the already computed k to compute
-  //       also Jm[j+1,i] (since it needs k at the same interface).
-  //       Doing so I would reduce the calls to TC_kappa by almost a factor 1/2
-  //       (obviously I could do the same for Im/Ip) */
-        
-  //       /* :::: Jm :::: */
-  //       for (nv=0; nv<NVAR; nv++)
-  //         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
-  //       TC_kappa( v, r[i], zL[j], theta[k], kpar, knor, phi);
-  //       Jm[j][i] = (*knor)*inv_dzi[j-1];
-  //     }
-  //   }
-  // }
-
-  // /* Compute Ip, Im */
-  // rR = grid[IDIR].xl;
-  // rL = grid[IDIR].xr;
-  // z = grid[JDIR].x;
-  // ArR = grid[IDIR].A;
-  // ArL = grid[IDIR].A - 1;
-  // KDOM_LOOP(k) {
-  //   for (l=0; l<lines[IDIR].N; l++) {
-  //     j = lines[IDIR].dom_line_idx;
-
-  //     for (i=lines[IDIR].lidx; i<=lines[IDIR].lidx; i++) {
-        
-  //       /* :::: Ip :::: */
-  //       for (nv=0; nv<NVAR; nv++)
-  //         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
-  //       TC_kappa( v, rR[i], z[j], theta[k], kpar, knor, phi);
-  //       Ip[j][i] = (*knor)*ArR[i]*inv_dri[i];
-        
-  //       /* :::: Im :::: */
-  //       for (nv=0; nv<NVAR; nv++)
-  //         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i-1]);
-  //       TC_kappa( v, rL[i], z[j], theta[k], kpar, knor, phi);
-  //       Im[j][i] = (*knor)*ArL[i]*inv_dri[i-1];
-  //     }
-  //   }
-  // }
-
-  /* Compute CI and CJ */
-  
-  LINES_LOOP(lines[0], l, j, i)
-    funzione(dEdT): e ricorda di normalizzare bene se necessario;
-  KDOM_LOOP(k) {
-    for (l=0; l<lines[JDIR].N; l++) {
-    
-    }
-  }
-
-
 }
 #endif
 
