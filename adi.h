@@ -52,6 +52,14 @@ void ExplicitUpdate (double **v, double **rhs, double **source,
 void ImplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt);
-void BuildIJ (const Data *d, Grid *grid, double **Ip, double **Im, double **Jp, double **Jm,
-             double **C, int kind);
+                     
+#if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+void BuildIJ_forTC (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
+                    double **Jp, double **Jm, double **CI, double **CJ);
+#endif
+#if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+void BuildIJ_forRes (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
+                     double **Jp, double **Jm, double **CI, double **CJ);
+#endif
+
 #endif
