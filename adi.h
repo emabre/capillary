@@ -52,10 +52,13 @@ void ExplicitUpdate (double **v, double **rhs, double **source,
 void ImplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt);
+void tdm_solver(double *x, double const *diagonal, double const *upper,
+                double const *lower, double const *right_hand_side, int const N);
                      
 #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
 void BuildIJ_forTC (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
                     double **Jp, double **Jm, double **CI, double **CJ);
+void Get_dEdT(double *v, double r, double z, double theta, double *dEdT);
 #endif
 #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
 void BuildIJ_forRes (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,

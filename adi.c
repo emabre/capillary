@@ -84,6 +84,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   DOM_LOOP(k,j,i)
     B[j][i] = d->Uc[BX3][k][j][i];
 
+  /* A shortcut to the primitive variables */
+  Vc = d->Vc;
+
   // Build the temperature matrix
   #if EOS==IDEAL
       DOM_LOOP(k,j,i) T[j][i] = Vc[PRS][k][j][i]/Vc[RHO][k][j][i];
@@ -348,7 +351,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
   double *ArR, *ArL;
   double *dVr, *dVz;
   double *r, *z, *theta;
-  double **dEdT;
+  double *dEdT;
 
   /* -- set a pointer to the primitive vars array -- 
     I do this because it is done also in other parts of the code
@@ -401,15 +404,39 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
       TC_kappa( v, r[i], zL[j], theta[k], kpar, knor, phi);
       Jm[j][i] = (*knor)*inv_dzi[j-1];
 
-      funzione(dEdT): e ricorda di normalizzare bene se necessario;
+      Get_dEdT(v, r[i], z[j], theta[k], dEdT);
       
       /* :::: CI :::: */
-      CI[j][i] = dEdT[j][i]*dVr[i];
+      CI[j][i] = (*dEdT)*dVr[i];
 
       /* :::: CJ :::: */
-      CJ[j][i] = dEdT[j][i]*dVz[j];
+      CJ[j][i] = (*dEdT)*dVz[j];
     }
   }
+}
+
+/**************************************************************************
+ * Get_dEdT: Computes the derivative dE/dT (E is the internal energy
+ * per unit volume, T is the temperature). This function also normalizes
+ * the dEdT. 
+ * ************************************************************************/
+void Get_dEdT(double *v, double r, double z, double theta, double *dEdT) {
+  double c;
+//
+  /*[Opt] This should be done with a table or something similar (also I should
+    make a more general computation as soon as possible)*/
+
+  // Specific heat (heat to increase of 1 Kelvin 1 gram of Hydrogen)
+  // Low temperature case, no ionization
+  c = 3/2*(1/CONST_mp)*CONST_kB;
+  // High temperature case, full ionization
+  // c = 3/2*(2/CONST_mp)*CONST_kB;
+  
+  // Heat capacity (heat to increas of 1 Kelvin 1 cm³ of Hydrogen)
+  *dEdT = c*v[RHO];
+
+  // Normalization
+  *dEdT = (*dEdT)/(UNIT_DENSITY*CONST_kB/CONST_mp);
 }
 #endif
 
@@ -506,7 +533,44 @@ void GeometryADI(Lines *lines, Grid *grid){
   }
 }
 
+/************************************************************
+ * Solve a linear system made by a tridiagonal matrix.
+ * See  https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm
+ * for info (accessed on 24/3/2017)
+ * 
+ * N: the size of the arrays x, diagonal, right_hand_side.
+ * x: solution
+ * *********************************************************/
+void tdm_solver(double *x, double const *diagonal, double const *upper,
+                double const *lower, double const *right_hand_side, int const N) {
+    
+    /*[Opt] Is it really needed to define two new arrays?
+            Maybe I can make that it uses directly the diagonal, upper,
+            lower arrays, modifying them, the only problem is that I
+            don't like the idea as a principle, that the function
+            modifies its actual input with no apparent reason*/
+    double up[N-1];
+    double rhs[N];
+    int i;
 
+    /*[Opt] Maybe there is another way to copy the arrays... more clever, shorter, faster..*/
+    for (i=0;i<N;i++)
+      rhs[i] = right_hand_side[i];
+    for (i=0;i<N-1;i++)
+      up[i] = upper[i];
+
+    up[0] = upper[0]/diagonal[0];
+    for (i=1; i<N-1; i++)
+      up[i] = up[i] / (diagonal[i]-lower[i-1]*up[i-1]);
+
+    rhs[0] = rhs[0]/diagonal[0];
+    for (i=0; i<N; i++)
+      rhs[i] = (rhs[i] - lower[i-1]*rhs[i-1]) / (diagonal[i] - lower[i-1]*up[i-1]);
+
+    x[N-1] = rhs[N-1];
+    for (i=N-2; i>-1; i--)
+      x[i] = rhs[i] - up[i]*x[i+1];
+  }
 
 /*******************************************************
  * COSE DA FARE, ma che sono secondarie:
