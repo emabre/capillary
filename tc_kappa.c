@@ -44,11 +44,20 @@ void TC_kappa(double *v, double x1, double x2, double x3,
     //*knor = 5.6e-7*T*T*sqT;
   }
 
-  /***************************************************/
-  /* [Ema] adimensionalization (it should be correct, I didn't change it)*/
+  /**************************************************
+   [Ema] Adimensionalization. It is slightly modified from
+   what is adviced in PLUTO's userguide:
+   I do not normalize by mu, since it is not constant over the domain,
+   I belive that it is not correct in general to normalize by mu.
+   Normalizing by mu could be a good idea when the EOS is IDEAL and no
+   change in mu over space/time is possible [at the time of writing it is
+   indeed necessary when EOS==IDEAL, due to the way temperature is computed in
+   the STS and EXPLICIT algorithms (T=p/rho). If one decides not to normalize by
+   mu then he should change the computation of T for the ideal case with
+   T=mu*p/rho]. For using ADI scheme I implemented, one must not normalize by mu.
   /**************************************************/
-  *kpar *= CONST_mp*mu/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
-  *knor *= CONST_mp*mu/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
+  *kpar *= CONST_mp/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
+  *knor *= CONST_mp/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
   /***************************************************/
 
   *phi = 1; //[Ema] this should be useless with the saturation of the thermal conduction off
