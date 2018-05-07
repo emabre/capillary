@@ -25,7 +25,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #endif
   static double **sourcea1, **sourcea2, **sourceb1, **sourceb2;
   // static double **dEdT;
-  double dt;
+  const double dt = g_dt;
   double ****Uc, ****Vc;
   double *r;
   double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
