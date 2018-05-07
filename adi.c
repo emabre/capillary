@@ -463,12 +463,12 @@ void ImplicitUpdate (double **v, double **b, double **source,
   still also contained inside *lines)*/
   /*[Opt] Maybe I could use g_dir instead of passing dir, but I am afraid of
   doing caos modifiying the value of g_dir for the rest of PLUTO*/
-  int *m, *n, *i, *j; // m and n play the role of i and j (not necessarly respectively)
+  // int *m, *n, *i, *j; // m and n play the role of i and j (not necessarly respectively)
+  // int s;
+  // const int zero=0;
+  int i,j;
   int Nlines = lines->N;
-  int ridx;
-  int lidx;
-  int l,s, dom_line_idx;
-  const int zero=0;
+  int ridx, lidx, l, dom_line_idx;
   /* I allocate these as big as if I had to cover the whole domain, so that I
    don't need to reallocate at every domain line that I update */
   double *diagonal, *upper, *lower, *rhs;
@@ -484,76 +484,116 @@ void ImplicitUpdate (double **v, double **b, double **source,
     upper = ARRAY_1D(NX2-1, double);
     lower = ARRAY_1D(NX2-1, double);
   }
-
-  /*[Opt] potrei sempificare il programma facendo che 
+    /*[Opt] potrei sempificare il programma facendo che 
   i membri di destra delle assegnazione prendono degli indici
   che puntano a j o a i a seconda del valore di dir*/
+  // if (dir == IDIR) {
+  //   j = &dom_line_idx;
+  //   m = &zero;
+  //   n = &s;
+  //   i = &lidx;
+  // } else if (dir == JDIR) {
+  //   j = &lidx;
+  //   m = &s;
+  //   n = &zero;
+  //   i = &dom_line_idx;
+  // }
+  // for (l = 0; l<Nlines; l++) {
+  //   dom_line_idx = lines->dom_line_idx;
+  //   lidx = lines->lidx;
+  //   ridx = lines->ridx;
+  //   s = lidx;
+  //     [*j+*m][*i+*n];
+  // }
   if (dir == IDIR) {
-    j = &dom_line_idx;
-    m = &zero;
-    n = &s;
-    i = &lidx;
-  } else if (dir == JDIR) {
-    j = &lidx;
-    m = &s;
-    n = &zero;
-    i = &dom_line_idx;
-  }
-  for (l = 0; l<Nlines; l++) {
-    dom_line_idx = lines->dom_line_idx;
-    lidx = lines->lidx;
-    ridx = lines->ridx;
-      
-      [*j+*m][*i+*n];
-  }
+    for (l = 0; l < Nlines; l++) {
+      j = lines->dom_line_idx;
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
 
-    // for (l = 0; l < Nlines; l++) {
-      // j = lines->dom_line_idx;
-      // lidx = lines->lidx[l];
-      // ridx = lines->ridx[l];
-
-      // upper[lidx] = -dt/C[j][lidx]*Hp[j][lidx];
-      // lower[ridx] = -dt/C[j][ridx]*Hm[j][ridx];
-      // rhs[lidx] = b[j][lidx];
-      // rhs[ridx] = b[j][ridx];
-      // for (i = lidx+1; i < ridx; i++) {
-      //   diagonal[i] = 1 + dt/C[j][i] * (Hp[j][i]+Hm[j][i]);
-      //   rhs[i] = b[j][i];
-      //   upper[i] = -dt/C[j][i]*Hp[j][i];
-      //   lower[i] = -dt/C[j][i]*Hm[j][i];
-      // }
-      // /* I include the effect of the source */
-      // if (source != NULL) {
-      //   for (i = lidx; i <= ridx; i++)
-      //     rhs[i] += source[j][i]*dt;
-      // }
-      // // I set the Bcs for lower boundary
-      // if (lbound[l].kind == DIRICHLET){
-      //   diagonal[lidx] = 1 + dt/C[j][lidx]*(Hp[j][lidx]+2*Hm[j][lidx]);
-      //   rhs[lidx] += dt/C[j][lidx]*Hm[j][lidx]*2*lbound[l].values[0];
-      // } else if (lbound[l].kind == NEUMANN_HOM) {
-      //   diagonal[lidx] = 1 + dt/C[j][lidx]*Hp[j][lidx];
-      // } else {
-      //   print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
-      //   QUIT_PLUTO(1);
-      // }
-      // // I set the Bcs for higher boundary
-      // if (rbound[l].kind == DIRICHLET){
-      //   diagonal[ridx] = 1 + dt/C[j][ridx]*(2*Hp[j][ridx]+Hm[j][ridx]);
-      //   rhs[ridx] += dt/C[j][ridx]*Hp[j][ridx]*2*rbound[l].values[0];
-      // } else if (rbound[l].kind == NEUMANN_HOM) {
-      //   diagonal[lidx] = 1 + dt/C[j][lidx]*Hp[j][lidx];
-      // } else {
-      //   print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
-      //   QUIT_PLUTO(1);
-      // }
-
+      upper[lidx] = -dt/C[j][lidx]*Hp[j][lidx];
+      lower[ridx] = -dt/C[j][ridx]*Hm[j][ridx];
+      rhs[lidx] = b[j][lidx];
+      rhs[ridx] = b[j][ridx];
+      for (i = lidx+1; i < ridx; i++) {
+        diagonal[i] = 1 + dt/C[j][i] * (Hp[j][i]+Hm[j][i]);
+        rhs[i] = b[j][i];
+        upper[i] = -dt/C[j][i]*Hp[j][i];
+        lower[i] = -dt/C[j][i]*Hm[j][i];
+      }
+      /* I include the effect of the source */
+      if (source != NULL) {
+        for (i = lidx; i <= ridx; i++)
+          rhs[i] += source[j][i]*dt;
+      }
+      // I set the Bcs for left boundary
+      if (lbound[l].kind == DIRICHLET){
+        diagonal[lidx] = 1 + dt/C[j][lidx]*(Hp[j][lidx]+2*Hm[j][lidx]);
+        rhs[lidx] += dt/C[j][lidx]*Hm[j][lidx]*2*lbound[l].values[0];
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        diagonal[lidx] = 1 + dt/C[j][lidx]*Hp[j][lidx];
+      } else {
+        print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+      // I set the Bcs for right boundary
+      if (rbound[l].kind == DIRICHLET){
+        diagonal[ridx] = 1 + dt/C[j][ridx]*(2*Hp[j][ridx]+Hm[j][ridx]);
+        rhs[ridx] += dt/C[j][ridx]*Hp[j][ridx]*2*rbound[l].values[0];
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        diagonal[ridx] = 1 + dt/C[j][ridx]*Hm[j][ridx];
+      } else {
+        print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
+        QUIT_PLUTO(1);
+      }
       // Now I solve the system
-    //   tdm_solver( v, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
-    
-    // }
+      tdm_solver( v, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
+    }
+  } else if (dir == JDIR) {
+    for (l = 0; l < Nlines; l++) {
+      i = lines->dom_line_idx;
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
 
-
+      upper[lidx] = -dt/C[lidx][i]*Hp[lidx][i];
+      lower[ridx] = -dt/C[ridx][i]*Hm[ridx][i];
+      rhs[lidx] = b[lidx][i];
+      rhs[ridx] = b[ridx][i];
+      for (j = lidx+1; j < ridx; j++) {
+        diagonal[j] = 1 + dt/C[j][i] * (Hp[j][i]+Hm[j][i]);
+        rhs[j] = b[j][i];
+        upper[j] = -dt/C[j][i]*Hp[j][i];
+        lower[j] = -dt/C[j][i]*Hm[j][i];
+      }
+      /* I include the effect of the source */
+      if (source != NULL) {
+        for (j = lidx; j <= ridx; j++)
+          rhs[j] += source[j][i]*dt;
+      }
+      // I set the Bcs for left boundary
+      if (lbound[l].kind == DIRICHLET){
+        diagonal[lidx] = 1 + dt/C[lidx][i]*(Hp[lidx][i]+2*Hm[lidx][i]);
+        rhs[lidx] += dt/C[lidx][i]*Hm[lidx][i]*2*lbound[l].values[0];
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        diagonal[lidx] = 1 + dt/C[lidx][i]*Hp[lidx][i];
+      } else {
+        print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+      // I set the Bcs for right boundary
+      if (rbound[l].kind == DIRICHLET){
+        diagonal[ridx] = 1 + dt/C[ridx][i]*(2*Hp[ridx][i]+Hm[ridx][i]);
+        rhs[ridx] += dt/C[ridx][i]*Hp[ridx][i]*2*rbound[l].values[0];
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        diagonal[ridx] = 1 + dt/C[ridx][i]*Hm[ridx][i];
+      } else {
+        print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+      // Now I solve the system
+      tdm_solver( v, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
+    }
+  }
 
   FreeArray1D(diagonal);
   FreeArray1D(upper);
