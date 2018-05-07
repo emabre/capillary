@@ -16,7 +16,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     static double **Ip_B, **Im_B, **Jp_B, **Jm_B, **CI_B, **CJ_B;
     static double **Bra1, **Bra2, **Brb1, **Brb2;
-    static double **B;
+    static double **Br;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     static double **Ip_T, **Im_T, **Jp_T, **Jm_T, **CI_T, **CJ_T;
@@ -55,7 +55,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       Brb1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       Brb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
-      B = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      Br = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #endif
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
       Ip_T = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -84,7 +84,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
   // Build a handy magnetic field matrix
   DOM_LOOP(k,j,i)
-    B[j][i] = d->Uc[BX3][k][j][i];
+    Br[j][i] = d->Uc[BX3][k][j][i];
 
   /* A shortcut to the primitive variables */
   Vc = d->Vc;
@@ -116,11 +116,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
    (a.1) Explicit update sweeping IDIR
   **********************************/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate (Bra1, B, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
+    ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT  // Sure only if it is adi?? maybe it's ok even if it is sts or expl
-    // Include eta*J^2 source term using B REMEMBER TO NORMALIZE
+    // Include eta*J^2 source term using Br REMEMBER TO NORMALIZE
     // ...
   #else
     LINES_LOOP(lines[0], l, j, i)
