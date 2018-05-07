@@ -5,9 +5,9 @@
 
 /**********************************************************/
 /* CAPILLARY DISCHARGE SETTINGS */
-#define T0 4600.0
+#define T0 3000.0
 #define TWALL 4600.0
-#define DENS0 2.5e-6
+#define DENS0 2.5e-7
 // #define DENS0 2.5e-7
 #define RCAP 0.05
 #define DZCAP 0.1 /*the electrodes are wide DZCAP cm*/

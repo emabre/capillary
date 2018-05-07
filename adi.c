@@ -39,6 +39,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       QUIT_PLUTO(1);
     }
   }
+  /* Some shortcuts */
+  Vc = d->Vc;
+  Uc = d->Uc;
+  r = grid[IDIR].x_glob;
+
   // Build geometry and allocate some stuff
   if (first_call) {
     GeometryADI(lines, grid);
@@ -56,10 +61,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       Brb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
       Br = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      
-      // Build a handy magnetic field matrix
-      DOM_LOOP(k,j,i)
-        Br[j][i] = d->Uc[BX3][k][j][i];
     #endif
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
       Ip_T = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -86,11 +87,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     first_call=0;
   }
 
-  /* A shortcut to the primitive variables */
-  Vc = d->Vc;
-
-  // Build the temperature matrix
-  #if EOS==IDEAL
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+    // Build the temperature matrix
+    #if EOS==IDEAL
       DOM_LOOP(k,j,i) T[j][i] = Vc[PRS][k][j][i]/Vc[RHO][k][j][i];
     #elif EOS==PVTE_LAW
       DOM_LOOP(k,j,i) {
@@ -103,11 +102,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     #else
       print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
     #endif
-
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     BuildIJ_forTC(d, grid, lines, Ip_T, Im_T, Jp_T, Jm_T, CI_T, CJ_T);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+    // Build a handy magnetic field matrix
+    DOM_LOOP(k,j,i)
+      Br[j][i] = r[i]*Uc[BX3][k][j][i];
     BuildIJ_forRes(d, grid, lines, Ip_B, Im_B, Jp_B, Jm_B, CI_B, CJ_B);
   #endif
   BoundaryADI(lines, d, grid, t_start); // Get bcs at t
@@ -194,8 +194,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   /***********************************
    * Update data
    * *********************************/
-  Uc = d->Uc;
-  r = grid[IDIR].x_glob;
   KDOM_LOOP(k) {
     LINES_LOOP(lines[0], l, j, i) {
       #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
@@ -474,19 +472,19 @@ void ImplicitUpdate (double **v, double **b, double **source,
    don't need to reallocate at every domain line that I update */
   double *diagonal, *upper, *lower, *rhs, *x;
 
-  /*[Opt] Maybe I could do that it allocates static arrays with size=max(NX1,NX2) ?*/
+  /*[Opt] Maybe I could do that it allocates static arrays with size=max(NX1_TOT,NX2_TOT) ?*/
   if (dir == IDIR) {
-    diagonal = ARRAY_1D(NX1, double);
-    rhs = ARRAY_1D(NX1, double);
-    upper = ARRAY_1D(NX1-1, double);
-    lower = ARRAY_1D(NX1-1, double);
-    x = ARRAY_1D(NX1, double);
+    diagonal = ARRAY_1D(NX1_TOT, double);
+    rhs = ARRAY_1D(NX1_TOT, double);
+    upper = ARRAY_1D(NX1_TOT, double);
+    lower = ARRAY_1D(NX1_TOT, double);
+    x = ARRAY_1D(NX1_TOT, double);
   } else if (dir == JDIR) {
-    diagonal = ARRAY_1D(NX2, double);
-    rhs = ARRAY_1D(NX2, double);
-    upper = ARRAY_1D(NX2-1, double);
-    lower = ARRAY_1D(NX2-1, double);
-    x = ARRAY_1D(NX2, double);
+    diagonal = ARRAY_1D(NX2_TOT, double);
+    rhs = ARRAY_1D(NX2_TOT, double);
+    upper = ARRAY_1D(NX2_TOT, double);
+    lower = ARRAY_1D(NX2_TOT, double);
+    x = ARRAY_1D(NX2_TOT, double);
   }
     /*[Opt] potrei sempificare il programma facendo che
   i membri di destra delle assegnazione prendono degli indici
@@ -611,10 +609,10 @@ void ImplicitUpdate (double **v, double **b, double **source,
   }
 
   FreeArray1D(diagonal);
+  FreeArray1D(x);
   FreeArray1D(upper);
   FreeArray1D(lower);
   FreeArray1D(rhs);
-  FreeArray1D(x);
 }
 //
 /****************************************************************************
@@ -632,7 +630,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
   static int first_call = 1;
 
   if (first_call) {
-    rhs = ARRAY_2D(NX2, NX1, double);
+    rhs = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     first_call = 0;
   }
 
@@ -840,5 +838,5 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
  *    per trovarmi le derivate delle incognite sui punti di griglia)
  * 4) Pensare ad un warning in caso di eta con componenti diverse tra loro
  * 5) Alberto dice di provare dopo eventualemente (se vedo probelmi o se voglio migliorare accuratezzax) a far aggiornare a t+dt/2 Jmp,Imp
- *
+ * 6) fare che viene stampate nell'output di pluto anche il dt parabolico che ci sarebbe con step esplicito
  ********************************************************/
