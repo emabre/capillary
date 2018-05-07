@@ -193,8 +193,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   /***********************************
    * Update data
    * *********************************/
-  // ATTENTO QUI FAI UN DOPPIO LOOP SU K AD UN CERTO PUNTO
-  // E ALCUNI INTERI (i,j,k) IN ALTRI PUNTI NONO SONO BEN DEFINITI
   Uc = d->Uc;
   KDOM_LOOP(k) {
     LINES_LOOP(lines[0], l, j, i) {
@@ -419,7 +417,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
 /**************************************************************************
  * Get_dEdT: Computes the derivative dE/dT (E is the internal energy
  * per unit volume, T is the temperature). This function also normalizes
- * the dEdT. 
+ * the dEdT.
  * ************************************************************************/
 void Get_dEdT(double *v, double r, double z, double theta, double *dEdT) {
   double c;
@@ -630,51 +628,95 @@ void ExplicitUpdate (double **v, double **b, double **source,
   }
 
   if (dir == IDIR) {
+    /********************
+    * Case direction IDIR
+    *********************/
     for (l = 0; l < Nlines; l++) {
       j = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
 
-      for (i = lidx+1; i < ridx; i++) {
-        if (source != NULL) {
-          for (i = lidx; i <= ridx; i++)
-            rhs[j][i] = b[j][i] + source[j][i]*dt;
-        } else {
-          /*[Opt] Maybe I could assign directly the address. BE CAREFUL:
-          if I assign the address, then I have to recover the old address of rhs (by saving temporarly the old rhs address
-          inside another variable), otherwise
-          at the next call of this function I will write over the memory of the old b*/
-          rhs[j][i] = b[j][i];
-        }
-        // Actual update
-        v[j][i] = rhs[j][i] + dt/C[j][i] * (b[j][i+1]*Hp[j][i] - b[j][i]*(Hp[j][i]+Hm[j][i]) + b[j][i-1]*Hm[j][i]);
-        // Cells near left boundary
-        if (lbound[l].kind == DIRICHLET){
-          b_ghost = 2*lbound[l].values[0] - b[j][lidx];
-          v[j][lidx] = rhs[j][lidx] + dt/C[j][lidx] * (b[j][lidx+1]*Hp[j][lidx] - b[j][lidx]*(Hp[j][lidx]+Hm[j][lidx]) + b_ghost*Hm[j][lidx]);
-        } else if (lbound[l].kind == NEUMANN_HOM) {
-          v[j][lidx] = rhs[j][lidx] + dt/C[j][lidx] * (b[j][lidx+1]*Hp[j][lidx] - b[j][lidx]*Hp[j][lidx]);
-        } else {
-          print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
-          QUIT_PLUTO(1);
-        }
-        // Cells near right boundary
-        if (rbound[l].kind == DIRICHLET){
-          b_ghost = 2*rbound[l].values[0] - b[j][ridx];
-          v[j][ridx] = rhs[j][ridx] + dt/C[j][ridx] * (b_ghost*Hp[j][ridx] - b[j][ridx]*(Hp[j][ridx]+Hm[j][ridx]) + b[j][ridx-1]*Hm[j][ridx]);
-        } else if (rbound[l].kind == NEUMANN_HOM) {
-          v[j][ridx] = rhs[j][ridx] + dt/C[j][ridx] * (-b[j][ridx]*Hm[j][ridx] + b[j][ridx-1]*Hm[j][ridx]);
-        } else {
-          print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
-          QUIT_PLUTO(1);
-        }
-
-
-
+      if (source != NULL) {
+        for (i = lidx; i <= ridx; i++)
+          rhs[j][i] = b[j][i] + source[j][i]*dt;
+      } else {
+        /*[Opt] Maybe I could assign directly the address. BE CAREFUL:
+        if I assign the address, then I have to recover the old address of rhs (by saving temporarly the old rhs address
+        inside another variable), otherwise
+        at the next call of this function I will write over the memory of the old b*/
+        rhs[j][i] = b[j][i];
       }
 
+      // Actual update
+      for (i = lidx+1; i < ridx; i++)
+        v[j][i] = rhs[j][i] + dt/C[j][i] * (b[j][i+1]*Hp[j][i] - b[j][i]*(Hp[j][i]+Hm[j][i]) + b[j][i-1]*Hm[j][i]);
+      // Cells near left boundary
+      if (lbound[l].kind == DIRICHLET){
+        b_ghost = 2*lbound[l].values[0] - b[j][lidx];
+        v[j][lidx] = rhs[j][lidx] + dt/C[j][lidx] * (b[j][lidx+1]*Hp[j][lidx] - b[j][lidx]*(Hp[j][lidx]+Hm[j][lidx]) + b_ghost*Hm[j][lidx]);
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        v[j][lidx] = rhs[j][lidx] + dt/C[j][lidx] * (b[j][lidx+1]*Hp[j][lidx] - b[j][lidx]*Hp[j][lidx]);
+      } else {
+        print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+      // Cells near right boundary
+      if (rbound[l].kind == DIRICHLET){
+        b_ghost = 2*rbound[l].values[0] - b[j][ridx];
+        v[j][ridx] = rhs[j][ridx] + dt/C[j][ridx] * (b_ghost*Hp[j][ridx] - b[j][ridx]*(Hp[j][ridx]+Hm[j][ridx]) + b[j][ridx-1]*Hm[j][ridx]);
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        v[j][ridx] = rhs[j][ridx] + dt/C[j][ridx] * (-b[j][ridx]*Hm[j][ridx] + b[j][ridx-1]*Hm[j][ridx]);
+      } else {
+        print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+    }
+  } else if (dir == JDIR) {
+    /********************
+    * Case direction JDIR
+    *********************/
+    for (l = 0; l < Nlines; l++) {
+      i = lines->dom_line_idx[l];
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
+
+      if (source != NULL) {
+        for (j = lidx; j <= ridx; j++)
+          rhs[j][i] = b[j][i] + source[j][i]*dt;
+      } else {
+        /*[Opt] Maybe I could assign directly the address. BE CAREFUL:
+        if I assign the address, then I have to recover the old address of rhs (by saving temporarly the old rhs address
+        inside another variable), otherwise
+        at the next call of this function I will write over the memory of the old b*/
+        rhs[j][i] = b[j][i];
+      }
+
+      // Actual update
+      for (j = lidx+1; j < ridx; j++)
+        v[j][i] = rhs[j][i] + dt/C[j][i] * (b[j+1][i]*Hp[j][i] - b[j][i]*(Hp[j][i]+Hm[j][i]) + b[j-1][i]*Hm[j][i]);
+      // Cells near left boundary
+      if (lbound[l].kind == DIRICHLET){
+        b_ghost = 2*lbound[l].values[0] - b[lidx][i];
+        v[lidx][i] = rhs[lidx][i] + dt/C[lidx][i] * (b[lidx+1][i]*Hp[lidx][i] - b[lidx][i]*(Hp[lidx][i]+Hm[lidx][i]) + b_ghost*Hm[lidx][i]);
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        v[lidx][i] = rhs[lidx][i] + dt/C[lidx][i] * (b[lidx+1][i]*Hp[lidx][i] - b[lidx][i]*Hp[lidx][i]);
+      } else {
+        print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+      // Cells near right boundary
+      if (rbound[l].kind == DIRICHLET){
+        b_ghost = 2*rbound[l].values[0] - b[ridx][i];
+        v[ridx][i] = rhs[ridx][i] + dt/C[ridx][i] * (b_ghost*Hp[ridx][i] - b[ridx][i]*(Hp[ridx][i]+Hm[ridx][i]) + b[ridx-1][i]*Hm[ridx][i]);
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        v[ridx][i] = rhs[ridx][i] + dt/C[ridx][i] * (-b[ridx][i]*Hm[ridx][i] + b[ridx-1][i]*Hm[ridx][i]);
+      } else {
+        print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
+        QUIT_PLUTO(1);
+      }
     }
   }
+
 
 }
 
