@@ -56,6 +56,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       Brb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
       Br = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      
+      // Build a handy magnetic field matrix
+      DOM_LOOP(k,j,i)
+        Br[j][i] = d->Uc[BX3][k][j][i];
     #endif
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
       Ip_T = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -82,10 +86,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     first_call=0;
   }
 
-  // Build a handy magnetic field matrix
-  DOM_LOOP(k,j,i)
-    Br[j][i] = d->Uc[BX3][k][j][i];
-
   /* A shortcut to the primitive variables */
   Vc = d->Vc;
 
@@ -104,10 +104,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
     #endif
 
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     BuildIJ_forTC(d, grid, lines, Ip_T, Im_T, Jp_T, Jm_T, CI_T, CJ_T);
   #endif
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     BuildIJ_forRes(d, grid, lines, Ip_B, Im_B, Jp_B, Jm_B, CI_B, CJ_B);
   #endif
   BoundaryADI(lines, d, grid, t_start); // Get bcs at t
