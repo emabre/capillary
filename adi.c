@@ -474,6 +474,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
    don't need to reallocate at every domain line that I update */
   double *diagonal, *upper, *lower, *rhs, *x;
 
+  /*[Opt] Maybe I could do that it allocates static arrays with size=max(NX1,NX2) ?*/
   if (dir == IDIR) {
     diagonal = ARRAY_1D(NX1, double);
     rhs = ARRAY_1D(NX1, double);
@@ -612,10 +613,68 @@ void ImplicitUpdate (double **v, double **b, double **source,
 /****************************************************************************
 Performs an explicit update of a diffusive problem (either for B or for T)
 *****************************************************************************/
-void ExplicitUpdate (double **v, double **rhs, double **source,
+void ExplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
                      int const dir) {
+  int i,j,l;
+  int ridx, lidx, l;
+  int Nlines = lines->N;
+  double b_ghost;
+  static double **rhs;
+  static int first_call = 1;
+
+  if (first_call) {
+    rhs = ARRAY_2D(NX2, NX1, double);
+    first_call = 0;
+  }
+
+  if (dir == IDIR) {
+    for (l = 0; l < Nlines; l++) {
+      j = lines->dom_line_idx[l];
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
+
+      for (i = lidx+1; i < ridx; i++) {
+        if (source != NULL) {
+          for (i = lidx; i <= ridx; i++)
+            rhs[j][i] = b[j][i] + source[j][i]*dt;
+        } else {
+          /*[Opt] Maybe I could assign directly the address. BE CAREFUL:
+          if I assign the address, then I have to recover the old address of rhs (by saving temporarly the old rhs address
+          inside another variable), otherwise
+          at the next call of this function I will write over the memory of the old b*/
+          rhs[j][i] = b[j][i];
+        }
+        // Actual update
+        v[j][i] = rhs[j][i] + dt/C[j][i] * (b[j][i+1]*Hp[j][i] - b[j][i]*(Hp[j][i]+Hm[j][i]) + b[j][i-1]*Hm[j][i]);
+        // Cells near left boundary
+        if (lbound[l].kind == DIRICHLET){
+          b_ghost = 2*lbound[l].values[0] - b[j][lidx];
+          v[j][lidx] = rhs[j][lidx] + dt/C[j][lidx] * (b[j][lidx+1]*Hp[j][lidx] - b[j][lidx]*(Hp[j][lidx]+Hm[j][lidx]) + b_ghost*Hm[j][lidx]);
+        } else if (lbound[l].kind == NEUMANN_HOM) {
+          v[j][lidx] = rhs[j][lidx] + dt/C[j][lidx] * (b[j][lidx+1]*Hp[j][lidx] - b[j][lidx]*Hp[j][lidx]);
+        } else {
+          print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
+          QUIT_PLUTO(1);
+        }
+        // Cells near right boundary
+        if (rbound[l].kind == DIRICHLET){
+          b_ghost = 2*rbound[l].values[0] - b[j][ridx];
+          v[j][ridx] = rhs[j][ridx] + dt/C[j][ridx] * (b_ghost*Hp[j][ridx] - b[j][ridx]*(Hp[j][ridx]+Hm[j][ridx]) + b[j][ridx-1]*Hm[j][ridx]);
+        } else if (rbound[l].kind == NEUMANN_HOM) {
+          v[j][ridx] = rhs[j][ridx] + dt/C[j][ridx] * (-b[j][ridx]*Hm[j][ridx] + b[j][ridx-1]*Hm[j][ridx]);
+        } else {
+          print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
+          QUIT_PLUTO(1);
+        }
+
+
+
+      }
+
+    }
+  }
 
 }
 
@@ -729,5 +788,6 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
  *    ma rigorosamente parlando, va bene? Forse devo ragionare sullo sviluppo di taylor
  *    per trovarmi le derivate delle incognite sui punti di griglia)
  * 4) Pensare ad un warning in caso di eta con componenti diverse tra loro
+ * 5) Alberto dice di provare dopo eventualemente (se vedo probelmi o se voglio migliorare accuratezzax) a far aggiornare a t+dt/2 Jmp,Imp
  * 
  ********************************************************/
