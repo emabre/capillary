@@ -15,7 +15,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     static double **Ip_B, **Im_B, **Jp_B, **Jm_B, **CI_B, **CJ_B;
-    static double **Ba1, **Ba2, **Bb1, **Bb2;
+    static double **Bra1, **Bra2, **Brb1, **Brb2;
     static double **B;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
@@ -27,6 +27,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   // static double **dEdT;
   double dt;
   double ****Uc, ****Vc;
+  double *r;
   double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
   /*Initial time before advancing the equations with the ADI method*/
   double t_start = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
@@ -49,10 +50,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       CI_B = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       CJ_B = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
-      Ba1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Ba2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Bb1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Bb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      Bra1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      Bra2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      Brb1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      Brb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
       B = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #endif
@@ -76,7 +77,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     sourcea2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     sourceb1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     sourceb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    
+
     // dEdT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     first_call=0;
   }
@@ -102,7 +103,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     #else
       print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
     #endif
-  
+
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     BuildIJ_forTC(d, grid, lines, Ip_T, Im_T, Jp_T, Jm_T, CI_T, CJ_T);
   #endif
@@ -115,7 +116,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
    (a.1) Explicit update sweeping IDIR
   **********************************/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate (Ba1, B, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
+    ExplicitUpdate (Bra1, B, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT  // Sure only if it is adi?? maybe it's ok even if it is sts or expl
@@ -135,11 +136,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   **********************************/
   BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate (Ba2, Ba1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
+    ImplicitUpdate (Bra2, Bra1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    // Build eta*J^2 source term using Ba2 REMEMBER TO NORMALIZE
+    // Build eta*J^2 source term using Bra2 REMEMBER TO NORMALIZE
     // ...
   #else
     LINES_LOOP(lines[0], l, j, i)
@@ -154,12 +155,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
    (b.1) Explicit update sweeping JDIR
   **********************************/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate (Bb1, Ba2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
+    ExplicitUpdate (Brb1, Bra2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
   #endif
   // /* -- This is USELESS as I already computed the source before, delete in future*/
   // #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-  //   // Build eta*J^2 source term using Ba2 REMEMBER TO NORMALIZE
+  //   // Build eta*J^2 source term using Bra2 REMEMBER TO NORMALIZE
   //   // ...
   // #else
   //   LINES_LOOP(lines[0], l, j, i)
@@ -175,11 +176,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   **********************************/
   BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate (Bb2, Bb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
+    ImplicitUpdate (Brb2, Brb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT // Sure only if it is adi?? maybe it's ok even if it is sts or expl
-    // Build eta*J^2 source term using Bb2 REMEMBER TO NORMALIZE
+    // Build eta*J^2 source term using Brb2 REMEMBER TO NORMALIZE
     // ...
   #else
     LINES_LOOP(lines[0], l, j, i)
@@ -194,10 +195,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
    * Update data
    * *********************************/
   Uc = d->Uc;
+  r = grid[IDIR].x_glob;
   KDOM_LOOP(k) {
     LINES_LOOP(lines[0], l, j, i) {
       #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
-        Uc[k][j][i][BX3] = Bb2[j][i];
+        Uc[k][j][i][BX3] = Brb2[j][i]/r[i];
       #endif
 
       #if HAVE_ENERGY
@@ -213,7 +215,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
           #else
             print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!")
           #endif
-        
+
         #elif (RESISTIVITY      == ALTERNATING_DIRECTION_IMPLICIT) && \
               (THERMAL_CONDUCTION != ALTERNATING_DIRECTION_IMPLICIT)
           // I provide the increase in int.energy from the integration of the pow.source
@@ -352,7 +354,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
   double *r, *z, *theta;
   double dEdT;
 
-  /* -- set a pointer to the primitive vars array -- 
+  /* -- set a pointer to the primitive vars array --
     I do this because it is done also in other parts of the code
     maybe it makes the program faster or just easier to write/read...*/
   Vc = d->Vc;
@@ -390,7 +392,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i-1]);
       TC_kappa( v, rL[i], z[j], theta[k], &kpar, &knor, &phi);
       Im[j][i] = knor*ArL[i]*inv_dri[i-1];
-      
+
       /* :::: Jp :::: */
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
@@ -404,7 +406,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
       Jm[j][i] = knor*inv_dzi[j-1];
 
       Get_dEdT(v, r[i], z[j], theta[k], &dEdT);
-      
+
       /* :::: CI :::: */
       CI[j][i] = dEdT*dVr[i];
 
@@ -430,7 +432,7 @@ void Get_dEdT(double *v, double r, double z, double theta, double *dEdT) {
   c = 3/2*(1/CONST_mp)*CONST_kB;
   // High temperature case, full ionization
   // c = 3/2*(2/CONST_mp)*CONST_kB;
-  
+
   // Heat capacity (heat to increas of 1 Kelvin 1 cm³ of Hydrogen)
   *dEdT = c*v[RHO];
 
@@ -486,7 +488,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
     lower = ARRAY_1D(NX2-1, double);
     x = ARRAY_1D(NX2, double);
   }
-    /*[Opt] potrei sempificare il programma facendo che 
+    /*[Opt] potrei sempificare il programma facendo che
   i membri di destra delle assegnazione prendono degli indici
   che puntano a j o a i a seconda del valore di dir*/
   // if (dir == IDIR) {
@@ -508,6 +510,9 @@ void ImplicitUpdate (double **v, double **b, double **source,
   //     [*j+*m][*i+*n];
   // }
   if (dir == IDIR) {
+  /********************
+  * Case direction IDIR
+  *********************/
     for (l = 0; l < Nlines; l++) {
       j = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
@@ -555,6 +560,9 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[j][i] = x[i];
     }
   } else if (dir == JDIR) {
+    /********************
+    * Case direction JDIR
+    *********************/
     for (l = 0; l < Nlines; l++) {
       i = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
@@ -606,6 +614,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
   FreeArray1D(upper);
   FreeArray1D(lower);
   FreeArray1D(rhs);
+  FreeArray1D(x);
 }
 //
 /****************************************************************************
@@ -616,7 +625,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
                      int const dir) {
   int i,j,l;
-  int ridx, lidx, l;
+  int ridx, lidx;
   int Nlines = lines->N;
   double b_ghost;
   static double **rhs;
@@ -721,7 +730,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
 }
 
 /****************************************************************************
-Function to initialize lines, I hope this kind of initialization is ok and 
+Function to initialize lines, I hope this kind of initialization is ok and
 there are no problems with data continuity and similar things
 *****************************************************************************/
 void InitializeLines(Lines *lines, int N){
@@ -784,7 +793,7 @@ void GeometryADI(Lines *lines, Grid *grid){
  * Solve a linear system made by a tridiagonal matrix.
  * See  https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm
  * for info (accessed on 24/3/2017)
- * 
+ *
  * N: the size of the arrays x, diagonal, right_hand_side.
  * x: solution
  * *********************************************************/
@@ -820,7 +829,7 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
 
 /*******************************************************
  * COSE DA FARE, ma che sono secondarie:
- * 
+ *
  * 0) Mettere a zero all'inizio i Jp,Ip,Jm,Im,C alla prima chiamata?
  * 1) Mettere un po' di cicli #if di controllo che la geometria
  *    il modello (MHD) e altro siano ok.
@@ -831,5 +840,5 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
  *    per trovarmi le derivate delle incognite sui punti di griglia)
  * 4) Pensare ad un warning in caso di eta con componenti diverse tra loro
  * 5) Alberto dice di provare dopo eventualemente (se vedo probelmi o se voglio migliorare accuratezzax) a far aggiornare a t+dt/2 Jmp,Imp
- * 
+ *
  ********************************************************/
