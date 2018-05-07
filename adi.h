@@ -48,10 +48,10 @@ void GeometryADI (Lines *lines, Grid *grid);
 void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t);
 void ExplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
-                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt);
+                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt, int const dir);
 void ImplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
-                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt);
+                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt, int const dir);
 void tdm_solver(double *x, double const *diagonal, double const *upper,
                 double const *lower, double const *right_hand_side, int const N);
                      

@@ -115,7 +115,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   **********************************/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     ExplicitUpdate (Ba1, B, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
-                    lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt);
+                    lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT  // Sure only if it is adi?? maybe it's ok even if it is sts or expl
     // Include eta*J^2 source term using B REMEMBER TO NORMALIZE
@@ -126,7 +126,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     ExplicitUpdate (Ta1, T, sourcea1, Ip_T, Im_T, CI_T, &lines[IDIR],
-                    lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt);
+                    lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
   #endif
 
   /**********************************
@@ -135,7 +135,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     ImplicitUpdate (Ba2, Ba1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
-                    lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt);
+                    lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     // Build eta*J^2 source term using Ba2 REMEMBER TO NORMALIZE
@@ -146,7 +146,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     ImplicitUpdate (Ta2, Ta1, sourcea2, Jp_T, Jm_T, CJ_T, &lines[JDIR],
-                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt);
+                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, JDIR);
   #endif
 
   /**********************************
@@ -154,7 +154,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   **********************************/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     ExplicitUpdate (Bb1, Ba2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
-                    lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt);
+                    lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
   #endif
   // /* -- This is USELESS as I already computed the source before, delete in future*/
   // #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
@@ -166,7 +166,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   // #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     ExplicitUpdate (Tb1, Ta2, sourcea1, Jp_T, Jm_T, CJ_T, &lines[JDIR],
-                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt);
+                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, NX2);
   #endif
 
   /**********************************
@@ -175,7 +175,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     ImplicitUpdate (Bb2, Bb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
-                    lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt);
+                    lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT // Sure only if it is adi?? maybe it's ok even if it is sts or expl
     // Build eta*J^2 source term using Bb2 REMEMBER TO NORMALIZE
@@ -186,7 +186,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     ImplicitUpdate (Tb2, Tb1, sourcea1, Ip_T, Im_T, CI_T, &lines[IDIR],
-                    lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt);
+                    lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
   #endif
 
   /***********************************
@@ -454,12 +454,94 @@ void BuildIJ_forRes(const Data *d, Grid *grid, Lines *lines,
 /****************************************************************************
 Performs an implicit update of a diffusive problem (either for B or for T)
 *****************************************************************************/
-void ImplicitUpdate (double **v, double **rhs, double **source,
+void ImplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
-                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt) {
+                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
+                     int const dir) {
+  /*[Opt] Maybe I could pass to this func. an integer which tells which bc has to be
+  used inside the structure *lines, instead of passing separately the bcs (which are
+  still also contained inside *lines)*/
+  /*[Opt] Maybe I could use g_dir instead of passing dir, but I am afraid of
+  doing caos modifiying the value of g_dir for the rest of PLUTO*/
+  int l, i, j; // m and n play the role of i and j (not necessarly respectively)
+  int Nlines = lines->N;
+  int ridx;
+  int lidx;
+  /* I allocate these as big as if I had to cover the whole domain, so that I
+   don't need to reallocate at every domain line that I update */
+  double *diagonal, *upper, *lower, *rhs;
 
-                       // if source == NULL
+  if (dir == IDIR) {
+    diagonal = ARRAY_1D(NX1, double);
+    rhs = ARRAY_1D(NX1, double);
+    upper = ARRAY_1D(NX1-1, double);
+    lower = ARRAY_1D(NX1-1, double);
+  } else if (dir == JDIR) {
+    diagonal = ARRAY_1D(NX2, double);
+    rhs = ARRAY_1D(NX2, double);
+    upper = ARRAY_1D(NX2-1, double);
+    lower = ARRAY_1D(NX2-1, double);
+  }
 
+  /*[Opt] potrei sempificare il programma facendo che 
+  i membri di destra delle assegnazione prendono degli indici
+  che puntano a j o a i a seconda del valore di dir*/
+  if (dir == IDIR) {
+    for (l = 0; l < Nlines; l++) {
+      j = lines->dom_line_idx;
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
+
+      upper[lidx] = -dt/C[j][lidx]*Hp[j][lidx];
+      lower[ridx] = -dt/C[j][ridx]*Hm[j][ridx];
+      rhs[lidx] = b[j][lidx];
+      rhs[ridx] = b[j][ridx];
+      for (i = lidx+1; i < ridx; i++) {
+        diagonal[i] = 1 + dt/C[j][i] * (Hp[j][i]+Hm[j][i]);
+        rhs[i] = b[j][i];
+        upper[i] = -dt/C[j][i]*Hp[j][i];
+        lower[i] = -dt/C[j][i]*Hm[j][i];
+      }
+      /* I include the effect of the source */
+      if (source != NULL) {
+        for (i = lidx; i <= ridx; i++)
+          rhs[i] += source[j][i]*dt;
+      }
+      // I set the Bcs for lower boundary
+      if (lbound[l].kind == DIRICHLET){
+        diagonal[lidx] = 1 + dt/C[j][lidx]*(Hp[j][lidx]+2*Hm[j][lidx]);
+        rhs[lidx] += dt/C[j][lidx]*Hm[j][lidx]*2*lbound[l].values[0];
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        diagonal[lidx] = 1 + dt/C[j][lidx]*Hp[j][lidx];
+      } else {
+        print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+      // I set the Bcs for higher boundary
+      if (rbound[l].kind == DIRICHLET){
+        diagonal[ridx] = 1 + dt/C[j][ridx]*(2*Hp[j][ridx]+Hm[j][ridx]);
+        rhs[ridx] += dt/C[j][ridx]*Hp[j][ridx]*2*rbound[l].values[0];
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        diagonal[lidx] = 1 + dt/C[j][lidx]*Hp[j][lidx];
+      } else {
+        print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+
+      // Now I solve the system
+      tdm_solver( v, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
+    
+    }
+  } else if (dir == JDIR) {
+    print1("Non implementata!");
+  }
+
+
+
+  FreeArray1D(diagonal);
+  FreeArray1D(upper);
+  FreeArray1D(lower);
+  FreeArray1D(rhs);
 }
 //
 /****************************************************************************
@@ -467,9 +549,8 @@ Performs an explicit update of a diffusive problem (either for B or for T)
 *****************************************************************************/
 void ExplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
-                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt) {
-
-                       // if source == NULL
+                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
+                     int const dir) {
 
 }
 
@@ -543,7 +624,6 @@ void GeometryADI(Lines *lines, Grid *grid){
  * *********************************************************/
 void tdm_solver(double *x, double const *diagonal, double const *upper,
                 double const *lower, double const *right_hand_side, int const N) {
-    
     /*[Opt] Is it really needed to define two new arrays?
             Maybe I can make that it uses directly the diagonal, upper,
             lower arrays, modifying them, the only problem is that I
