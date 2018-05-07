@@ -55,7 +55,7 @@ void TC_kappa(double *v, double x1, double x2, double x3,
    the STS and EXPLICIT algorithms (T=p/rho). If one decides not to normalize by
    mu then he should change the computation of T for the ideal case with
    T=mu*p/rho]. For using ADI scheme I implemented, one must not normalize by mu.
-  /**************************************************/
+   *************************************************/
   *kpar *= CONST_mp/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
   *knor *= CONST_mp/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
   /***************************************************/

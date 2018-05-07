@@ -1,2 +1,2 @@
-OBJ += gamma_transp.o capillary_wall.o current_table.o freeze_fluid.o adi.o
+OBJ += gamma_transp.o capillary_wall.o current_table.o freeze_fluid.o adi.o tc_kappa.o
 HEADERS += gamma_transp.h capillary_wall.h current_table.h freeze_fluid.h adi.h

@@ -4,6 +4,7 @@ and thermal conduction) terms with the Alternating Directino Implicit algorithm*
 #include "adi.h"
 #include "capillary_wall.h"
 #include "current_table.h"
+#include "Thermal_Conduction/tc.h"
 
 // Remarkable comments:
 // [Opt] = it can be optimized (in terms of performance)
@@ -342,7 +343,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
                    double **Jm, double **CI, double **CJ) {
   int i,j,k;
   int nv, l;
-  double *kpar, *knor, *phi; // Electr. resistivity or thermal conductivity
+  double kpar, knor, phi; // Electr. resistivity or thermal conductivity
   double v[NVAR];
   double ****Vc;
   double *inv_dri, *inv_dzi;
@@ -351,7 +352,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
   double *ArR, *ArL;
   double *dVr, *dVz;
   double *r, *z, *theta;
-  double *dEdT;
+  double dEdT;
 
   /* -- set a pointer to the primitive vars array -- 
     I do this because it is done also in other parts of the code
@@ -379,8 +380,8 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
       /* :::: Ip :::: */
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
-      TC_kappa( v, rR[i], z[j], theta[k], kpar, knor, phi);
-      Ip[j][i] = (*knor)*ArR[i]*inv_dri[i];
+      TC_kappa( v, rR[i], z[j], theta[k], &kpar, &knor, &phi);
+      Ip[j][i] = knor*ArR[i]*inv_dri[i];
       /* [Opt] Here I could use the already computed k to compute
       also Im[1,i+1] (since it needs k at the same interface).
       Doing so I would reduce the calls to TC_kappa by almost a factor 1/2
@@ -389,28 +390,28 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
       /* :::: Im :::: */
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i-1]);
-      TC_kappa( v, rL[i], z[j], theta[k], kpar, knor, phi);
-      Im[j][i] = (*knor)*ArL[i]*inv_dri[i-1];
+      TC_kappa( v, rL[i], z[j], theta[k], &kpar, &knor, &phi);
+      Im[j][i] = knor*ArL[i]*inv_dri[i-1];
       
       /* :::: Jp :::: */
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
-      TC_kappa( v, r[i], zR[j], theta[k], kpar, knor, phi);
-      Jp[j][i] = (*knor)*inv_dzi[j];
+      TC_kappa( v, r[i], zR[j], theta[k], &kpar, &knor, &phi);
+      Jp[j][i] = knor*inv_dzi[j];
 
       /* :::: Jm :::: */
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
-      TC_kappa( v, r[i], zL[j], theta[k], kpar, knor, phi);
-      Jm[j][i] = (*knor)*inv_dzi[j-1];
+      TC_kappa( v, r[i], zL[j], theta[k], &kpar, &knor, &phi);
+      Jm[j][i] = knor*inv_dzi[j-1];
 
-      Get_dEdT(v, r[i], z[j], theta[k], dEdT);
+      Get_dEdT(v, r[i], z[j], theta[k], &dEdT);
       
       /* :::: CI :::: */
-      CI[j][i] = (*dEdT)*dVr[i];
+      CI[j][i] = dEdT*dVr[i];
 
       /* :::: CJ :::: */
-      CJ[j][i] = (*dEdT)*dVz[j];
+      CJ[j][i] = dEdT*dVz[j];
     }
   }
 }
@@ -464,25 +465,27 @@ void ImplicitUpdate (double **v, double **b, double **source,
   /*[Opt] Maybe I could use g_dir instead of passing dir, but I am afraid of
   doing caos modifiying the value of g_dir for the rest of PLUTO*/
   // int *m, *n, *i, *j; // m and n play the role of i and j (not necessarly respectively)
-  // int s;
+  // int s, dom_line_idx;
   // const int zero=0;
   int i,j;
   int Nlines = lines->N;
-  int ridx, lidx, l, dom_line_idx;
+  int ridx, lidx, l;
   /* I allocate these as big as if I had to cover the whole domain, so that I
    don't need to reallocate at every domain line that I update */
-  double *diagonal, *upper, *lower, *rhs;
+  double *diagonal, *upper, *lower, *rhs, *x;
 
   if (dir == IDIR) {
     diagonal = ARRAY_1D(NX1, double);
     rhs = ARRAY_1D(NX1, double);
     upper = ARRAY_1D(NX1-1, double);
     lower = ARRAY_1D(NX1-1, double);
+    x = ARRAY_1D(NX1, double);
   } else if (dir == JDIR) {
     diagonal = ARRAY_1D(NX2, double);
     rhs = ARRAY_1D(NX2, double);
     upper = ARRAY_1D(NX2-1, double);
     lower = ARRAY_1D(NX2-1, double);
+    x = ARRAY_1D(NX2, double);
   }
     /*[Opt] potrei sempificare il programma facendo che 
   i membri di destra delle assegnazione prendono degli indici
@@ -507,7 +510,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
   // }
   if (dir == IDIR) {
     for (l = 0; l < Nlines; l++) {
-      j = lines->dom_line_idx;
+      j = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
 
@@ -547,11 +550,14 @@ void ImplicitUpdate (double **v, double **b, double **source,
         QUIT_PLUTO(1);
       }
       // Now I solve the system
-      tdm_solver( v, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
+      tdm_solver( x+lidx, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
+      /*[Opt] Is this for a waste of time? maybe I could engineer better the use of tdm_solver function(or the way it is written)*/
+      for (i=lidx; i<=ridx; i++)
+        v[j][i] = x[i];
     }
   } else if (dir == JDIR) {
     for (l = 0; l < Nlines; l++) {
-      i = lines->dom_line_idx;
+      i = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
 
@@ -591,7 +597,9 @@ void ImplicitUpdate (double **v, double **b, double **source,
         QUIT_PLUTO(1);
       }
       // Now I solve the system
-      tdm_solver( v, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
+      tdm_solver( x+lidx, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
+      for (j=lidx; j<=ridx; j++)
+        v[j][i] = x[j];
     }
   }
 
