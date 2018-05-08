@@ -44,7 +44,10 @@ void ComputeUserVar (const Data *d, Grid *grid)
   double ***interBound;
 
   /*[Rob] I could exploit the (I think) globally available runtime structure to get the number and name of variables
-  set for output so that I do not need to modify consistently bot the pluto.ini and the definition of these macros*/
+  set for output so that I do not need to modify consistently bot the pluto.ini and the definition of these macros.
+  From the doc: "Runtime parameters can be accessed anywhere in the code
+through the members of the Runtime structure, (see Doc/Doxygen/html/structs 8h.html ) using the func-
+tion RuntimeGet(), e.g. ..."*/
   #if WRITE_J1D == YES || WRITE_J == YES
     double ***Jz;
   #endif

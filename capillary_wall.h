@@ -10,9 +10,9 @@
 #define DENS0 2.5e-7
 // #define DENS0 2.5e-7
 #define RCAP 0.05
-#define DZCAP 0.1 /*the electrodes are wide DZCAP cm*/
+#define DZCAP 0.2 /*the electrodes are wide DZCAP cm*/
 // #define DZCAP 0.06
-#define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
+#define ZCAP 1.0 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 // #define ZCAP 0.2
 /**********************************************************/
 
