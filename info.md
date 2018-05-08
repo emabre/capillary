@@ -32,3 +32,7 @@ Thus I edited the file prototypes.h in the original Source folder, since copying
 
 **Check**
 + Tempertature computation in case of super-time-stepping is correct?
+
+**Optimizations for performance and robustness/ease of use**
++ In comments: [Opt] means possibility to optimize the code
++ In comments: [Rob] means possibility to optimize the rubustness of the code

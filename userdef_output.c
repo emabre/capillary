@@ -36,13 +36,15 @@ void ComputeUserVar (const Data *d, Grid *grid)
  *
  *    Define user-defined output variables
  *
- * EMA: la modifico per stamparmi la temperatura
+ *
  *
  ***************************************************************** */
 {
   int i, j, k;
   double ***interBound;
 
+  /*[Rob] I could exploit the (I think) globally available runtime structure to get the number and name of variables
+  set for output so that I do not need to modify consistently bot the pluto.ini and the definition of these macros*/
   #if WRITE_J1D == YES || WRITE_J == YES
     double ***Jz;
   #endif
@@ -72,8 +74,6 @@ void ComputeUserVar (const Data *d, Grid *grid)
       double ***T_c_r, ***T_c_z;
     #endif
   #endif
-
-  print1("NX3_TOT=%d, NX2_TOT=%d, NX1_TOT=%d",NX3_TOT, NX2_TOT, NX1_TOT);
 
 /******************************************************/
 /*I allocate space for all the variables of the output*/
@@ -215,12 +215,12 @@ void ComputeUserVar (const Data *d, Grid *grid)
   #if WRITE_J2D == YES
     ComputeJ2DforOutput(d, grid, Jr, Jz, Jphi);
   #endif
-  
+
   #if WRITE_J_OLD == YES
     ComputeJforOutput(d, grid, Jr, Jz);
   #endif
 
-  
+
   // free_Data(&d_corrected_r);
   // free_Data(&d_corrected_z);
   free_Data(d_corrected_r);
@@ -340,14 +340,14 @@ void ChangeDumpVar ()
 
   /*-------------------------------------------------------------------------
   void GetCurrentForOutput (..)
-  What follows has been copied from GetCurrent() removing parts which did not 
+  What follows has been copied from GetCurrent() removing parts which did not
   refer to 2D+CYLINDRICAL GEOMETRY + CELL CENTERED MHD,
   I also removed if cycle on the allocation of ***a23Bx3, ***a13Bx3, ***a13Bx3 and
-  changed their names to ***a23Bx3_local, ***a13Bx3_local, ***a13Bx3_local (in order not 
+  changed their names to ***a23Bx3_local, ***a13Bx3_local, ***a13Bx3_local (in order not
   to confuse/mess up the global variables ***a23Bx3, ***a13Bx3, ***a12Bx3)
   ----------------------------------------------------------------------------*/
   void GetCurrentForOutput (const Data *d, int dir, Grid *grid, double ***Jr, double ***Jz, double ***Jphi)
-  { 
+  {
     int  i, j, k;
     double *dx1, *dx2, *dx3;
     double *r, *rp;
@@ -363,7 +363,7 @@ void ChangeDumpVar ()
   /* ------------------------------------------------------------------
     1. Set pointer shortcuts.
         The primary magnetic field will be the cell-centered field.
-        
+
         Note: in 2+1/2 dimensions, we also need Jx1 and Jx2 which
               contribute to the total energy equation but not
               to the induction equation.
@@ -376,7 +376,7 @@ void ChangeDumpVar ()
           Bx3 = d->Vc[BX3];)
 
     //[Ema] Just because I am lazy and I do not want to change the names in the whol function
-    Jx1 = Jr; 
+    Jx1 = Jr;
     Jx2 = Jz;
     Jx3 = Jphi;
 
@@ -427,12 +427,12 @@ void ChangeDumpVar ()
       BOX_LOOP(&box,k,j,i){
 
         d12 = d13 = 1.0/dx1[i];
-        d21 = d23 = 1.0/dx2[j]; 
-        d31 = d32 = 1.0/dx3[k];    
-        
+        d21 = d23 = 1.0/dx2[j];
+        d31 = d32 = 1.0/dx3[k];
+
         // #if GEOMETRY == CYLINDRICAL
         d32 = d31 = 0.0;
-        d13 = 2.0/(fabs(r[i+1])*r[i+1] - fabs(r[i])*r[i]);  
+        d13 = 2.0/(fabs(r[i+1])*r[i+1] - fabs(r[i])*r[i]);
         // #endif
 
         // #if COMPONENTS == 3
@@ -449,7 +449,7 @@ void ChangeDumpVar ()
         dx2_Bx1 = 0.5*(CDIFF_X2(Bx1,k,j,i) + CDIFF_X2(Bx1,k,j,i+1))*d21;
         Jx3[k][j][i] = (dx1_Bx2 - dx2_Bx1);
       }
-      
+
     }else if (dir == JDIR){
 
     /* ----------------------------------------------------
@@ -467,9 +467,9 @@ void ChangeDumpVar ()
 
         // #if GEOMETRY == CYLINDRICAL
         d32 = d31 = 0.0; /* axisymmetry */
-        d13 = 1.0/(r[i]*dx1[i]); 
+        d13 = 1.0/(r[i]*dx1[i]);
         // #endif
-        
+
         // #if COMPONENTS == 3
         dx2_Bx3 = FDIFF_X2(a23Bx3_local,k,j,i)*d23;
         dx3_Bx2 = 0.5*(CDIFF_X3(Bx2,k,j,i) + CDIFF_X3(Bx2,k,j+1,i))*d32;
@@ -498,7 +498,7 @@ void ChangeDumpVar ()
         d12 = d13 = 1.0/dx1[i];
         d21 = d23 = 1.0/dx2[j];
         d31 = d32 = 1.0/dx3[k];
-        
+
         // #if COMPONENTS == 3
         dx2_Bx3 = 0.5*(CDIFF_X2(a23Bx3_local,k,j,i) + CDIFF_X2(a23Bx3_local,k+1,j,i))*d23;
         dx3_Bx2 = FDIFF_X3(Bx2,k,j,i)*d32;
@@ -572,7 +572,7 @@ void ChangeDumpVar ()
     // print1("for 0, gbeg: %d, gend: %d", grid[IDIR].gbeg, grid[IDIR].gend);
     B = d->Vc[iBPHI];
 
-    DOM_LOOP(k,j,i){      
+    DOM_LOOP(k,j,i){
       if (i == IBEG){
         Jr[k][j][i] = (B[k][j+1][i]-B[k][j][i])/(z[j+1]-z[j]);
       }
@@ -609,7 +609,7 @@ void ComputeJforOutput_old(const Data *d, Grid *grid, double ***Ji, double ***Jj
   double J_jsweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
   Data* d_temp;
   RBox box;
-  
+
   // alloc_Data(&d_temp);
   d_temp = alloc_Data();
 

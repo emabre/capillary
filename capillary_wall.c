@@ -45,17 +45,21 @@ i=0                 o-------------------------------->(axis)
   zcap_real = grid[1].xr_glob[j_cap_inter_end];
   dzcap_real = grid[1].xr_glob[j_cap_inter_end]-grid[1].xl_glob[j_elec_start];
 
-  print1("\n\n-------------------------------------------------------------------------");
-  print1("\nIndexes of remarkable internal bounary points:");
-  print1("\ni_cap_inter_end: \t%d", i_cap_inter_end);
-  print1("\nj_cap_inter_end: \t%d", j_cap_inter_end);
-  print1("\nj_elec_start:    \t%d\n", j_elec_start);
-  print1("\nRemarkable points:");
-  print1("\nCapillary radius,      set: %g; \tactual: %g \t(cm)", RCAP, rcap_real*UNIT_LENGTH);
-  print1("\nCapillary half length, set: %g; \tactual: %g \t(cm)", ZCAP, zcap_real*UNIT_LENGTH);
-  print1("\nElectrode length,      set: %g; \tactual: %g \t(cm)", DZCAP, dzcap_real*UNIT_LENGTH);
-  print1("\n( electrode actual start: z=%g; \t(cm) )",(zcap_real-dzcap_real)*UNIT_LENGTH);
-  print1("\n---------------------------------------------------------------------------");
+  print1("\n  -------------------------------------------------------------------------");
+  print1("\n  Indexes of remarkable internal bounary points:");
+  print1("\n  i_cap_inter_end: \t%d", i_cap_inter_end);
+  print1("\n  j_cap_inter_end: \t%d", j_cap_inter_end);
+  print1("\n  j_elec_start:    \t%d\n", j_elec_start);
+  print1("\n  Remarkable points:");
+  print1("\n  Capillary radius,      set: %g; \tactual: %g \t(cm)", RCAP, rcap_real*UNIT_LENGTH);
+  print1("\n  Capillary half length, set: %g; \tactual: %g \t(cm)", ZCAP, zcap_real*UNIT_LENGTH);
+  print1("\n  Electrode length,      set: %g; \tactual: %g \t(cm)", DZCAP, dzcap_real*UNIT_LENGTH);
+  print1("\n  ( electrode actual start: z=%g; \t(cm) )",(zcap_real-dzcap_real)*UNIT_LENGTH);
+  print1("\n");
+  print1("\n  Just so that you know:");
+  print1("\n  NX3_TOT=%d, NX2_TOT=%d, NX1_TOT=%d",NX3_TOT, NX2_TOT, NX1_TOT);
+  print1("\n  IBEG=%d, IEND=%d, JBEG=%d, JEND=%d, KBEG=%d, KEND=%d", IBEG, IEND, JBEG, JEND, KBEG, KEND);
+  print1("\n  ---------------------------------------------------------------------------");
   print1("\n");
   
   capillary_not_set = 0;

@@ -6,6 +6,10 @@ and thermal conduction) terms with the Alternating Directino Implicit algorithm*
 #include "current_table.h"
 #include "Thermal_Conduction/tc.h"
 
+#if KBEG != KEND
+  #error grid in k direction should only be of 1 point
+#endif
+
 // Remarkable comments:
 // [Opt] = it can be optimized (in terms of performance)
 
@@ -30,7 +34,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   double *r;
   double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
   /*Initial time before advancing the equations with the ADI method*/
-  double t_start = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
+  double const t_start = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
 
   // Find the remarkable indexes (if they had not been found before)
   if (capillary_not_set) {
@@ -168,7 +172,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   // #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     ExplicitUpdate (Tb1, Ta2, sourcea1, Jp_T, Jm_T, CJ_T, &lines[JDIR],
-                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, NX2);
+                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, JDIR);
   #endif
 
   /**********************************
@@ -187,7 +191,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       sourceb2[j][i] = 0.0;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate (Tb2, Tb1, sourcea1, Ip_T, Im_T, CI_T, &lines[IDIR],
+    ImplicitUpdate (Tb2, Tb1, sourceb2, Ip_T, Im_T, CI_T, &lines[IDIR],
                     lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
   #endif
 
@@ -209,6 +213,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
           #elif EOS==PVTE_LAW
             for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
               /*[Opt] I should use a tabulation maybe!*/
+              print1("[Ema]Are you sure this is the internal energy??");
               Uc[k][j][i][ENG] = InternalEnergyFunc(v, Tb2[j][i]);
           #else
             print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!")
@@ -372,6 +377,16 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
   ArL = grid[IDIR].A - 1;
   dVr = grid[IDIR].dV;
   dVz = grid[JDIR].dV;
+
+  /*[Opt] This is probably useless, it is here just for debugging purposes*/
+  DOM_LOOP(k, j, i) {
+    Ip[j][i] = 0.0;
+    Im[j][i] = 0.0;
+    Jp[j][i] = 0.0;
+    Jm[j][i] = 0.0;
+    CI[j][i] = 0.0;
+    CJ[j][i] = 0.0;
+  }
   KDOM_LOOP(k) {
     LINES_LOOP(lines[0], l, j, i) {
 
@@ -606,6 +621,9 @@ void ImplicitUpdate (double **v, double **b, double **source,
       for (j=lidx; j<=ridx; j++)
         v[j][i] = x[j];
     }
+  } else {
+    print1("[ImplicitUpdate] Unimplemented choice for 'dir'!");
+    QUIT_PLUTO(1);
   }
 
   FreeArray1D(diagonal);
@@ -722,6 +740,9 @@ void ExplicitUpdate (double **v, double **b, double **source,
         QUIT_PLUTO(1);
       }
     }
+  } else {
+    print1("[ImplicitUpdate] Unimplemented choice for 'dir'!");
+    QUIT_PLUTO(1);
   }
 
 
