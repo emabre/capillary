@@ -3,7 +3,7 @@
 /***************************************************************************************
  * [Ema] Print matrix (useful for calling inside gdb) 
  ****************************************************************************************/
-void printMat(double **matrix, int dim2, int dim1)
+void printmat(double **matrix, int dim2, int dim1)
 {
     int i, j;
     for (i = 0; i < dim1; ++i)
