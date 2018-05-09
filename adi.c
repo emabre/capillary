@@ -27,12 +27,14 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     static double **Ta1, **Ta2, **Tb1, **Tb2;
     static double **T;
   #endif
-  static double **sourcea1, **sourcea2, **sourceb1, **sourceb2;
+  // eta*J^2 source terms ("ohm power": heating power per unit volume due to Ohm effect)
+  static double **ohmp_a1, **ohmp_a2, **ohmp_b1, **ohmp_b2;
   // static double **dEdT;
   const double dt = g_dt;
   double ****Uc, ****Vc;
   double *r;
   double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
+  double rhoe_old, rhoe_new;
   /*Initial time before advancing the equations with the ADI method*/
   double const t_start = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
 
@@ -80,12 +82,20 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       Tb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
       T = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+
+      TOT_LOOP (k,j,i) {
+        Ta1[j][i] = 0.0;
+        Ta2[j][i] = 0.0;
+        Tb1[j][i] = 0.0;
+        Tb2[j][i] = 0.0;
+      }
+
     #endif
 
-    sourcea1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    sourcea2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    sourceb1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    sourceb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    ohmp_a1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    ohmp_a2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    ohmp_b1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    ohmp_b2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
     // dEdT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     first_call=0;
@@ -127,11 +137,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     // Include eta*J^2 source term using Br REMEMBER TO NORMALIZE
     // ...
   #else
-    LINES_LOOP(lines[0], l, j, i)
-      sourcea1[j][i] = 0.0;
+    LINES_LOOP(lines[IDIR], l, j, i)
+      ohmp_a1[j][i] = 0.0;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate (Ta1, T, sourcea1, Ip_T, Im_T, CI_T, &lines[IDIR],
+    ExplicitUpdate (Ta1, T, ohmp_a1, Ip_T, Im_T, CI_T, &lines[IDIR],
                     lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
   #endif
 
@@ -147,11 +157,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     // Build eta*J^2 source term using Bra2 REMEMBER TO NORMALIZE
     // ...
   #else
-    LINES_LOOP(lines[0], l, j, i)
-      sourcea2[j][i] = 0.0;
+    LINES_LOOP(lines[IDIR], l, j, i)
+      ohmp_a2[j][i] = 0.0;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate (Ta2, Ta1, sourcea2, Jp_T, Jm_T, CJ_T, &lines[JDIR],
+    ImplicitUpdate (Ta2, Ta1, ohmp_a2, Jp_T, Jm_T, CJ_T, &lines[JDIR],
                     lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, JDIR);
   #endif
 
@@ -167,11 +177,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   //   // Build eta*J^2 source term using Bra2 REMEMBER TO NORMALIZE
   //   // ...
   // #else
-  //   LINES_LOOP(lines[0], l, j, i)
-  //     sourceb1[j][i] = 0.0;
+  //   LINES_LOOP(lines[IDIR], l, j, i)
+  //     ohmp_b1[j][i] = 0.0;
   // #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate (Tb1, Ta2, sourcea1, Jp_T, Jm_T, CJ_T, &lines[JDIR],
+    ExplicitUpdate (Tb1, Ta2, ohmp_a1, Jp_T, Jm_T, CJ_T, &lines[JDIR],
                     lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, JDIR);
   #endif
 
@@ -187,11 +197,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     // Build eta*J^2 source term using Brb2 REMEMBER TO NORMALIZE
     // ...
   #else
-    LINES_LOOP(lines[0], l, j, i)
-      sourceb2[j][i] = 0.0;
+    LINES_LOOP(lines[IDIR], l, j, i)
+      ohmp_b2[j][i] = 0.0;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate (Tb2, Tb1, sourceb2, Ip_T, Im_T, CI_T, &lines[IDIR],
+    ImplicitUpdate (Tb2, Tb1, ohmp_b2, Ip_T, Im_T, CI_T, &lines[IDIR],
                     lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
   #endif
 
@@ -199,7 +209,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
    * Update data
    * *********************************/
   KDOM_LOOP(k) {
-    LINES_LOOP(lines[0], l, j, i) {
+    LINES_LOOP(lines[IDIR], l, j, i) {
       #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
         Uc[k][j][i][BX3] = Brb2[j][i]/r[i];
       #endif
@@ -213,8 +223,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
           #elif EOS==PVTE_LAW
             for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
               /*[Opt] I should use a tabulation maybe!*/
-              print1("[Ema]Are you sure this is the internal energy??");
-              Uc[k][j][i][ENG] = InternalEnergyFunc(v, Tb2[j][i]);
+              rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN);
+              rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN);
+              Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
           #else
             print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!")
           #endif
@@ -224,14 +235,14 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
           // I provide the increase in int.energy from the integration of the pow.source
           /* I am just using trapezi integration of source term,
           but I could use something like cav-simps with very little effort
-          (I have already sourcea, sourceb, sourcec(?)!*/
-          Uc[k][j][i][ENG] += sourceb1[j][i]*dt
+          (I have already ohmp_a, ohmp_b, ohmp_c(?)!*/
+          Uc[k][j][i][ENG] += ohmp_b1[j][i]*dt
         #endif
       #endif
     }
   }
 
-}//
+}
 
 /****************************************************************************
 * Function to build the bcs of lines
@@ -379,7 +390,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
   dVz = grid[JDIR].dV;
 
   /*[Opt] This is probably useless, it is here just for debugging purposes*/
-  DOM_LOOP(k, j, i) {
+  TOT_LOOP(k, j, i) {
     Ip[j][i] = 0.0;
     Im[j][i] = 0.0;
     Jp[j][i] = 0.0;
@@ -387,9 +398,9 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
     CI[j][i] = 0.0;
     CJ[j][i] = 0.0;
   }
+  // lines->lidx
   KDOM_LOOP(k) {
-    LINES_LOOP(lines[0], l, j, i) {
-
+    LINES_LOOP(lines[IDIR], l, j, i) {
       /* :::: Ip :::: */
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
@@ -838,7 +849,7 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
       up[i] = up[i] / (diagonal[i]-lower[i-1]*up[i-1]);
 
     rhs[0] = rhs[0]/diagonal[0];
-    for (i=0; i<N; i++)
+    for (i=1; i<N; i++)
       rhs[i] = (rhs[i] - lower[i-1]*rhs[i-1]) / (diagonal[i] - lower[i-1]*up[i-1]);
 
     x[N-1] = rhs[N-1];

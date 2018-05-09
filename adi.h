@@ -8,9 +8,13 @@
 #define DIRICHLET    1
 #define NEUMANN_HOM  2
 
-#define LINES_LOOP(lines, l, j, i) \
-  for ((i)=lines.dom_line_idx[(l)=0]; (l)<lines.N; (i)=lines.dom_line_idx[++(l)]) \
-  for ((j)=lines.lidx[(l)]; (j)<=lines.ridx[(l)]; (j)++)
+/* To loop on lines, the correct use is, usually:
+   LINES_LOOP(lines[IDIR], l, j, i)
+   or:
+   LINES_LOOP(lines[JDIR], l, i, j)*/
+#define LINES_LOOP(lines, l, line_idx , line_sweeper) \
+  for ((line_idx)=lines.dom_line_idx[(l)=0]; (l)<lines.N; (line_idx)=lines.dom_line_idx[++(l)]) \
+  for ((line_sweeper)=lines.lidx[(l)]; (line_sweeper)<=lines.ridx[(l)]; (line_sweeper)++)
 /**********************/
 
 #if (THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT) && \
