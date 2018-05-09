@@ -37,6 +37,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   double rhoe_old, rhoe_new;
   /*Initial time before advancing the equations with the ADI method*/
   double const t_start = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
+  RBox *box_outcap, *box_incap;
 
   // Find the remarkable indexes (if they had not been found before)
   if (capillary_not_set) {
@@ -49,6 +50,25 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   Vc = d->Vc;
   Uc = d->Uc;
   r = grid[IDIR].x_glob;
+
+  /*Compute the conservative vector in order to start the cycle. 
+  This step will be useless if the data structure 
+  contains Vc as well as Uc (for future improvements). [Ema] (Comment copied from sts.c)*/
+  KDOM_LOOP(k) {
+    box_incap->kb = box_incap->ke = k;
+    box_outcap->kb = box_outcap->ke = k; 
+  }
+  box_outcap->ib = grid[IDIR].nghost;
+  box_outcap->ie = 
+  box_outcap->jb =
+  box_outcap->je =
+  box_incap->ib =
+  box_incap->ie =
+  box_incap->jb =
+  box_incap->je =
+  PrimToCons3D(Vc, Uc, box_outcap);
+  PrimToCons3D(Vc, Uc, box_incap);
+
 
   // Build geometry and allocate some stuff
   if (first_call) {
@@ -458,7 +478,7 @@ void Get_dEdT(double *v, double r, double z, double theta, double *dEdT) {
   // c = 3/2*(2/CONST_mp)*CONST_kB;
 
   // Heat capacity (heat to increas of 1 Kelvin 1 cm³ of Hydrogen)
-  *dEdT = c*v[RHO];
+  *dEdT = c*v[RHO]*UNIT_DENSITY;
 
   // Normalization
   *dEdT = (*dEdT)/(UNIT_DENSITY*CONST_kB/CONST_mp);
