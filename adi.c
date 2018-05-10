@@ -233,9 +233,16 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
             #error Not implemented for ideal eos (but it is easy to add it!)
           #elif EOS==PVTE_LAW
             for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
-              /*[Opt] I should use a tabulation maybe!*/
-              rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN);
-              rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN);
+              #ifdef TEST_ADI
+                rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
+                rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+                rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*Tb2[j][i]*KELVIN;
+                rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+              #else
+                /*[Opt] I should use a tabulation maybe!*/
+                rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN);
+                rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN);
+              #endif
               Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
           #else
             print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!")
@@ -470,13 +477,15 @@ void GetHeatCapacity(double *v, double r, double z, double theta, double *dEdT) 
     do not do the computations twice!*/
 
   // Specific heat (heat to increase of 1 Kelvin 1 gram of Hydrogen)
-  // Low temperature case, no ionization
-  c = 3/2*(1/CONST_mp)*CONST_kB;
-  // High temperature case, full ionization
-  // c = 3/2*(2/CONST_mp)*CONST_kB;
+  #ifdef TEST_ADI
+    // Low temperature case, no ionization
+    c = 3/2*(1/CONST_mp)*CONST_kB;
+    // High temperature case, full ionization
+    // c = 3/2*(2/CONST_mp)*CONST_kB;
 
-  // Heat capacity (heat to increas of 1 Kelvin 1 cm³ of Hydrogen)
-  *dEdT = c*v[RHO]*UNIT_DENSITY;
+    // Heat capacity (heat to increas of 1 Kelvin 1 cm³ of Hydrogen)
+    *dEdT = c*v[RHO]*UNIT_DENSITY;
+  #endif
 
   // Normalization
   *dEdT = (*dEdT)/(UNIT_DENSITY*CONST_kB/CONST_mp);

@@ -2,6 +2,8 @@
 #define ADI_H
 /* Contains some structures used for the adi method*/
 
+#define TEST_ADI
+
 /*********************
  * Some useful macros
  * *******************/

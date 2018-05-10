@@ -2,8 +2,8 @@
 #include "current_table.h"
 
 /*Electrical current table, in Ampere, seconds*/
-double i_curr_tab[N_CURR_TAB] = { 50.000000e+00,
-                                  50.000000e+00};
+double i_curr_tab[N_CURR_TAB] = { 0.100000e+00,
+                                  0.100000e+00};
 double t_curr_tab[N_CURR_TAB] = { -1.000000e-20,
                                   8.000000e-07};
 //
