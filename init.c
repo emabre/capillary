@@ -55,6 +55,7 @@ void Init (double *us, double x1, double x2, double x3)
     if (x1 < rcap) { //in cyl coords x1 is r, x2 is z
       us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
       // us[iBPHI] = Bwall/2;
+      us[RHO] = dens0;
     } else {
       us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
       // us[iBPHI] = 0.0;

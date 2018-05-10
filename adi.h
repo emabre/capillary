@@ -69,4 +69,8 @@ void BuildIJ_forRes (const Data *d, Grid *grid, Lines *lines, double **Ip, doubl
                      double **Jp, double **Jm, double **CI, double **CJ);
 #endif
 
+/* Stuff to do prim->cons and cons->prim conversions*/
+void ConsToPrimLines (Data_Arr U, Data_Arr V, unsigned char ***flag, Lines *lines);
+void PrimToConsLines (Data_Arr V, Data_Arr U, Lines *lines);
+
 #endif

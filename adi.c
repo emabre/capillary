@@ -37,7 +37,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   double rhoe_old, rhoe_new;
   /*Initial time before advancing the equations with the ADI method*/
   double const t_start = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
-  RBox box_outcap, box_incap;
 
   // Find the remarkable indexes (if they had not been found before)
   if (capillary_not_set) {
@@ -50,29 +49,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   Vc = d->Vc;
   Uc = d->Uc;
   r = grid[IDIR].x_glob;
-
-  /* -------------------------------------------------------------------------
-  Compute the conservative vector in order to start the cycle. 
-  This step will be useless if the data structure 
-  contains Vc as well as Uc (for future improvements). [Ema] (Comment copied from sts.c)
-  -----------------------------------------------------------------------------*/
-  KDOM_LOOP(k) {
-    box_incap.kb = k;
-    box_incap.ke = k;
-    box_outcap.kb = k;
-    box_outcap.ke = k; 
-  }
-  box_outcap.ib = grid[IDIR].nghost;
-  box_outcap.ie = NX1_TOT - 1 - grid[IDIR].nghost;
-  box_outcap.jb = j_cap_inter_end+1;
-  box_outcap.je = NX2_TOT - 1 - grid[JDIR].nghost;
-  box_incap.ib = grid[IDIR].nghost;
-  box_incap.ie = i_cap_inter_end;
-  box_incap.jb = grid[JDIR].nghost;
-  box_incap.je = j_cap_inter_end;
-  PrimToCons3D(Vc, Uc, &box_outcap);
-  PrimToCons3D(Vc, Uc, &box_incap);
-
 
   /* -------------------------------------------------------------------
   Build geometry and allocate some stuff
@@ -123,12 +99,21 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ohmp_b1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     ohmp_b2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
-    // dEdT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     first_call=0;
   }
 
+  /* -------------------------------------------------------------------------
+      Compute the conservative vector in order to start the cycle. 
+      This step will be useless if the data structure 
+      contains Vc as well as Uc (for future improvements).
+      [Ema] (Comment copied from sts.c)
+    --------------------------------------------------------------------------- */
+  PrimToConsLines (Vc, Uc, lines);
+
+  /* -------------------------------------------------------------------------
+      Build the temperature (T) and/or the product magnetic field with radius (B*r)
+     ------------------------------------------------------------------------- */
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    // Build the temperature matrix
     #if EOS==IDEAL
       DOM_LOOP(k,j,i) T[j][i] = Vc[PRS][k][j][i]/Vc[RHO][k][j][i];
     #elif EOS==PVTE_LAW
@@ -268,7 +253,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     }
   }
 
-  qui chiama cons to prim
+  /* -------------------------------------------------------------------------
+      Compute back the primitive vector from the updated conservative vector.
+     ------------------------------------------------------------------------- */
+  ConsToPrimLines (Uc, Vc, d->flag, lines);
 
 }
 
@@ -478,6 +466,8 @@ void Get_dEdT(double *v, double r, double z, double theta, double *dEdT) {
 //
   /*[Opt] This should be done with a table or something similar (also I should
     make a more general computation as soon as possible)*/
+  /*[Opt] I could also include the normalization in the definition so that I
+    do not do the computations twice!*/
 
   // Specific heat (heat to increase of 1 Kelvin 1 gram of Hydrogen)
   // Low temperature case, no ionization
@@ -526,7 +516,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
    don't need to reallocate at every domain line that I update */
   double *diagonal, *upper, *lower, *rhs, *x;
 
-  /*[Opt] Maybe I could do that it allocates static arrays with size=max(NX1_TOT,NX2_TOT) ?*/
+  /*[Opt] Maybe I could do that it allocates static arrays with size NMAX_POINT (=max(NX1_TOT,NX2_TOT)) ?*/
   if (dir == IDIR) {
     diagonal = ARRAY_1D(NX1_TOT, double);
     rhs = ARRAY_1D(NX1_TOT, double);
@@ -806,6 +796,7 @@ void InitializeLines(Lines *lines, int N){
 
 /****************************************************************************
 Function to build geometrical parameters belonging to lines
+[Rob] Maybe it's better to move this to another file? the one containing init()??
 *****************************************************************************/
 void GeometryADI(Lines *lines, Grid *grid){
   int i,j;
