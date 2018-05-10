@@ -89,6 +89,9 @@ double SahaXFrac(double T, double rho)
   n  = rho/CONST_mp; /* = n(protons) + n(neutrals)   not   n(total) */
   c  = me*kT*sqrt(me*kT)/(h3*n)*exp(-chi/kT);
 
+  /*[Ema] I checked that this is equivalent to the x you get from solving
+    in a straight forward way the equation 7.10 in the doc (the usual Saha equation
+    for Hydrogen). I guess this is more convenient than that one!*/
   x = 2.0/(sqrt(1.0 + 4.0/c) + 1.0);
   return x;
 }
