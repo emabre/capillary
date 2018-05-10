@@ -445,7 +445,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
       TC_kappa( v, r[i], zL[j], theta[k], &kpar, &knor, &phi);
       Jm[j][i] = knor*inv_dzi[j-1];
 
-      Get_dEdT(v, r[i], z[j], theta[k], &dEdT);
+      GetHeatCapacity(v, r[i], z[j], theta[k], &dEdT);
 
       /* :::: CI :::: */
       CI[j][i] = dEdT*dVr[i];
@@ -457,11 +457,11 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
 }
 
 /**************************************************************************
- * Get_dEdT: Computes the derivative dE/dT (E is the internal energy
+ * GetHeatCapacity: Computes the derivative dE/dT (E is the internal energy
  * per unit volume, T is the temperature). This function also normalizes
  * the dEdT.
  * ************************************************************************/
-void Get_dEdT(double *v, double r, double z, double theta, double *dEdT) {
+void GetHeatCapacity(double *v, double r, double z, double theta, double *dEdT) {
   double c;
 //
   /*[Opt] This should be done with a table or something similar (also I should

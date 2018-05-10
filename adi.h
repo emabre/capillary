@@ -62,7 +62,7 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
 #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
 void BuildIJ_forTC (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
                     double **Jp, double **Jm, double **CI, double **CJ);
-void Get_dEdT(double *v, double r, double z, double theta, double *dEdT);
+void GetHeatCapacity(double *v, double r, double z, double theta, double *dEdT);
 #endif
 #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
 void BuildIJ_forRes (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,

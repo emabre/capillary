@@ -41,33 +41,52 @@ void Init (double *us, double x1, double x2, double x3)
    #error physics not valid
   #endif
 
+  //Remember: in cyl coords x1 is r, x2 is z
+
+  /* ----------------------------------------------------- 
+      Zones not covered in the next lines (except for zone "Everywhere")
+    ----------------------------------------------------- */
   us[RHO] = 0.1*dens0;
-  if (x2 < zcap-dzcap) {
-    if (x1 <= rcap) { //in cyl coords x1 is r, x2 is z
-      us[iBPHI] = Bwall*x1/rcap;
-      us[RHO] = dens0;
-    } else {
-      us[iBPHI] = Bwall;
-      // us[iBPHI] = 0.0;
-    }
-  } else if ( zcap-dzcap <= x2 && x2 <= zcap ) {
-    // the field linearly decreses in z direction (this is provisory, better electrode have to be implemented)
-    if (x1 < rcap) { //in cyl coords x1 is r, x2 is z
-      us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
-      // us[iBPHI] = Bwall/2;
-      us[RHO] = dens0;
-    } else {
-      us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
-      // us[iBPHI] = 0.0;
-    }
-  } else if (x2 > zcap) {
+  /* ----------------------------------------------------- 
+      Inside capillary, excluded near-electrode zone
+     ----------------------------------------------------- */
+  if (x2 < zcap-dzcap && x1 <= rcap) {
+    us[iBPHI] = Bwall*x1/rcap;
+    us[RHO] = dens0;
+  }
+  /* ----------------------------------------------------- 
+      Inside capillary, in near-electrode zone
+     ----------------------------------------------------- */
+  if (zcap-dzcap <= x2 && x2 < zcap && x1 < rcap) {
+    /* the B field linearly decreses in z direction
+    (this is provisory, better electrode have to be implemented) */
+    us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+    us[RHO] = dens0;
+  }
+  /* ------------------------------------------------------
+      Above non-electrode wall (internal boundary, outside capillary)
+     ------------------------------------------------------ */
+  if (x2 < zcap-dzcap && x1>rcap) {
+    us[iBPHI] = Bwall;
+  }
+  /* ------------------------------------------------------
+      Above electrode wall (internal boundary, outside capillary)
+     ------------------------------------------------------ */
+  if ( zcap-dzcap <= x2 && x2 < zcap && x1 >= rcap) {
+    us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
+  }
+  /* ------------------------------------------------------
+      Outside capillary (not in internal boundary)
+     ------------------------------------------------------ */
+  if (x2 > zcap) {
     // No field outside capillary
     us[iBPHI] = 0.0;
   }
-
+  /* ----------------------------------------------------- 
+      Everywhere
+     ----------------------------------------------------- */
   us[iBZ] = us[iBR] = 0.0;
   us[iVPHI] = us[iVZ] = us[iVR] = 0.0;
-
   T = T0;
   #if EOS==IDEAL
       mu = MeanMolecularWeight(us);
