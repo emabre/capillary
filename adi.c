@@ -37,7 +37,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   double rhoe_old, rhoe_new;
   /*Initial time before advancing the equations with the ADI method*/
   double const t_start = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
-  RBox *box_outcap, *box_incap;
+  RBox box_outcap, box_incap;
 
   // Find the remarkable indexes (if they had not been found before)
   if (capillary_not_set) {
@@ -51,26 +51,32 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   Uc = d->Uc;
   r = grid[IDIR].x_glob;
 
-  /*Compute the conservative vector in order to start the cycle. 
+  /* -------------------------------------------------------------------------
+  Compute the conservative vector in order to start the cycle. 
   This step will be useless if the data structure 
-  contains Vc as well as Uc (for future improvements). [Ema] (Comment copied from sts.c)*/
+  contains Vc as well as Uc (for future improvements). [Ema] (Comment copied from sts.c)
+  -----------------------------------------------------------------------------*/
   KDOM_LOOP(k) {
-    box_incap->kb = box_incap->ke = k;
-    box_outcap->kb = box_outcap->ke = k; 
+    box_incap.kb = k;
+    box_incap.ke = k;
+    box_outcap.kb = k;
+    box_outcap.ke = k; 
   }
-  box_outcap->ib = grid[IDIR].nghost;
-  box_outcap->ie = 
-  box_outcap->jb =
-  box_outcap->je =
-  box_incap->ib =
-  box_incap->ie =
-  box_incap->jb =
-  box_incap->je =
-  PrimToCons3D(Vc, Uc, box_outcap);
-  PrimToCons3D(Vc, Uc, box_incap);
+  box_outcap.ib = grid[IDIR].nghost;
+  box_outcap.ie = NX1_TOT - 1 - grid[IDIR].nghost;
+  box_outcap.jb = j_cap_inter_end+1;
+  box_outcap.je = NX2_TOT - 1 - grid[JDIR].nghost;
+  box_incap.ib = grid[IDIR].nghost;
+  box_incap.ie = i_cap_inter_end;
+  box_incap.jb = grid[JDIR].nghost;
+  box_incap.je = j_cap_inter_end;
+  PrimToCons3D(Vc, Uc, &box_outcap);
+  PrimToCons3D(Vc, Uc, &box_incap);
 
 
-  // Build geometry and allocate some stuff
+  /* -------------------------------------------------------------------
+  Build geometry and allocate some stuff
+  ----------------------------------------------------------------------*/
   if (first_call) {
     GeometryADI(lines, grid);
     #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
@@ -261,6 +267,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #endif
     }
   }
+
+  qui chiama cons to prim
 
 }
 
