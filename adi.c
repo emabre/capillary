@@ -302,9 +302,11 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
         lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
       } else {
         /* :::: Outer domain boundary :::: */
-        lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
-        // IS THIS OK?? Before or later change here, and also in its equivalent in init.c
-        lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
+        // lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
+        // // IS THIS OK?? Before or later change here, and also in its equivalent in init.c
+        // lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
+        lines[IDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
+        lines[IDIR].rbound[TDIFF][l].values[0] = 0.0;
       }
     }
     // JDIR lines
@@ -899,4 +901,10 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
  * 4) Pensare ad un warning in caso di eta con componenti diverse tra loro
  * 5) Alberto dice di provare dopo eventualemente (se vedo probelmi o se voglio migliorare accuratezzax) a far aggiornare a t+dt/2 Jmp,Imp
  * 6) fare che viene stampate nell'output di pluto anche il dt parabolico che ci sarebbe con step esplicito
+ * 7) Attenzione alla griglia stretchata: forse devo cambiare la
+ *    discretizzazione delle derivate se voglio usare rigorosamente una griglia stretchata
+ * 8) Le bc devono essere impostate in modo almeno parzialmente coerente con come sono fatte nel resto del programma:
+ *    ovvero, se ho impostato al runtime OUTFLOW, REFLECTIVE.. (tranne al più USERDEF)
+ *    le condizioni dell'adi dovranno essere concordi a ciò (rimane la questione di come imporre
+ *    facilmente le bc per il caso userdef) 
  ********************************************************/

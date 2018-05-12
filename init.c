@@ -171,7 +171,10 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   Actual setting of the boundary conditions
   ***********************************
   ***********************************/
-  if (side == X1_END){
+  /* Maybe additional check for the runtime value of the boundary is useless,
+     I keep it here as I want to be sure I can change the bc only by editing the
+     pluto.ini file, and avoid editing also this file*/
+  if (side == X1_END && RuntimeGet()->right_bound[IDIR] == USERDEF){
   /**********************************************
   Side r = rmax
   **********************************************/
