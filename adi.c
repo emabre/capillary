@@ -209,7 +209,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     **********************************/
     ExplicitUpdate (Brb1, Bra2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
-
+    #if HAVE_ENERGY
+      // Compute back B from Br
+      // Compute current density (GetCurrent or a self made function?)
+      // compute resistive flux (energy component) (res_flux or self made function?)
+      // update the delta U
+    #endif
     /**********************************
      (b.2) Implicit update sweeping IDIR
     **********************************/
