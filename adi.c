@@ -509,8 +509,6 @@ void BuildIJ_forRes(const Data *d, Grid *grid, Lines *lines,
   double *inv_dri, *inv_dzi, *inv_dr, *inv_dz, *r_1;
   double *zL, *zR;
   double *rL, *rR;
-  double *ArR, *ArL;
-  double *dVr, *dVz;
   double *r, *z, *theta;
 
   /* -- set a pointer to the primitive vars array --
@@ -532,10 +530,6 @@ void BuildIJ_forRes(const Data *d, Grid *grid, Lines *lines,
   rR = grid[IDIR].xr;
   zL = grid[JDIR].xl;
   zR = grid[JDIR].xr;
-  ArR = grid[IDIR].A;
-  ArL = grid[IDIR].A - 1;
-  dVr = grid[IDIR].dV;
-  dVz = grid[JDIR].dV;
 
   /*[Opt] This is probably useless, it is here just for debugging purposes*/
   TOT_LOOP(k, j, i) {
