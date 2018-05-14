@@ -254,7 +254,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
           /* I am just using trapezi integration of source term,
           but I could use something like cav-simps with very little effort
           (I have already ohmp_a, ohmp_b, ohmp_c(?)!*/
-          Uc[k][j][i][ENG] += ohmp_b1[j][i]*dt
+          Uc[k][j][i][ENG] += ohmp_b1[j][i]*dt;
         #endif
       #endif
     }
@@ -382,7 +382,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
                    double **Jm, double **CI, double **CJ) {
   int i,j,k;
   int nv, l;
-  double kpar, knor, phi; // Electr. resistivity or thermal conductivity
+  double kpar, knor, phi; // Thermal conductivity
   double v[NVAR];
   double ****Vc;
   double *inv_dri, *inv_dzi;
@@ -405,8 +405,8 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
 
   r = grid[IDIR].x;
   z = grid[JDIR].x;
-  rR = grid[IDIR].xl;
-  rL = grid[IDIR].xr;
+  rL = grid[IDIR].xl;
+  rR = grid[IDIR].xr;
   zL = grid[JDIR].xl;
   zR = grid[JDIR].xr;
   ArR = grid[IDIR].A;
@@ -499,9 +499,111 @@ void GetHeatCapacity(double *v, double r, double z, double theta, double *dEdT) 
 Function to build the Ip,Im,Jp,Jm for the electrical resistivity problem
 *****************************************************************************/
 void BuildIJ_forRes(const Data *d, Grid *grid, Lines *lines,
-                    double **Ip, double **Im, double **Jp,
-                    double **Jm, double **CI, double **CJ) {
+                   double **Ip, double **Im, double **Jp,
+                   double **Jm, double **CI, double **CJ) {
+  int i,j,k;
+  int nv, l;
+  double eta[3]; // Electr. resistivity
+  double v[NVAR];
+  double ****Vc;
+  double *inv_dri, *inv_dzi, *inv_dr, *inv_dz, *r_1;
+  double *zL, *zR;
+  double *rL, *rR;
+  double *ArR, *ArL;
+  double *dVr, *dVz;
+  double *r, *z, *theta;
 
+  /* -- set a pointer to the primitive vars array --
+    I do this because it is done also in other parts of the code
+    maybe it makes the program faster or just easier to write/read...*/
+  Vc = d->Vc;
+
+  inv_dzi = grid[JDIR].inv_dxi;
+  inv_dri = grid[IDIR].inv_dxi;
+  inv_dz = grid[JDIR].inv_dx;
+  inv_dr = grid[IDIR].inv_dx;
+  r_1 = grid[IDIR].r_1;
+
+  theta = grid[KDIR].x;
+
+  r = grid[IDIR].x;
+  z = grid[JDIR].x;
+  rL = grid[IDIR].xl;
+  rR = grid[IDIR].xr;
+  zL = grid[JDIR].xl;
+  zR = grid[JDIR].xr;
+  ArR = grid[IDIR].A;
+  ArL = grid[IDIR].A - 1;
+  dVr = grid[IDIR].dV;
+  dVz = grid[JDIR].dV;
+
+  /*[Opt] This is probably useless, it is here just for debugging purposes*/
+  TOT_LOOP(k, j, i) {
+    Ip[j][i] = 0.0;
+    Im[j][i] = 0.0;
+    Jp[j][i] = 0.0;
+    Jm[j][i] = 0.0;
+    CI[j][i] = 0.0;
+    CJ[j][i] = 0.0;
+  }
+  // lines->lidx
+  KDOM_LOOP(k) {
+    LINES_LOOP(lines[IDIR], l, j, i) {
+      /* :::: Ip :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
+      /*[Rob] I should give also J to Resistive_eta().
+        I don't, but I could simply compute it by modifying easily the GetCurrent()
+        function, as it only uses J and B element of the Data structure.
+        Even easier: I could change the whole adi implementation and make it
+        advance directly d->Vc instead of allocating vectors for T and Br */
+      Resistive_eta( v, rR[i], z[j], theta[k], NULL, eta);
+      if (eta[0] != eta[1] || eta[1] != eta[2]) {
+        print1("Anisotropic resistivity is not implemented in ADI!");
+        QUIT_PLUTO(1);
+      }
+      Ip[j][i] = eta[0]*inv_dr[i]*inv_dri[i]/rR[i];
+      /* [Opt] Here I could use the already computed eta to compute
+      also Im[1,i+1] (since it needs eta at the same interface).
+      Doing so I would reduce the calls to Resistive_eta by almost a factor 1/2
+      (obviously I could do the same for Im/Ip) */
+
+      /* :::: Im :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i-1]);
+      Resistive_eta( v, rL[i], z[j], theta[k], NULL, eta);
+      if (eta[0] != eta[1] || eta[1] != eta[2]) {
+        print1("Anisotropic resistivity is not implemented in ADI!");
+        QUIT_PLUTO(1);
+      }
+      if (rL[i]!=0.0)
+        Im[j][i] = eta[0]*inv_dri[i-1]*inv_dr[i]/rL[i];
+      else
+        Im[j][i] = eta[0]/(r[i]*r[i])/rR[i];
+
+      /* :::: Jp :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
+      Resistive_eta( v, r[i], zR[j], theta[k], NULL, eta);
+      if (eta[0] != eta[1] || eta[1] != eta[2]) {
+        print1("Anisotropic resistivity is not implemented in ADI!");
+        QUIT_PLUTO(1);
+      }
+      Jp[j][i] = eta[0]*inv_dz[j]*inv_dzi[j];
+
+      /* :::: Jm :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
+      Resistive_eta( v, r[i], zL[j], theta[k], NULL, eta);
+      Jm[j][i] = eta[0]*inv_dz[j]*inv_dzi[j-1];
+
+      /* :::: CI :::: */
+      CI[j][i] = r_1[i];
+
+      /* :::: CJ :::: */
+      CJ[j][i] = 1.0;
+    }
+  }
 }
 #endif
 
