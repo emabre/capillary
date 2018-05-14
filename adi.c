@@ -21,6 +21,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     static double **Ip_B, **Im_B, **Jp_B, **Jm_B, **CI_B, **CJ_B;
     static double **Bra1, **Bra2, **Brb1, **Brb2;
     static double **Br;
+    static double **B;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     static double **Ip_T, **Im_T, **Jp_T, **Jm_T, **CI_T, **CJ_T;
@@ -185,6 +186,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
     #if HAVE_ENERGY
+      KDOM_LOOP(k)
+        LINES_LOOP(lines[IDIR], l, j, i)
+          B[j][i] = Bra1[j][i]/r[i];
+      
       // Compute back B from Br
       // Compute current density (GetCurrent or a self made function?)
       // compute resistive flux (energy component) (res_flux or self made function?)
