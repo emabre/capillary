@@ -137,88 +137,97 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #endif
   BoundaryADI(lines, d, grid, t_start); // Get bcs at t
 
+  /*[Rob] Maybe I can partially couple the two problems:
+    first do a half step of both, then recompute the quantities
+    and do the second half-step of both*/
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+/* ------------------------------------------------------------
+    ------------------------------------------------------------
+    Advance thermal conduction problem
+    ------------------------------------------------------------
+    ------------------------------------------------------------ */
   /**********************************
    (a.1) Explicit update sweeping IDIR
   **********************************/
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
-                    lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
-  #endif
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT  // Sure only if it is adi?? maybe it's ok even if it is sts or expl
-    // Include eta*J^2 source term using Br REMEMBER TO NORMALIZE
-    // ...
-  #else
-    LINES_LOOP(lines[IDIR], l, j, i)
-      ohmp_a1[j][i] = 0.0;
-  #endif
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate (Ta1, T, ohmp_a1, Ip_T, Im_T, CI_T, &lines[IDIR],
+    ExplicitUpdate (Ta1, T, NULL, Ip_T, Im_T, CI_T, &lines[IDIR],
                     lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
-  #endif
 
   /**********************************
    (a.2) Implicit update sweeping JDIR
   **********************************/
-  BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate (Bra2, Bra1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
-                    lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
-  #endif
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    // Build eta*J^2 source term using Bra2 REMEMBER TO NORMALIZE
-    // ...
-  #else
-    LINES_LOOP(lines[IDIR], l, j, i)
-      ohmp_a2[j][i] = 0.0;
-  #endif
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate (Ta2, Ta1, ohmp_a2, Jp_T, Jm_T, CJ_T, &lines[JDIR],
+    BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
+    ImplicitUpdate (Ta2, Ta1, NULL, Jp_T, Jm_T, CJ_T, &lines[JDIR],
                     lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, JDIR);
-  #endif
 
   /**********************************
    (b.1) Explicit update sweeping JDIR
   **********************************/
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate (Brb1, Bra2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
-                    lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
-  #endif
-  // /* -- This is USELESS as I already computed the source before, delete in future*/
-  // #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-  //   // Build eta*J^2 source term using Bra2 REMEMBER TO NORMALIZE
-  //   // ...
-  // #else
-  //   LINES_LOOP(lines[IDIR], l, j, i)
-  //     ohmp_b1[j][i] = 0.0;
-  // #endif
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ExplicitUpdate (Tb1, Ta2, ohmp_a1, Jp_T, Jm_T, CJ_T, &lines[JDIR],
+    ExplicitUpdate (Tb1, Ta2, NULL, Jp_T, Jm_T, CJ_T, &lines[JDIR],
                     lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, JDIR);
-  #endif
 
   /**********************************
    (b.2) Implicit update sweeping IDIR
   **********************************/
-  BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate (Brb2, Brb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
-                    lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
-  #endif
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT // Sure only if it is adi?? maybe it's ok even if it is sts or expl
-    // Build eta*J^2 source term using Brb2 REMEMBER TO NORMALIZE
-    // ...
-  #else
-    LINES_LOOP(lines[IDIR], l, j, i)
-      ohmp_b2[j][i] = 0.0;
-  #endif
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    ImplicitUpdate (Tb2, Tb1, ohmp_b2, Ip_T, Im_T, CI_T, &lines[IDIR],
+    BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
+    ImplicitUpdate (Tb2, Tb1, NULL, Ip_T, Im_T, CI_T, &lines[IDIR],
                     lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
   #endif
 
-  /***********************************
-   * Update data
-   * *********************************/
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+/* ------------------------------------------------------------
+   ------------------------------------------------------------
+    Advance magnetic diffusion problem
+   ------------------------------------------------------------
+   ------------------------------------------------------------ */
+    /**********************************
+     (a.1) Explicit update sweeping IDIR
+    **********************************/
+    ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
+                    lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
+    #if HAVE_ENERGY
+      // Compute back B from Br
+      // Compute current density (GetCurrent or a self made function?)
+      // compute resistive flux (energy component) (res_flux or self made function?)
+      // update the delta U
+    #endif
+
+    /**********************************
+     (a.2) Implicit update sweeping JDIR
+    **********************************/
+    BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
+    ImplicitUpdate (Bra2, Bra1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
+                      lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
+    #if HAVE_ENERGY
+      // Compute back B from Br
+      // Compute current density (GetCurrent or a self made function?)
+      // compute resistive flux (energy component) (res_flux or self made function?)
+      // update the delta U
+    #endif
+
+    /**********************************
+     (b.1) Explicit update sweeping JDIR
+    **********************************/
+    ExplicitUpdate (Brb1, Bra2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
+                    lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
+
+    /**********************************
+     (b.2) Implicit update sweeping IDIR
+    **********************************/
+    BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
+      ImplicitUpdate (Brb2, Brb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
+                      lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
+    #if HAVE_ENERGY
+      // Compute back B from Br
+      // Compute current density (GetCurrent or a self made function?)
+      // compute resistive flux (energy component) (res_flux or self made function?)
+      // update the delta U
+    #endif
+  #endif
+/* ------------------------------------------------------------
+   ------------------------------------------------------------
+    Update data
+   ------------------------------------------------------------
+   ------------------------------------------------------------ */
   KDOM_LOOP(k) {
     LINES_LOOP(lines[IDIR], l, j, i) {
       #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
@@ -244,6 +253,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
                 rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN);
               #endif
               Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
+              Uc[k][j][i][ENG] += du_res; // I wrote this line just to rememeber that I have to add this
           #else
             print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!")
           #endif
