@@ -21,7 +21,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     static double **Ip_B, **Im_B, **Jp_B, **Jm_B, **CI_B, **CJ_B;
     static double **Bra1, **Bra2, **Brb1, **Brb2;
     static double **Br;
-    static double **B;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     static double **Ip_T, **Im_T, **Jp_T, **Jm_T, **CI_T, **CJ_T;
@@ -33,7 +32,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   // static double **dEdT;
   const double dt = g_dt;
   double ****Uc, ****Vc;
-  double *r;
+  double *r, *r_1;
   double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
   double rhoe_old, rhoe_new;
   /*Initial time before advancing the equations with the ADI method*/
@@ -50,6 +49,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   Vc = d->Vc;
   Uc = d->Uc;
   r = grid[IDIR].x_glob;
+  r_1 = grid[IDIR].x_glob;
 
   /* -------------------------------------------------------------------
   Build geometry and allocate some stuff
@@ -133,7 +133,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     // Build a handy magnetic field matrix
     DOM_LOOP(k,j,i)
-      Br[j][i] = r[i]*Uc[BX3][k][j][i];
+      Br[j][i] = r[i]*Uc[k][j][i][BX3];
     BuildIJ_forRes(d, grid, lines, Ip_B, Im_B, Jp_B, Jm_B, CI_B, CJ_B);
   #endif
   BoundaryADI(lines, d, grid, t_start); // Get bcs at t
@@ -186,7 +186,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
     #if HAVE_ENERGY
-      EM_EnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
+      ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
     #endif
 
     /**********************************
@@ -196,7 +196,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ImplicitUpdate (Bra2, Bra1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                       lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
     #if HAVE_ENERGY
-      EM_EnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
+      ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
     #endif
 
     /**********************************
@@ -205,9 +205,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ExplicitUpdate (Brb1, Bra2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
     #if HAVE_ENERGY
-    /* [Opt]: I could inglobate this call to EM_EnergyIncrease in the previous one by using dt instead of 0.5*dt
+    /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt instead of 0.5*dt
        (but in this way it is more readable)*/
-      EM_EnergyIncrease(dUres_b1, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
+      ResEnergyIncrease(dUres_b1, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
     #endif
     /**********************************
      (b.2) Implicit update sweeping IDIR
@@ -216,7 +216,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       ImplicitUpdate (Brb2, Brb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                       lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
     #if HAVE_ENERGY
-      EM_EnergyIncrease(dUres_b2, Ip_B, Im_B, Brb1, grid, &lines[IDIR], 0.5*dt, IDIR);
+      ResEnergyIncrease(dUres_b2, Ip_B, Im_B, Brb1, grid, &lines[IDIR], 0.5*dt, IDIR);
     #endif
   #endif
 /* ------------------------------------------------------------
@@ -227,7 +227,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   KDOM_LOOP(k) {
     LINES_LOOP(lines[IDIR], l, j, i) {
       #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
-        Uc[k][j][i][BX3] = Brb2[j][i]/r[i];
+        Uc[k][j][i][BX3] = Brb2[j][i]*r_1[i];
 
         #if HAVE_ENERGY
           Uc[k][j][i][ENG] += dUres_a1[j][i]+dUres_a2[j][i]+dUres_b1[j][i]+dUres_b2[j][i];
@@ -803,7 +803,8 @@ void ExplicitUpdate (double **v, double **b, double **source,
         if I assign the address, then I have to recover the old address of rhs (by saving temporarly the old rhs address
         inside another variable), otherwise
         at the next call of this function I will write over the memory of the old b*/
-        rhs[j][i] = b[j][i];
+        for (i = lidx; i <= ridx; i++)
+          rhs[j][i] = b[j][i];
       }
 
       // Actual update
@@ -847,7 +848,8 @@ void ExplicitUpdate (double **v, double **b, double **source,
         if I assign the address, then I have to recover the old address of rhs (by saving temporarly the old rhs address
         inside another variable), otherwise
         at the next call of this function I will write over the memory of the old b*/
-        rhs[j][i] = b[j][i];
+        for (j = lidx; j <= ridx; j++)
+          rhs[j][i] = b[j][i];
       }
 
       // Actual update
@@ -879,6 +881,8 @@ void ExplicitUpdate (double **v, double **b, double **source,
     QUIT_PLUTO(1);
   }
 }
+
+#if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT && HAVE_ENERGY
 /****************************************************************************
 Function to build the a matrix which contain the amount of increase of the 
 energy due to joule effect and magnetic field energy (flux of poynting vector due to 
@@ -888,7 +892,7 @@ input both the Hp_B and the Hm_B. But for the whole internal (i.e. boudary exclu
 only one among Hp_B and Hm_B is necessary. The other one is used to fill F 
 at one side (left or right) of the domain.
 *****************************************************************************/
-void EM_EnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br,
+void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br,
                        Grid *grid, Lines *lines, double dt, int dir){
   /* F :Power flux flowing from cell (i,j) to (i+1,j), when dir==IDIR;
         or from cell (i,j) to (i,j+1), when dir == JDIR.
@@ -899,10 +903,8 @@ void EM_EnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   int lidx, ridx;
   int Nlines = lines->N;
   int static first_call = 1;
-  double *dV, *inv_dr, *inv_dz, *r_1;
-  double *zL, *zR;
+  double *dV, *inv_dz, *r_1;
   double *rL, *rR;
-  double *r, *z, *theta;
   double Br_ghost;
   Bcs *rbound, *lbound;
 
@@ -958,6 +960,7 @@ void EM_EnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       ridx = lines->ridx[l];
       for (j=lidx; j<ridx; j++)
         F[j][i] = -Hp_B[j][i] * (Br[j+1][i] - Br[j][i])*dz[j]*r_1[i] * 0.5*(Br[j+1][i] * Br[j][i]);
+      
       /*Define boundary fluxes*/
       if (lbound[l].kind == DIRICHLET){
         Br_ghost = 2*lbound[l].values[0] - Br[lidx][i];
@@ -974,12 +977,9 @@ void EM_EnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       for (j=lidx; j<=ridx; j++)
         dUres[j][i] = -(F[j][i] - F[j][i-1])*dt*inv_dz[i];
     }
-
   }
-
-
 }
-
+#endif
 
 /****************************************************************************
 Function to initialize lines, I hope this kind of initialization is ok and

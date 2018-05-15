@@ -73,7 +73,7 @@ void GetHeatCapacity(double *v, double r, double z, double theta, double *dEdT);
 void BuildIJ_forRes (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
                      double **Jp, double **Jm, double **CI, double **CJ);
   #if HAVE_ENERGY
-    void EM_EnergyIncrease(double **dUres, double** Ip_B, double** Im_B, double **Br,
+    void ResEnergyIncrease(double **dUres, double** Ip_B, double** Im_B, double **Br,
                            Grid *grid, Lines *lines, double dt, int dir);
   #endif
 #endif
