@@ -28,8 +28,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     static double **Ta1, **Ta2, **Tb1, **Tb2;
     static double **T;
   #endif
-  // eta*J^2 source terms ("ohm power": heating power per unit volume due to Ohm effect)
-  static double **ohmp_a1, **ohmp_a2, **ohmp_b1, **ohmp_b2;
+  // Energy increse(due to electro-magnetics) terms
+  static double **dUres_a1, **dUres_a2, **dUres_b1, **dUres_b2;
   // static double **dEdT;
   const double dt = g_dt;
   double ****Uc, ****Vc;
@@ -70,7 +70,13 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       Brb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
       Br = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+
+      dUres_a1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      dUres_a2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      dUres_b1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      dUres_b2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #endif
+
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
       Ip_T = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       Im_T = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -92,13 +98,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         Tb1[j][i] = 0.0;
         Tb2[j][i] = 0.0;
       }
-
     #endif
-
-    ohmp_a1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    ohmp_a2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    ohmp_b1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    ohmp_b2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
     first_call=0;
   }
@@ -186,14 +186,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
     #if HAVE_ENERGY
-      KDOM_LOOP(k)
-        LINES_LOOP(lines[IDIR], l, j, i)
-          B[j][i] = Bra1[j][i]/r[i];
-      
-      // Compute back B from Br
-      // Compute current density (GetCurrent or a self made function?)
-      // compute resistive flux (energy component) (res_flux or self made function?)
-      // update the delta U
+      EM_EnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
     #endif
 
     /**********************************
@@ -203,10 +196,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ImplicitUpdate (Bra2, Bra1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                       lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
     #if HAVE_ENERGY
-      // Compute back B from Br
-      // Compute current density (GetCurrent or a self made function?)
-      // compute resistive flux (energy component) (res_flux or self made function?)
-      // update the delta U
+      EM_EnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
     #endif
 
     /**********************************
@@ -215,10 +205,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ExplicitUpdate (Brb1, Bra2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
     #if HAVE_ENERGY
-      // Compute back B from Br
-      // Compute current density (GetCurrent or a self made function?)
-      // compute resistive flux (energy component) (res_flux or self made function?)
-      // update the delta U
+    /* [Opt]: I could inglobate this call to EM_EnergyIncrease in the previous one by using dt instead of 0.5*dt
+       (but in this way it is more readable)*/
+      EM_EnergyIncrease(dUres_b1, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
     #endif
     /**********************************
      (b.2) Implicit update sweeping IDIR
@@ -227,10 +216,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       ImplicitUpdate (Brb2, Brb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                       lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
     #if HAVE_ENERGY
-      // Compute back B from Br
-      // Compute current density (GetCurrent or a self made function?)
-      // compute resistive flux (energy component) (res_flux or self made function?)
-      // update the delta U
+      EM_EnergyIncrease(dUres_b2, Ip_B, Im_B, Brb1, grid, &lines[IDIR], 0.5*dt, IDIR);
     #endif
   #endif
 /* ------------------------------------------------------------
@@ -242,39 +228,31 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     LINES_LOOP(lines[IDIR], l, j, i) {
       #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
         Uc[k][j][i][BX3] = Brb2[j][i]/r[i];
+
+        #if HAVE_ENERGY
+          Uc[k][j][i][ENG] += dUres_a1[j][i]+dUres_a2[j][i]+dUres_b1[j][i]+dUres_b2[j][i];
+        #endif
       #endif
 
-      #if HAVE_ENERGY
-
-        #if (THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT)
-          // I get the int. energy from the temperature
-          #if EOS==IDEAL
-            #error Not implemented for ideal eos (but it is easy to add it!)
-          #elif EOS==PVTE_LAW
-            for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
-              #ifdef TEST_ADI
-                rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
-                rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
-                rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*Tb2[j][i]*KELVIN;
-                rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
-              #else
-                /*[Opt] I should use a tabulation maybe!*/
-                rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN);
-                rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN);
-              #endif
-              Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
-              Uc[k][j][i][ENG] += du_res; // I wrote this line just to rememeber that I have to add this
-          #else
-            print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!")
-          #endif
-
-        #elif (RESISTIVITY      == ALTERNATING_DIRECTION_IMPLICIT) && \
-              (THERMAL_CONDUCTION != ALTERNATING_DIRECTION_IMPLICIT)
-          // I provide the increase in int.energy from the integration of the pow.source
-          /* I am just using trapezi integration of source term,
-          but I could use something like cav-simps with very little effort
-          (I have already ohmp_a, ohmp_b, ohmp_c(?)!*/
-          Uc[k][j][i][ENG] += ohmp_b1[j][i]*dt;
+      #if (THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT)
+        // I get the int. energy from the temperature
+        #if EOS==IDEAL
+          #error Not implemented for ideal eos (but it is easy to add it!)
+        #elif EOS==PVTE_LAW
+          for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+            #ifdef TEST_ADI
+              rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
+              rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+              rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*Tb2[j][i]*KELVIN;
+              rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+            #else
+              /*[Opt] I should use a tabulation maybe!*/
+              rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN);
+              rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN);
+            #endif
+            Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
+        #else
+          print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!");
         #endif
       #endif
     }
@@ -900,9 +878,108 @@ void ExplicitUpdate (double **v, double **b, double **source,
     print1("[ImplicitUpdate] Unimplemented choice for 'dir'!");
     QUIT_PLUTO(1);
   }
+}
+/****************************************************************************
+Function to build the a matrix which contain the amount of increase of the 
+energy due to joule effect and magnetic field energy (flux of poynting vector due to 
+resistive magnetic diffusion)
+[Opt]: Note that in the actual implementation this function needs to take as
+input both the Hp_B and the Hm_B. But for the whole internal (i.e. boudary excluded)
+only one among Hp_B and Hm_B is necessary. The other one is used to fill F 
+at one side (left or right) of the domain.
+*****************************************************************************/
+void EM_EnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br,
+                       Grid *grid, Lines *lines, double dt, int dir){
+  /* F :Power flux flowing from cell (i,j) to (i+1,j), when dir==IDIR;
+        or from cell (i,j) to (i,j+1), when dir == JDIR.
+  */
+  static double **F;
+  double *dr, *dz, *r;
+  int i,j,l;
+  int lidx, ridx;
+  int Nlines = lines->N;
+  int static first_call = 1;
+  double *dV, *inv_dr, *inv_dz, *r_1;
+  double *zL, *zR;
+  double *rL, *rR;
+  double *r, *z, *theta;
+  double Br_ghost;
+  Bcs *rbound, *lbound;
+
+  /*[Opt] Maybe I could do that it allocates static arrays with size NMAX_POINT (=max(NX1_TOT,NX2_TOT)) ?*/
+  if (first_call) {
+    /* I define it 2d in case I need to export it later*/
+    F = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    first_call = 0;
+  }
+
+  lbound = lines->lbound[BDIFF];
+  rbound = lines->rbound[BDIFF];
+  dr = grid[IDIR].dx;
+  r_1 = grid[IDIR].r_1;
+
+  if (dir == IDIR) {
+    r = grid[IDIR].x;
+    rR = grid[IDIR].xr;
+    rL = grid[IDIR].xl;
+    dV = grid[IDIR].dV;
+    
+    for (l = 0; l<Nlines; l++) {
+      j = lines->dom_line_idx[l];
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
+      for (i=lidx; i<ridx; i++) // I stop before ridx, as for the last interface(as for the first) I must use the BCs
+        F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1]*r_1[i+1] + Br[j][i]*r_1[i]);
+      /*Define boundary fluxes*/
+      if (lbound[l].kind == DIRICHLET){
+        Br_ghost = 2*lbound[l].values[0] - Br[j][lidx];
+        F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br_ghost)*dr[lidx] * 0.5*(Br[j][lidx]*r_1[lidx] + Br_ghost*r_1[lidx-1]);
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        F[j][lidx-1] = 0.0;
+      }
+      if (rbound[l].kind == DIRICHLET){
+        Br_ghost = 2*rbound[l].values[0] - Br[j][ridx];
+        F[j][ridx] = -Hp_B[j][ridx] * (Br_ghost - Br[j][ridx])*dr[ridx] * 0.5*(Br_ghost*r_1[ridx+1] + Br[j][ridx]*r_1[ridx]);
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        F[j][ridx] = 0.0;
+      }
+      // Build dU
+      for (i=lidx; i<=ridx; i++)
+        dUres[j][i] = -(rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
+    }
+    
+  } else if (dir == JDIR) {
+    dz = grid[JDIR].dx;
+    inv_dz = grid[JDIR].inv_dx;
+    
+    for (l = 0; l<Nlines; l++) {
+      i = lines->dom_line_idx[l];
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
+      for (j=lidx; j<ridx; j++)
+        F[j][i] = -Hp_B[j][i] * (Br[j+1][i] - Br[j][i])*dz[j]*r_1[i] * 0.5*(Br[j+1][i] * Br[j][i]);
+      /*Define boundary fluxes*/
+      if (lbound[l].kind == DIRICHLET){
+        Br_ghost = 2*lbound[l].values[0] - Br[lidx][i];
+        F[lidx-1][i] = -Hm_B[lidx][i] * (Br[lidx][i] - Br_ghost)*dz[lidx] * 0.5*r_1[lidx]*(Br[lidx][i] + Br_ghost);
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        F[lidx-1][i] = 0.0;
+      }
+      if (rbound[l].kind == DIRICHLET){
+        F[ridx][i] = -Hp_B[ridx][i] * (Br_ghost - Br[ridx][i])*dz[ridx] * 0.5*r_1[ridx]*(Br_ghost + Br[ridx][i]);
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        F[ridx][i] = 0.0;
+      }
+      // Build dU
+      for (j=lidx; j<=ridx; j++)
+        dUres[j][i] = -(F[j][i] - F[j][i-1])*dt*inv_dz[i];
+    }
+
+  }
 
 
 }
+
 
 /****************************************************************************
 Function to initialize lines, I hope this kind of initialization is ok and

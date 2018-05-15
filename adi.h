@@ -36,6 +36,8 @@
   #define NADI  1
 #endif
 
+/* Remember that for the diffusion of B, the BC must refer to the product B*r
+as that is the quantity which is advanced by the scheme*/
 typedef struct BCS{
   int kind;     /**< Kind of boundary condition: 1=Dirichlet, 2=Hom.Neumann*/
   double values[2];   /**< Values necessary to define the boundary condition
@@ -66,9 +68,14 @@ void BuildIJ_forTC (const Data *d, Grid *grid, Lines *lines, double **Ip, double
                     double **Jp, double **Jm, double **CI, double **CJ);
 void GetHeatCapacity(double *v, double r, double z, double theta, double *dEdT);
 #endif
+
 #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
 void BuildIJ_forRes (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
                      double **Jp, double **Jm, double **CI, double **CJ);
+  #if HAVE_ENERGY
+    void EM_EnergyIncrease(double **dUres, double** Ip_B, double** Im_B, double **Br,
+                           Grid *grid, Lines *lines, double dt, int dir);
+  #endif
 #endif
 
 /* Stuff to do prim->cons and cons->prim conversions*/
