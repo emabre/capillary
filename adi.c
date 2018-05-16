@@ -912,8 +912,16 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   if (first_call) {
     /* I define it 2d in case I need to export it later*/
     F = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    /*This is useless, it's just for debugging purposes*/
+    ITOT_LOOP(i)
+      JTOT_LOOP(j)
+        F[j][i] = 0.0;
     first_call = 0;
   }
+  /*This is useless, it's just for debugging purposes*/
+  ITOT_LOOP(i)
+    JTOT_LOOP(j)
+      dUres[j][i] = 0.0;
 
   lbound = lines->lbound[BDIFF];
   rbound = lines->rbound[BDIFF];

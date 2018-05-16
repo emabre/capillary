@@ -45,7 +45,7 @@ void ConsToPrimLines (Data_Arr U, Data_Arr V, unsigned char ***flag, Lines *line
       err = ConsToPrim (U[k][j], v, ibeg, iend, flag[k][j]);
 
       if (err) {
-        print1("[ConsToPrimLines] Error converting Cons->Prim (k:%d,j:%d,i:%d)", k,j,i);
+        print1("[ConsToPrimLines] Error converting Cons->Prim (k:%d,j:%d)", k,j);
         QUIT_PLUTO(1);        
       }
 
