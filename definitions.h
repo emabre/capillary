@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -48,3 +48,4 @@
 #define  LIMITER                   DEFAULT
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
+#define  FREEZE_FLUID

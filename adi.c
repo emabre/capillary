@@ -15,7 +15,7 @@ and thermal conduction) terms with the Alternating Directino Implicit algorithm*
 
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static int first_call=1;
-  int i,j,k, l, nv;
+  int i,j,k, l;
   static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     static double **Ip_B, **Im_B, **Jp_B, **Jm_B, **CI_B, **CJ_B;
@@ -26,6 +26,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     static double **Ip_T, **Im_T, **Jp_T, **Jm_T, **CI_T, **CJ_T;
     static double **Ta1, **Ta2, **Tb1, **Tb2;
     static double **T;
+    double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
+    double rhoe_old, rhoe_new;
+    int nv;
   #endif
   // Energy increse(due to electro-magnetics) terms
   static double **dUres_a1, **dUres_a2, **dUres_b1, **dUres_b2;
@@ -33,8 +36,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   const double dt = g_dt;
   double ****Uc, ****Vc;
   double *r, *r_1;
-  double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
-  double rhoe_old, rhoe_new;
   /*Initial time before advancing the equations with the ADI method*/
   double const t_start = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
 
@@ -49,7 +50,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   Vc = d->Vc;
   Uc = d->Uc;
   r = grid[IDIR].x_glob;
-  r_1 = grid[IDIR].x_glob;
+  r_1 = grid[IDIR].r_1;
 
   /* -------------------------------------------------------------------
   Build geometry and allocate some stuff
@@ -340,12 +341,12 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
       if ( j < j_elec_start) {
         /* :::: Capillary wall (no electrode) :::: */
         lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall;
+        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real;
       } else if (j >= j_elec_start && j <= j_cap_inter_end) {
         /* :::: Electrode :::: */
         lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall * \
-            (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap );
+        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+            (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
       } else {
         /* :::: Outer domain boundary :::: */
         lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;

@@ -19,6 +19,7 @@ void Init (double *us, double x1, double x2, double x3)
   double T,mu;/*Temperature in K and mean particle weight*/
   double curr, Bwall; //Bwall is in code units
   double unit_Mfield, dens0;
+  double alpha; //ratio between delta current density wall-axis and current density on axis
 
   // Just a check that the geometrical settings makes sense:
   if (DZCAP > ZCAP){
@@ -33,6 +34,7 @@ void Init (double *us, double x1, double x2, double x3)
   // print1("Current from tab: %g", curr);
   // Mag field at the capillary wall, in code units
   Bwall = (BIOTSAV_GAUSS_S_A(curr, RCAP))/unit_Mfield;
+  alpha = 0.7e8/1e8;
 
   #if GEOMETRY != CYLINDRICAL
    #error geometry not valid
@@ -51,7 +53,8 @@ void Init (double *us, double x1, double x2, double x3)
       Inside capillary, excluded near-electrode zone
      ----------------------------------------------------- */
   if (x2 < zcap-dzcap && x1 <= rcap) {
-    us[iBPHI] = Bwall*x1/rcap;
+    // us[iBPHI] = Bwall*x1/rcap;
+    us[iBPHI] = Bwall * x1/rcap * (1 - alpha*(1 - x1*x1/(rcap*rcap)));
     us[RHO] = dens0;
   }
   /* ----------------------------------------------------- 
@@ -60,7 +63,8 @@ void Init (double *us, double x1, double x2, double x3)
   if (zcap-dzcap <= x2 && x2 < zcap && x1 < rcap) {
     /* the B field linearly decreses in z direction
     (this is provisory, better electrode have to be implemented) */
-    us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+    // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+    us[iBPHI] = (Bwall*x1/rcap * (1 - alpha*(1 - x1*x1/(rcap*rcap)))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     us[RHO] = dens0;
   }
   /* ------------------------------------------------------
