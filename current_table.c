@@ -5,7 +5,7 @@
 double i_curr_tab[N_CURR_TAB] = { 51.05e+00,
                                   51.05e+00};
 double t_curr_tab[N_CURR_TAB] = { -1.000000e-20,
-                                  8.000000e-07};
+                                  2000.000000e-09};
 //
 /*------------------------------------------------------
   Function to compute current at the present time step

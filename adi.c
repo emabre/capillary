@@ -390,7 +390,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
   double *ArR, *ArL;
   double *dVr, *dVz;
   double *r, *z, *theta;
-  double dEdT;
+  double T, dEdT;
 
   /* -- set a pointer to the primitive vars array --
     I do this because it is done also in other parts of the code
@@ -452,9 +452,14 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
       TC_kappa( v, r[i], zL[j], theta[k], &kpar, &knor, &phi);
       Jm[j][i] = knor*inv_dzi[j-1];
-
-      GetHeatCapacity(v, r[i], z[j], theta[k], &dEdT);
-
+      #ifdef TEST_ADI
+        HeatCapacity_test(v, r[i], z[j], theta[k], &dEdT);
+      #else
+        if (GetPV_Temperature(v, &(T) )!=0) {
+          print1("\nTC_kappa:[Ema] Error computing temperature!");
+        }
+        HeatCapacity(v, T, &dEdT);
+      #endif
       /* :::: CI :::: */
       CI[j][i] = dEdT*dVr[i];
 
@@ -464,12 +469,13 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
   }
 }
 
+#ifdef TEST_ADI
 /**************************************************************************
  * GetHeatCapacity: Computes the derivative dE/dT (E is the internal energy
  * per unit volume, T is the temperature). This function also normalizes
  * the dEdT.
  * ************************************************************************/
-void GetHeatCapacity(double *v, double r, double z, double theta, double *dEdT) {
+void HeatCapacity_test(double *v, double r, double z, double theta, double *dEdT) {
   double c;
 //
   /*[Opt] This should be done with a table or something similar (also I should
@@ -478,7 +484,6 @@ void GetHeatCapacity(double *v, double r, double z, double theta, double *dEdT) 
     do not do the computations twice!*/
 
   // Specific heat (heat to increase of 1 Kelvin 1 gram of Hydrogen)
-  #ifdef TEST_ADI
     // Low temperature case, no ionization
     c = 3/2*(1/CONST_mp)*CONST_kB;
     // High temperature case, full ionization
@@ -486,11 +491,12 @@ void GetHeatCapacity(double *v, double r, double z, double theta, double *dEdT) 
 
     // Heat capacity (heat to increas of 1 Kelvin 1 cm³ of Hydrogen)
     *dEdT = c*v[RHO]*UNIT_DENSITY;
-  #endif
+
 
   // Normalization
   *dEdT = (*dEdT)/(UNIT_DENSITY*CONST_kB/CONST_mp);
 }
+#endif
 #endif
 
 #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT

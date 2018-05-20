@@ -15,6 +15,7 @@
 */
 /* /////////////////////////////////////////////////////////////////// */
 #include "pluto.h"
+#include "pvte_law_heat_capacity.h"
 
 static double SahaXFrac(double T, double rho);
 #define DIFF_ORDER  4   /* = 2 or 4 for 2nd or 4th accurate approximations
@@ -85,7 +86,9 @@ double SahaXFrac(double T, double rho)
   me = 2.0*CONST_PI*CONST_me;
   kT = CONST_kB*T;
   h3 = CONST_h*CONST_h*CONST_h;
-
+  /*[Ema] Is is correct, strictly speaking, to use mp? maybe I should use the average
+    H atom mass (maybe CONST_amu, as it is used in InternalEnergyFunc())
+    ( or sum the electron mass to the proton mass)!*/
   n  = rho/CONST_mp; /* = n(protons) + n(neutrals)   not   n(total) */
   c  = me*kT*sqrt(me*kT)/(h3*n)*exp(-chi/kT);
 
@@ -249,5 +252,40 @@ printf ("gmm1:  prs = %12.6e, T = %12.6e, chiT = %12.6e, chirho = %12.6e\n",
 
 //printf ("gmm1 = %f\n",gmm1);
   return gmm1;
+
+}
+
+/* ********************************************************************* */
+void HeatCapacity(double *v, double T, double *dEdT)
+/*!
+ * Computes heat capacity of hydrogen according to the eos
+ * at page 69 (eq: 7.10) of the userguide
+ * [Rob]: maybe it does not make so much sense that I define also this function
+ *        everything should be defined once forever when one defines the
+ *        InternalEnergyFunc(), and from it I should compute the derivative
+ *        maybe numerically. May the function FundamentalDerivative() help in
+ *        this sense? Of course then one should tabulate the heat capacity
+ *        with respect to temperature and density.
+ *        If you delete this func remember to delete also its header in eos.h
+ * [Opt]: maybe make some of the variables which don't depend on the input
+ *        "static" ? this might make you spare some time in the computation!
+ *********************************************************************** */
+{ 
+  double chi = 13.6*CONST_eV;
+  double B = -chi/CONST_kB;
+  double A=(2*CONST_PI*CONST_me*CONST_kB)*sqrt(2*CONST_PI*CONST_me*CONST_kB)*CONST_mp/(CONST_h*CONST_h*CONST_h);
+  double D = 1.5*CONST_kB/CONST_amu;
+  double sqT;
+  double x, dxdT;
+  double norm_unit = (UNIT_DENSITY*CONST_kB/CONST_mp);
+
+  x = SahaXFrac(T, v[RHO]);
+  sqT = sqrt(T);
+  dxdT = A/v[RHO] * (1.5*sqT - B/sqT) * exp(B/T);
+
+  *dEdT = v[RHO] * ((D*T + chi/CONST_mH)*dxdT + D*(1+x));
+
+  // Normalization
+  *dEdT = (*dEdT)/norm_unit;
 
 }
