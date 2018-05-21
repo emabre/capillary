@@ -3,5 +3,4 @@
 
 /*[Ema] This is for computing the heat capacity, user supplied (inside pvte_law.c)*/
 void HeatCapacity(double *v, double T, double *dEdT);
-
 #endif

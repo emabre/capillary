@@ -2,3 +2,4 @@ OBJ += gamma_transp.o capillary_wall.o current_table.o freeze_fluid.o adi.o
 OBJ += tc_kappa.o res_eta.o
 OBJ += debug_utilities.o mappersLines.o
 HEADERS += gamma_transp.h capillary_wall.h current_table.h freeze_fluid.h adi.h debug_utilities.h
+HEADERS += pvte_law_heat_capacity.h

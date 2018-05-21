@@ -5,6 +5,7 @@ and thermal conduction) terms with the Alternating Directino Implicit algorithm*
 #include "capillary_wall.h"
 #include "current_table.h"
 #include "Thermal_Conduction/tc.h"
+#include "pvte_law_heat_capacity.h"
 
 #if KBEG != KEND
   #error grid in k direction should only be of 1 point
