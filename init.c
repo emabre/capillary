@@ -56,6 +56,7 @@ void Init (double *us, double x1, double x2, double x3)
     // us[iBPHI] = Bwall*x1/rcap;
     us[iBPHI] = Bwall * x1/rcap * (1 - alpha*(1 - x1*x1/(rcap*rcap)));
     us[RHO] = dens0;
+    us[iVZ] = VZ0/UNIT_VELOCITY;
   }
   /* ----------------------------------------------------- 
       Inside capillary, in near-electrode zone
@@ -66,6 +67,7 @@ void Init (double *us, double x1, double x2, double x3)
     // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     us[iBPHI] = (Bwall*x1/rcap * (1 - alpha*(1 - x1*x1/(rcap*rcap)))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     us[RHO] = dens0;
+    us[iVZ] = VZ0/UNIT_VELOCITY;
   }
   /* ------------------------------------------------------
       Above non-electrode wall (internal boundary, outside capillary)
@@ -90,7 +92,7 @@ void Init (double *us, double x1, double x2, double x3)
       Everywhere
      ----------------------------------------------------- */
   us[iBZ] = us[iBR] = 0.0;
-  us[iVPHI] = us[iVZ] = us[iVR] = 0.0;
+  us[iVPHI] = us[iVR] = 0.0;
   T = T0;
   #if EOS==IDEAL
       mu = MeanMolecularWeight(us);
@@ -198,12 +200,12 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       ReflectiveBound (d->Vc[iVPHI], vsign[iVPHI], X1_END, CENTER);
 
       #if IMPOSE_TWALL
-      // Setting T
-      BOX_LOOP(box,k,j,i){
-        setT( d, TWALL, i, j, k);
-      }
+        // Setting T
+        BOX_LOOP(box,k,j,i){
+          setT( d, TWALL, i, j, k);
+        }
       #else
-      // I reflect pressure, to have no advection of energy through the capillary wall
+        // I reflect pressure, to have no advection of energy through the capillary wall
         ReflectiveBound (d->Vc[PRS], vsign[PRS], X1_END, CENTER);
       #endif
     } else {
@@ -235,6 +237,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       #else
         // I reflect pressure, to have no advection of energy through the capillary wall
         d->Vc[PRS][k][j][i_cap_inter_end+1] = d->Vc[PRS][k][j][i_cap_inter_end];
+        print1("pressure on capwall is %g", d->Vc[PRS][k][j][i_cap_inter_end+1]*UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
       #endif
       // Magnetic field on capillary wall (exclued electrode)
       for (j=0; j<j_elec_start; j++) {

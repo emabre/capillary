@@ -192,7 +192,7 @@ tion RuntimeGet(), e.g. ..."*/
           GetMu(T_c_r[k][j][i], v[RHO], &(mu_aux));
         #endif
       }
-//aszascs
+
       DOM_LOOP(k,j,i){
         #if EOS==IDEAL
           mu_aux = MeanMolecularWeight(d_corrected_z.Vc);
