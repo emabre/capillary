@@ -196,12 +196,16 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       ReflectiveBound (d->Vc[iVZ], vsign[iVZ], X1_END, CENTER);
       ReflectiveBound (d->Vc[iVR], vsign[iVR], X1_END, CENTER);
       ReflectiveBound (d->Vc[iVPHI], vsign[iVPHI], X1_END, CENTER);
-      //ReflectiveBound (d->Vc[PRS], vsign[PRS], X1_END, CENTER);
 
+      #if IMPOSE_TWALL
       // Setting T
       BOX_LOOP(box,k,j,i){
         setT( d, TWALL, i, j, k);
       }
+      #else
+      // I reflect pressure, to have no advection of energy through the capillary wall
+        ReflectiveBound (d->Vc[PRS], vsign[PRS], X1_END, CENTER);
+      #endif
     } else {
       print1("[Ema]UserDefBoundary: Not setting BCs!!!!\n");
     }
@@ -223,10 +227,15 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d->Vc[iVR][k][j][i_cap_inter_end+1] = -(d->Vc[iVR][k][j][i_cap_inter_end]);
         d->Vc[iVZ][k][j][i_cap_inter_end+1] = d->Vc[iVZ][k][j][i_cap_inter_end];
       }
-      // Temperature
-      for (j=0; j<=j_cap_inter_end-1; j++) {
-        setT( d, TWALL, i_cap_inter_end+1, j, k);
-      }
+      // Temperature (or pressure)
+      #if IMPOSE_TWALL
+        for (j=0; j<=j_cap_inter_end-1; j++) {
+          setT( d, TWALL, i_cap_inter_end+1, j, k);
+        }
+      #else
+        // I reflect pressure, to have no advection of energy through the capillary wall
+        d->Vc[PRS][k][j][i_cap_inter_end+1] = d->Vc[PRS][k][j][i_cap_inter_end];
+      #endif
       // Magnetic field on capillary wall (exclued electrode)
       for (j=0; j<j_elec_start; j++) {
         d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall;
@@ -252,8 +261,13 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d->Vc[iVZ][k][j_cap_inter_end][i] = -(d->Vc[iVZ][k][j_cap_inter_end+1][i]);
         // Magnetic Field
         d->Vc[iBPHI][k][j_cap_inter_end][i] = 0.0;
-        // Temperature
-        setT( d, TWALL, i, j_cap_inter_end, k);
+        // Temperature (or pressure)
+        #if IMPOSE_TWALL
+          setT( d, TWALL, i, j_cap_inter_end, k);
+        #else
+          // I reflect pressure, to have no advection of energy through the wall
+          d->Vc[PRS][k][j_cap_inter_end][i] = d->Vc[PRS][k][j_cap_inter_end+1][i];
+        #endif
       }
     }
     /*********************
@@ -261,6 +275,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
                   decomment the one you like!)
     *********************/
     #if MULTIPLE_GHOSTS != YES
+      print1("\nBe careful! without multiple ghosts the bc for temperature(pressure) is not quite ok, you should implement it more carefully");
       KTOT_LOOP(k) {
         /****ALGORITHM 1 *****/
         // // I should not change the grid size near the capillary end!
@@ -331,9 +346,13 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end+1] = d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end];
         //magnetic field
         d->Vc[iBPHI][k][j_cap_inter_end][i_cap_inter_end+1] = 0.0;
-        //temperature
-        // setT( d, TWALL, i_cap_inter_end+1, j, k);
-        setT( d, TWALL, i_cap_inter_end+1, j_cap_inter_end, k); //[Ema?] appena cambiato, vedere se è ok
+        //Temperature (or pressure)
+        #if IMPOSE_TWALL
+          setT( d, TWALL, i_cap_inter_end+1, j_cap_inter_end, k);
+        #else
+          // I reflect pressure, to have no advection of energy through the wall
+          d->Vc[PRS][k][j_cap_inter_end][i_cap_inter_end+1] = d->Vc[PRS][k][j_cap_inter_end][i_cap_inter_end];
+        #endif
       }
 
       // I repeat the usual configuration for the correction in r direction
@@ -351,17 +370,23 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d_correction[0].Vc[iVZ][k] = d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end];
         d_correction[0].Vc[iVPHI][k] = 0.0;
         d_correction[0].Vc[RHO][k] = d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end];
-        #if EOS==IDEAL
-            #error double internal ghost not implemented for ideas eos
-        #elif EOS==PVTE_LAW
-            GetMu(TWALL, d_correction[0].Vc[RHO][k], &mu); // No need to adim. T (GetMu takes T in K)
-        #endif
-        // I cannot correct the Temperature, I must set it same as in the normal
-        // *d structure
-        d_correction[0].Vc[PRS][k] = d_correction[0].Vc[RHO][k]*TWALL / (KELVIN*mu);
         d_correction[0].Vc[iBZ][k] = 0.0;
         d_correction[0].Vc[iBPHI][k] = 0.0;
         d_correction[0].Vc[iBR][k] = 0.0;
+        #if IMPOSE_TWALL
+          #if EOS==IDEAL
+              #error double internal ghost not implemented for ideas eos
+          #elif EOS==PVTE_LAW
+              GetMu(TWALL, d_correction[0].Vc[RHO][k], &mu); // No need to adim. T (GetMu takes T in K)
+          #endif
+          // I don't correct the Temperature, I set it same as in the normal
+          // *d structure
+          d_correction[0].Vc[PRS][k] = d_correction[0].Vc[RHO][k]*TWALL / (KELVIN*mu);
+        #else
+          // I reflect pressure, to have no advection of energy through the wall
+          d_correction[0].Vc[PRS][k] = d->Vc[PRS][k][j_cap_inter_end][i_cap_inter_end];
+        #endif
+        
       }
 
       // In i and j directions I have only one point to fix,
@@ -383,18 +408,24 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d_correction[1].Vc[iVZ][k] = -(d->Vc[iVZ][k][j_cap_inter_end+1][i_cap_inter_end+1]);
         d_correction[0].Vc[iVPHI][k] = 0.0;
         d_correction[1].Vc[RHO][k] = d->Vc[RHO][k][j_cap_inter_end+1][i_cap_inter_end+1];
-        #if EOS==IDEAL
-            #error double internal ghost not implemented for ideas eos
-        #elif EOS==PVTE_LAW
-            GetMu(TWALL, d_correction[1].Vc[RHO][k], &mu);
-        #endif
-        // I cannot correct the Temperature, I must set it same as in the normal
-        // *d structure
-        d_correction[1].Vc[PRS][k] = d_correction[1].Vc[RHO][k]*TWALL / (KELVIN*mu);
         d_correction[1].Vc[iBZ][k] = 0.0;
         d_correction[1].Vc[iBPHI][k] = 0.0;
         d_correction[1].Vc[iBR][k] = 0.0;
+        #if IMPOSE_TWALL
+          #if EOS==IDEAL
+              #error double internal ghost not implemented for ideas eos
+          #elif EOS==PVTE_LAW
+              GetMu(TWALL, d_correction[1].Vc[RHO][k], &mu);
+          #endif
+          // I don't correct the Temperature, I set it same as in the normal
+          // *d structure
+          d_correction[1].Vc[PRS][k] = d_correction[1].Vc[RHO][k]*TWALL / (KELVIN*mu);
+        #else
+          // I reflect pressure, to have no advection of energy through the wall
+          d_correction[1].Vc[PRS][k] = d->Vc[PRS][k][j_cap_inter_end+1][i_cap_inter_end+1];
+        #endif
       }
+
       // No correction for the k direction
       d_correction[2].Npoints = 0;
     #endif

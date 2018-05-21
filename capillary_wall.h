@@ -2,6 +2,7 @@
 #define CAPILLARY_WALL_H
 
 #define MULTIPLE_GHOSTS YES
+#define IMPOSE_TWALL YES
 
 /**********************************************************/
 /* CAPILLARY DISCHARGE SETTINGS */
