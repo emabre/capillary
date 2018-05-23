@@ -198,15 +198,15 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       ReflectiveBound (d->Vc[iVR], vsign[iVR], X1_END, CENTER);
       ReflectiveBound (d->Vc[iVPHI], vsign[iVPHI], X1_END, CENTER);
 
+      BOX_LOOP(box,k,j,i){
       #if IMPOSE_TWALL
         // Setting T
-        BOX_LOOP(box,k,j,i){
-          setT( d, TWALL, i, j, k);
-        }
+        setT( d, TWALL, i, j, k);
       #else
         // I reflect pressure, to have no advection of energy through the capillary wall
         ReflectiveBound (d->Vc[PRS], vsign[PRS], X1_END, CENTER);
       #endif
+      }
     } else {
       print1("[Ema]UserDefBoundary: Not setting BCs!!!!\n");
     }
@@ -229,15 +229,14 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d->Vc[iVZ][k][j][i_cap_inter_end+1] = d->Vc[iVZ][k][j][i_cap_inter_end];
       }
       // Temperature (or pressure)
-      #if IMPOSE_TWALL
-        for (j=0; j<=j_cap_inter_end-1; j++) {
+      for (j=0; j<=j_cap_inter_end-1; j++) {
+        #if IMPOSE_TWALL
           setT( d, TWALL, i_cap_inter_end+1, j, k);
-        }
-      #else
-        // I reflect pressure, to have no advection of energy through the capillary wall
-        d->Vc[PRS][k][j][i_cap_inter_end+1] = d->Vc[PRS][k][j][i_cap_inter_end];
-        print1("pressure on capwall is %g", d->Vc[PRS][k][j][i_cap_inter_end+1]*UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
-      #endif
+        #else
+          // I reflect pressure, to have no advection of energy through the capillary wall
+          d->Vc[PRS][k][j][i_cap_inter_end+1] = d->Vc[PRS][k][j][i_cap_inter_end];
+        #endif
+      }
       // Magnetic field on capillary wall (exclued electrode)
       for (j=0; j<j_elec_start; j++) {
         d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall;

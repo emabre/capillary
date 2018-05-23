@@ -22,6 +22,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     static double **Ip_B, **Im_B, **Jp_B, **Jm_B, **CI_B, **CJ_B;
     static double **Bra1, **Bra2, **Brb1, **Brb2;
     static double **Br;
+    // Energy increse(due to electro-magnetics) terms
+    static double **dUres_a1, **dUres_a2, **dUres_b1, **dUres_b2;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     static double **Ip_T, **Im_T, **Jp_T, **Jm_T, **CI_T, **CJ_T;
@@ -31,9 +33,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     double rhoe_old, rhoe_new;
     int nv;
   #endif
-  // Energy increse(due to electro-magnetics) terms
-  static double **dUres_a1, **dUres_a2, **dUres_b1, **dUres_b2;
-  // static double **dEdT;
   const double dt = g_dt;
   double ****Uc, ****Vc;
   double *r, *r_1;
