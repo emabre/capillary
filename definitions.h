@@ -8,7 +8,7 @@
 #define  TIME_STEPPING           RK2
 #define  DIMENSIONAL_SPLITTING   YES
 #define  NTRACER                 0
-#define  USER_DEF_PARAMETERS     4
+#define  USER_DEF_PARAMETERS     8
 
 /* -- physics dependent declarations -- */
 
@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      NO
+#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -27,6 +27,10 @@
 #define  ETAY_GAU                1
 #define  ETAZ_GAU                2
 #define  KAPPA_GAUBOB            3
+#define  TWALL                   4
+#define  T0                      5
+#define  DENS0                   6
+#define  VZ0                     7
 
 /* [Beg] user-defined constants (do not change this line) */
 
@@ -48,4 +52,17 @@
 #define  LIMITER                   DEFAULT
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
+
+/* ---------------------------------------------------- */
+/*  Ema's additional macros                            */
 #define  FREEZE_FLUID
+// #define  TEST_ADI
+#define IMPOSE_TWALL NO
+/* ---------------------------------------------------- */
+
+/* ---------------------------------------------------- */
+/*    CAPILLARY GEOMETRY SETTINGS                      */
+#define RCAP 0.05
+#define DZCAP 0.5 /*the electrodes are wide DZCAP cm*/
+#define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
+/* ---------------------------------------------------- */

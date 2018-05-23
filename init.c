@@ -16,10 +16,13 @@ void Init (double *us, double x1, double x2, double x3)
  *
  *********************************************************************** */
 {
-  double T,mu;/*Temperature in K and mean particle weight*/
+  double mu;/*Temperature in K and mean particle weight*/
   double curr, Bwall; //Bwall is in code units
-  double unit_Mfield, dens0;
+  double unit_Mfield;
   double alpha; //ratio between delta current density wall-axis and current density on axis
+  double T0_K = g_inputParam[T0];
+  double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
+  double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
 
   // Just a check that the geometrical settings makes sense:
   if (DZCAP > ZCAP){
@@ -28,7 +31,6 @@ void Init (double *us, double x1, double x2, double x3)
   }
 
   unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
-  dens0 = (DENS0)/UNIT_DENSITY;
 
   curr = current_from_time(0.0);
   // print1("Current from tab: %g", curr);
@@ -45,20 +47,20 @@ void Init (double *us, double x1, double x2, double x3)
 
   //Remember: in cyl coords x1 is r, x2 is z
 
-  /* ----------------------------------------------------- 
+  /* -----------------------------------------------------
       Zones not covered in the next lines (except for zone "Everywhere")
     ----------------------------------------------------- */
   us[RHO] = 0.001*dens0;
-  /* ----------------------------------------------------- 
+  /* -----------------------------------------------------
       Inside capillary, excluded near-electrode zone
      ----------------------------------------------------- */
   if (x2 < zcap-dzcap && x1 <= rcap) {
     // us[iBPHI] = Bwall*x1/rcap;
     us[iBPHI] = Bwall * x1/rcap * (1 - alpha*(1 - x1*x1/(rcap*rcap)));
     us[RHO] = dens0;
-    us[iVZ] = VZ0/UNIT_VELOCITY;
+    us[iVZ] = vz0;
   }
-  /* ----------------------------------------------------- 
+  /* -----------------------------------------------------
       Inside capillary, in near-electrode zone
      ----------------------------------------------------- */
   if (zcap-dzcap <= x2 && x2 < zcap && x1 < rcap) {
@@ -67,7 +69,7 @@ void Init (double *us, double x1, double x2, double x3)
     // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     us[iBPHI] = (Bwall*x1/rcap * (1 - alpha*(1 - x1*x1/(rcap*rcap)))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     us[RHO] = dens0;
-    us[iVZ] = VZ0/UNIT_VELOCITY;
+    us[iVZ] = vz0;
   }
   /* ------------------------------------------------------
       Above non-electrode wall (internal boundary, outside capillary)
@@ -88,18 +90,17 @@ void Init (double *us, double x1, double x2, double x3)
     // No field outside capillary
     us[iBPHI] = 0.0;
   }
-  /* ----------------------------------------------------- 
+  /* -----------------------------------------------------
       Everywhere
      ----------------------------------------------------- */
   us[iBZ] = us[iBR] = 0.0;
   us[iVPHI] = us[iVR] = 0.0;
-  T = T0;
   #if EOS==IDEAL
       mu = MeanMolecularWeight(us);
   #elif EOS==PVTE_LAW
-      GetMu(T, us[RHO], &mu); // GetMu takes T in Kelvin, no need to adim. T
+      GetMu(T0_K, us[RHO], &mu); // GetMu takes T in Kelvin, no need to adim. T
   #endif
-  us[PRS] = us[RHO]*T / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
+  us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
 
 }
 
@@ -125,6 +126,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   double mu;
   double unit_Mfield;
   static int first_call=1;
+  double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin
 
   unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
 
@@ -201,7 +203,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       BOX_LOOP(box,k,j,i){
       #if IMPOSE_TWALL
         // Setting T
-        setT( d, TWALL, i, j, k);
+        setT( d, Twall_K, i, j, k);
       #else
         // I reflect pressure, to have no advection of energy through the capillary wall
         ReflectiveBound (d->Vc[PRS], vsign[PRS], X1_END, CENTER);
@@ -231,7 +233,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       // Temperature (or pressure)
       for (j=0; j<=j_cap_inter_end-1; j++) {
         #if IMPOSE_TWALL
-          setT( d, TWALL, i_cap_inter_end+1, j, k);
+          setT( d, Twall_K, i_cap_inter_end+1, j, k);
         #else
           // I reflect pressure, to have no advection of energy through the capillary wall
           d->Vc[PRS][k][j][i_cap_inter_end+1] = d->Vc[PRS][k][j][i_cap_inter_end];
@@ -264,7 +266,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d->Vc[iBPHI][k][j_cap_inter_end][i] = 0.0;
         // Temperature (or pressure)
         #if IMPOSE_TWALL
-          setT( d, TWALL, i, j_cap_inter_end, k);
+          setT( d, Twall_K, i, j_cap_inter_end, k);
         #else
           // I reflect pressure, to have no advection of energy through the wall
           d->Vc[PRS][k][j_cap_inter_end][i] = d->Vc[PRS][k][j_cap_inter_end+1][i];
@@ -349,7 +351,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d->Vc[iBPHI][k][j_cap_inter_end][i_cap_inter_end+1] = 0.0;
         //Temperature (or pressure)
         #if IMPOSE_TWALL
-          setT( d, TWALL, i_cap_inter_end+1, j_cap_inter_end, k);
+          setT( d, Twall_K, i_cap_inter_end+1, j_cap_inter_end, k);
         #else
           // I reflect pressure, to have no advection of energy through the wall
           d->Vc[PRS][k][j_cap_inter_end][i_cap_inter_end+1] = d->Vc[PRS][k][j_cap_inter_end][i_cap_inter_end];
@@ -378,16 +380,16 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
           #if EOS==IDEAL
               #error double internal ghost not implemented for ideas eos
           #elif EOS==PVTE_LAW
-              GetMu(TWALL, d_correction[0].Vc[RHO][k], &mu); // No need to adim. T (GetMu takes T in K)
+              GetMu(Twall_K, d_correction[0].Vc[RHO][k], &mu); // No need to adim. T (GetMu takes T in K)
           #endif
           // I don't correct the Temperature, I set it same as in the normal
           // *d structure
-          d_correction[0].Vc[PRS][k] = d_correction[0].Vc[RHO][k]*TWALL / (KELVIN*mu);
+          d_correction[0].Vc[PRS][k] = d_correction[0].Vc[RHO][k]*Twall_K / (KELVIN*mu);
         #else
           // I reflect pressure, to have no advection of energy through the wall
           d_correction[0].Vc[PRS][k] = d->Vc[PRS][k][j_cap_inter_end][i_cap_inter_end];
         #endif
-        
+
       }
 
       // In i and j directions I have only one point to fix,
@@ -416,11 +418,11 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
           #if EOS==IDEAL
               #error double internal ghost not implemented for ideas eos
           #elif EOS==PVTE_LAW
-              GetMu(TWALL, d_correction[1].Vc[RHO][k], &mu);
+              GetMu(Twall_K, d_correction[1].Vc[RHO][k], &mu);
           #endif
           // I don't correct the Temperature, I set it same as in the normal
           // *d structure
-          d_correction[1].Vc[PRS][k] = d_correction[1].Vc[RHO][k]*TWALL / (KELVIN*mu);
+          d_correction[1].Vc[PRS][k] = d_correction[1].Vc[RHO][k]*Twall_K / (KELVIN*mu);
         #else
           // I reflect pressure, to have no advection of energy through the wall
           d_correction[1].Vc[PRS][k] = d->Vc[PRS][k][j_cap_inter_end+1][i_cap_inter_end+1];

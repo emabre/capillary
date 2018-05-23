@@ -287,6 +287,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
   int i,j,l;
   double t_sec;
+  double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin
   # if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     double Twall;
   #endif
@@ -299,7 +300,7 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
 
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     // I compute the wall temperature
-    Twall = TWALL/KELVIN;
+    Twall = Twall_K / KELVIN;
 
     // IDIR lines
     for (l=0; l<lines[IDIR].N; l++) {
