@@ -48,7 +48,7 @@ void Init (double *us, double x1, double x2, double x3)
   /* ----------------------------------------------------- 
       Zones not covered in the next lines (except for zone "Everywhere")
     ----------------------------------------------------- */
-  us[RHO] = 0.1*dens0;
+  us[RHO] = 0.001*dens0;
   /* ----------------------------------------------------- 
       Inside capillary, excluded near-electrode zone
      ----------------------------------------------------- */

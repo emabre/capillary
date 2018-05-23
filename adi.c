@@ -29,6 +29,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     static double **Ip_T, **Im_T, **Jp_T, **Jm_T, **CI_T, **CJ_T;
     static double **Ta1, **Ta2, **Tb1, **Tb2;
     static double **T;
+    static double **dEdT;
     double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
     double rhoe_old, rhoe_new;
     int nv;
@@ -93,6 +94,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
       T = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
+      dEdT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+
       TOT_LOOP (k,j,i) {
         Ta1[j][i] = 0.0;
         Ta2[j][i] = 0.0;
@@ -129,7 +132,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     #else
       print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
     #endif
-    BuildIJ_forTC(d, grid, lines, Ip_T, Im_T, Jp_T, Jm_T, CI_T, CJ_T);
+    BuildIJ_forTC(d, grid, lines, Ip_T, Im_T, Jp_T, Jm_T, CI_T, CJ_T, dEdT);
   #endif
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     // Build a handy magnetic field matrix
@@ -240,18 +243,28 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         #if EOS==IDEAL
           #error Not implemented for ideal eos (but it is easy to add it!)
         #elif EOS==PVTE_LAW
-          for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
             #ifdef TEST_ADI
+              for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+
+              /*I think in this way the update does not conserve the energy*/
               rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
               rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
               rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*Tb2[j][i]*KELVIN;
               rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+              Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
+
+              /*I think in this way the update should conserve the energy*/
+              // Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
             #else
-              /*[Opt] I should use a tabulation maybe!*/
-              rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN);
-              rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN);
+              /*I think in this way the update should conserve the energy*/
+              // Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
+
+              /*I think in this way the update does not conserve the energy*/
+              for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+              rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
+              rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN); // I guess in this way it is not conservative!
+              Uc[k][j][i][ENG] += rhoe_new-rhoe_old;              
             #endif
-            Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
         #else
           print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!");
         #endif
@@ -374,11 +387,13 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
 
 #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
 /****************************************************************************
-Function to build the Ip,Im,Jp,Jm for the thermal conduction problem
+Function to build the Ip,Im,Jp,Jm, CI, CJ (and also dEdT) for the thermal conduction problem
+Note that I must make available for outside dEdT, as I will use it later to 
+advance the energy in a way that conserves the energy
 *****************************************************************************/
 void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
                    double **Ip, double **Im, double **Jp,
-                   double **Jm, double **CI, double **CJ) {
+                   double **Jm, double **CI, double **CJ, double **dEdT) {
   int i,j,k;
   int nv, l;
   double kpar, knor, phi; // Thermal conductivity
@@ -390,7 +405,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
   double *ArR, *ArL;
   double *dVr, *dVz;
   double *r, *z, *theta;
-  double T, dEdT;
+  double T;
 
   /* -- set a pointer to the primitive vars array --
     I do this because it is done also in other parts of the code
@@ -421,6 +436,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
     Jm[j][i] = 0.0;
     CI[j][i] = 0.0;
     CJ[j][i] = 0.0;
+    dEdT[j][i] = 0.0;
   }
   // lines->lidx
   KDOM_LOOP(k) {
@@ -453,18 +469,18 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
       TC_kappa( v, r[i], zL[j], theta[k], &kpar, &knor, &phi);
       Jm[j][i] = knor*inv_dzi[j-1];
       #ifdef TEST_ADI
-        HeatCapacity_test(v, r[i], z[j], theta[k], &dEdT);
+        HeatCapacity_test(v, r[i], z[j], theta[k], &(dEdT[j][i]) );
       #else
         if (GetPV_Temperature(v, &(T) )!=0) {
           print1("\nTC_kappa:[Ema] Error computing temperature!");
         }
-        HeatCapacity(v, T, &dEdT);
+        HeatCapacity(v, T, &(dEdT[j][i]) );
       #endif
       /* :::: CI :::: */
-      CI[j][i] = dEdT*dVr[i];
+      CI[j][i] = dEdT[j][i]*dVr[i];
 
       /* :::: CJ :::: */
-      CJ[j][i] = dEdT*dVz[j];
+      CJ[j][i] = dEdT[j][i]*dVz[j];
     }
   }
 }

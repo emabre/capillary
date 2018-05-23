@@ -6,7 +6,7 @@
 
 /**********************************************************/
 /* CAPILLARY DISCHARGE SETTINGS */
-#define T0 5800.0
+#define T0 4000.0
 #define TWALL 3000.0
 #define DENS0 2.5e-7
 // #define DENS0 2.5e-7
@@ -15,7 +15,7 @@
 // #define DZCAP 0.06
 #define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 // #define ZCAP 0.2
-#define VZ0 2.0e4 /*Velocity component in z direction, inside capillary, at start*/
+#define VZ0 0.0 /*Velocity component in z direction, inside capillary, at start*/
 /**********************************************************/
 
 double extern const zcap, dzcap, rcap;
