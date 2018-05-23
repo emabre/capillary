@@ -260,6 +260,8 @@ void HeatCapacity(double *v, double T, double *dEdT)
 /*!
  * Computes heat capacity of hydrogen according to the eos
  * at page 69 (eq: 7.10) of the userguide
+ * T: temperature in Kelvin
+ * v: vector containing primitive quantities in code units
  * [Rob]: maybe it does not make so much sense that I define also this function
  *        everything should be defined once forever when one defines the
  *        InternalEnergyFunc(), and from it I should compute the derivative
@@ -281,9 +283,9 @@ void HeatCapacity(double *v, double T, double *dEdT)
 
   x = SahaXFrac(T, v[RHO]);
   sqT = sqrt(T);
-  dxdT = A/v[RHO] * (1.5*sqT - B/sqT) * exp(B/T);
+  dxdT = A/(v[RHO]*UNIT_DENSITY) * (1.5*sqT - B/sqT) * exp(B/T);
 
-  *dEdT = v[RHO] * ((D*T + chi/CONST_mH)*dxdT + D*(1+x));
+  *dEdT = v[RHO]*UNIT_DENSITY * ((D*T + chi/CONST_mH)*dxdT + D*(1+x));
 
   // Normalization
   *dEdT = (*dEdT)/norm_unit;
