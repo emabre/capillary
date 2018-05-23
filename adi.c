@@ -253,10 +253,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
               rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
               Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
 
-              /*I think in this way the update should conserve the energy*/
+              /*I think in this way the update should conserve the energy, but it seems unstable!(23052018)*/
               // Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
             #else
-              /*I think in this way the update should conserve the energy*/
+              /*I think in this way the update should conserve the energy, but it seems unstable!(23052018)*/
               // Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
 
               /*I think in this way the update does not conserve the energy*/
