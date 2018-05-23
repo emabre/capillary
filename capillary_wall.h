@@ -53,7 +53,7 @@ typedef struct CORR{
 Corr extern d_correction[3];
 
 int SetRemarkableIdxs(Grid *grid);
-int find_idx_closest(double *vec, int Nvec, double v);
+int FindIdxClosest(double *vec, int Nvec, double v);
 
 // void alloc_Data(Data *data);
 Data* alloc_Data();

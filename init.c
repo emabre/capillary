@@ -125,7 +125,6 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   double mu;
   double unit_Mfield;
   static int first_call=1;
-  // static int i_cap_inter_end=-1, j_cap_inter_end=-1,j_elec_start=-1;
 
   unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
 

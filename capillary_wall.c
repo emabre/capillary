@@ -37,13 +37,18 @@ i=0                 o-------------------------------->(axis)
     */
 
   /* I find the indexes of the cells closest to the capillary bounds*/
-  i_cap_inter_end = find_idx_closest(grid[0].xr_glob, grid[0].gend-grid[0].gbeg+1, rcap);
-  j_cap_inter_end = find_idx_closest(grid[1].xr_glob, grid[1].gend-grid[1].gbeg+1, zcap);
-  j_elec_start = find_idx_closest(grid[1].xl_glob, grid[1].gend-grid[1].gbeg+1, zcap-dzcap);
+  i_cap_inter_end = IBEG + FindIdxClosest(&(grid[IDIR].xr_glob[IBEG]), IEND-IBEG, rcap);
+  j_cap_inter_end = JBEG + FindIdxClosest(&(grid[JDIR].xr_glob[JBEG]), JEND-JBEG, zcap);
+  j_elec_start = JBEG + FindIdxClosest(&(grid[JDIR].xl_glob[JBEG]), JEND-JBEG, zcap-dzcap);
 
-  rcap_real = grid[0].xr_glob[i_cap_inter_end];
-  zcap_real = grid[1].xr_glob[j_cap_inter_end];
-  dzcap_real = grid[1].xr_glob[j_cap_inter_end]-grid[1].xl_glob[j_elec_start];
+  if (j_elec_start > j_cap_inter_end) {
+    print1("\n[SetRemarkableIdxs]Electrode appears to start after end of capillary! Quitting.");
+    QUIT_PLUTO(1);
+  }
+
+  rcap_real = grid[IDIR].xr_glob[i_cap_inter_end];
+  zcap_real = grid[JDIR].xr_glob[j_cap_inter_end];
+  dzcap_real = grid[JDIR].xr_glob[j_cap_inter_end]-grid[JDIR].xl_glob[j_elec_start];
 
   print1("\n  -------------------------------------------------------------------------");
   print1("\n  Indexes of remarkable internal bounary points:");
@@ -69,7 +74,7 @@ i=0                 o-------------------------------->(axis)
 /******************************************************************/
 /*Finds the index of the element in vec closest to the value of v*/
 /******************************************************************/
-int find_idx_closest(double *vec, int Nvec, double v){
+int FindIdxClosest(double *vec, int Nvec, double v){
   int i, i_mindiff;
   double diff;
 
