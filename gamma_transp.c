@@ -47,7 +47,7 @@ const double Gamma_jil[2][10][4] = {
   Erg to keV conversion
 ---------------------------------------------------*/
 double erg2keV(double kT) {
-    return kT*CONST_eV/1e3;
+    return kT/CONST_eV/1e3;
 }
 
 /*---------------------------------------------*/
@@ -181,6 +181,8 @@ double elRes_norm_DUED(double z, double rho, double kT) {
   Z_ion = fmax(1.0,z); /*Normally it should be the maximum between z and 1*/
   Zmin = fmin(z,1.0); /*Normally it should be the minimum between z and 1*/
 
+  /* Resistivity(Spitzer) in direction parallel to magnetic field,
+     (ONLY VALID FOR HYDROGEN), corrected incuding collisions e-e*/
   elRes_norm_ei = 1.840e-19 * Z_ion * cl_ei_el_DUED(ne, kT, z)/(TkeV*sqrt_TkeV) * Z_ion*Zmin/(z+1e-20);
   // print1("%e", sqrt_TkeV);
   // QUIT_PLUTO(1);

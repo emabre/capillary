@@ -189,7 +189,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     **********************************/
     ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
-    #if HAVE_ENERGY
+    #if (HAVE_ENERGY && JOULE_EFFECT)
       ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
     #endif
 
@@ -199,7 +199,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
     ImplicitUpdate (Bra2, Bra1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                       lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
-    #if HAVE_ENERGY
+    #if (HAVE_ENERGY && JOULE_EFFECT)
       ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
     #endif
 
@@ -208,7 +208,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     **********************************/
     ExplicitUpdate (Brb1, Bra2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
-    #if HAVE_ENERGY
+    #if (HAVE_ENERGY && JOULE_EFFECT)
     /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt instead of 0.5*dt
        (but in this way it is more readable)*/
       ResEnergyIncrease(dUres_b1, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
@@ -219,7 +219,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
       ImplicitUpdate (Brb2, Brb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                       lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
-    #if HAVE_ENERGY
+    #if (HAVE_ENERGY && JOULE_EFFECT)
       ResEnergyIncrease(dUres_b2, Ip_B, Im_B, Brb1, grid, &lines[IDIR], 0.5*dt, IDIR);
     #endif
   #endif
@@ -233,7 +233,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
         Uc[k][j][i][BX3] = Brb2[j][i]*r_1[i];
 
-        #if HAVE_ENERGY
+        #if (HAVE_ENERGY && JOULE_EFFECT)
           Uc[k][j][i][ENG] += dUres_a1[j][i]+dUres_a2[j][i]+dUres_b1[j][i]+dUres_b2[j][i];
         #endif
       #endif
@@ -906,7 +906,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
   }
 }
 
-#if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT && HAVE_ENERGY
+#if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT && HAVE_ENERGY && JOULE_EFFECT)
 /****************************************************************************
 Function to build the a matrix which contain the amount of increase of the 
 energy due to joule effect and magnetic field energy (flux of poynting vector due to 
