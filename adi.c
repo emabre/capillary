@@ -363,6 +363,7 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
             (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
       } else {
         /* :::: Outer domain boundary :::: */
+        prova neumann??
         lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
         lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
       }
