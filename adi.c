@@ -363,8 +363,9 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
             (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
       } else {
         /* :::: Outer domain boundary :::: */
-        prova neumann??
-        lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+
+        // lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+        lines[IDIR].rbound[BDIFF][l].kind = NEUMANN_HOM;
         lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
       }
     }
@@ -378,6 +379,8 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
       } else {
         /* :::: Outer capillary wall :::: */
         lines[JDIR].lbound[BDIFF][l].kind = DIRICHLET;
+        // As alternative... (I don't belive it is right)
+        // lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;
         lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
       }
       /* :::: Outer domain boundary :::: */
@@ -712,7 +715,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
       } else if (lbound[l].kind == NEUMANN_HOM) {
         diagonal[lidx] = 1 + dt/C[j][lidx]*Hp[j][lidx];
       } else {
-        print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
+        print1("\n[ImplicitUpdate]Error setting left bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
       }
       // I set the Bcs for right boundary
@@ -722,7 +725,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
       } else if (rbound[l].kind == NEUMANN_HOM) {
         diagonal[ridx] = 1 + dt/C[j][ridx]*Hm[j][ridx];
       } else {
-        print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
+        print1("\n[ImplicitUpdate]Error setting right bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
       }
       // Now I solve the system
@@ -762,7 +765,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
       } else if (lbound[l].kind == NEUMANN_HOM) {
         diagonal[lidx] = 1 + dt/C[lidx][i]*Hp[lidx][i];
       } else {
-        print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
+        print1("\n[ImplicitUpdate]Error setting left bc (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
       // I set the Bcs for right boundary
@@ -772,7 +775,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
       } else if (rbound[l].kind == NEUMANN_HOM) {
         diagonal[ridx] = 1 + dt/C[ridx][i]*Hm[ridx][i];
       } else {
-        print1("\n[ImplicitUpdate]Error setting bcs, not known bc kind!");
+        print1("\n[ImplicitUpdate]Error setting right bcs (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
       // Now I solve the system
@@ -842,7 +845,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
       } else if (lbound[l].kind == NEUMANN_HOM) {
         v[j][lidx] = rhs[j][lidx] + dt/C[j][lidx] * (b[j][lidx+1]*Hp[j][lidx] - b[j][lidx]*Hp[j][lidx]);
       } else {
-        print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
+        print1("\n[ExplicitUpdate]Error setting left bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
       }
       // Cells near right boundary
@@ -852,7 +855,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
       } else if (rbound[l].kind == NEUMANN_HOM) {
         v[j][ridx] = rhs[j][ridx] + dt/C[j][ridx] * (-b[j][ridx]*Hm[j][ridx] + b[j][ridx-1]*Hm[j][ridx]);
       } else {
-        print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
+        print1("\n[ExplicitUpdate]Error setting right bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
       }
     }
@@ -887,7 +890,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
       } else if (lbound[l].kind == NEUMANN_HOM) {
         v[lidx][i] = rhs[lidx][i] + dt/C[lidx][i] * (b[lidx+1][i]*Hp[lidx][i] - b[lidx][i]*Hp[lidx][i]);
       } else {
-        print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
+        print1("\n[ExplicitUpdate]Error setting left bc (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
       // Cells near right boundary
@@ -897,7 +900,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
       } else if (rbound[l].kind == NEUMANN_HOM) {
         v[ridx][i] = rhs[ridx][i] + dt/C[ridx][i] * (-b[ridx][i]*Hm[ridx][i] + b[ridx-1][i]*Hm[ridx][i]);
       } else {
-        print1("\n[ExplicitUpdate]Error setting bcs, not known bc kind!");
+        print1("\n[ExplicitUpdate]Error setting right bc (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
     }
