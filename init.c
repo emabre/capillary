@@ -19,6 +19,7 @@ void Init (double *us, double x1, double x2, double x3)
   double mu;/*Temperature in K and mean particle weight*/
   double curr, Bwall; //Bwall is in code units
   double unit_Mfield;
+  double csi = x1/rcap;
   double alpha = g_inputParam[ALPHA_J]; //ratio between delta current density wall-axis and current density on axis
   double T0_K = g_inputParam[T0];
   double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
@@ -55,7 +56,7 @@ void Init (double *us, double x1, double x2, double x3)
      ----------------------------------------------------- */
   if (x2 < zcap-dzcap && x1 <= rcap) {
     // us[iBPHI] = Bwall*x1/rcap;
-    us[iBPHI] = Bwall * x1/rcap * (1 - alpha*(1 - x1*x1/(rcap*rcap)));
+    us[iBPHI] = Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi));
     us[RHO] = dens0;
     us[iVZ] = vz0;
   }
@@ -66,7 +67,7 @@ void Init (double *us, double x1, double x2, double x3)
     /* the B field linearly decreses in z direction
     (this is provisory, better electrode have to be implemented) */
     // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
-    us[iBPHI] = (Bwall*x1/rcap * (1 - alpha*(1 - x1*x1/(rcap*rcap)))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+    us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     us[RHO] = dens0;
     us[iVZ] = vz0;
   }
@@ -117,24 +118,32 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
  *********************************************************************** */
 {
   int  i, j, k;
-  double t_sec, curr, Bwall; //Bwall is in code units, t_sec is in seconds
+  double t_sec; // t_sec is in seconds
   int  vsign[NVAR]; /*vector containing signs which will be set by Flipsign*/
   // double T,mu;/*Temperature in K and mean particle weight, for the usage of macro "KELVIN" see page 45 of the manual*/
   // double mu_all[NX3_TOT][NX2_TOT][NX1_TOT]; /*mean particle weight in the whole domain*/
-  double qz,qr,diagonal,sinth,costh;
-  double mu;
-  double unit_Mfield;
+  #if MULTIPLE_GHOSTS != YES
+    double qz,qr,diagonal,sinth,costh;
+  #endif
   static int first_call=1;
-  double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin
-
-  unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+  #if IMPOSE_TWALL
+    double mu;
+    double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin
+  #endif
+  #if IMPOSE_BWALL
+    double unit_Mfield;
+    double curr, Bwall; //Bwall is in code units,
+  #endif
 
   /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
   t_sec = g_time*(UNIT_LENGTH/UNIT_VELOCITY);
 
-  curr = current_from_time(t_sec);
-  // print1("\nCurrent from tab: %g", curr);
-  Bwall = BIOTSAV_GAUSS_S_A(curr, RCAP)/unit_Mfield;
+  #if IMPOSE_BWALL
+    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+    curr = current_from_time(t_sec);
+    // print1("\nCurrent from tab: %g", curr);
+    Bwall = BIOTSAV_GAUSS_S_A(curr, RCAP)/unit_Mfield;
+  #endif
 
   /**********************************
   Find the remarkable indexes (if they had not been found before)
@@ -240,15 +249,23 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       }
       // Magnetic field on capillary wall (exclued electrode)
       for (j=0; j<j_elec_start; j++) {
-        d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall;
+        #if IMPOSE_BWALL
+          d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall;
+        #else
+          d->Vc[iBPHI][k][j][i_cap_inter_end+1] = d->Vc[iBPHI][k][j][i_cap_inter_end];
+        #endif
       }
       // Magnetic field on electrode
       for (j=j_elec_start; j<=j_cap_inter_end; j++) {
-        /* d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall* \
-             (1-(grid[1].x_glob[j]-grid[1].x_glob[j_elec_start])/ \
-             (grid[1].x_glob[j_cap_inter_end]-grid[1].x_glob[j_elec_start])); */
-        d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall* \
-               (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap );
+        #if IMPOSE_BWALL
+          /* d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall* \
+                (1-(grid[1].x_glob[j]-grid[1].x_glob[j_elec_start])/ \
+                (grid[1].x_glob[j_cap_inter_end]-grid[1].x_glob[j_elec_start])); */
+          d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall* \
+                  (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap );
+        #else
+          d->Vc[iBPHI][k][j][i_cap_inter_end+1] = d->Vc[iBPHI][k][j][i_cap_inter_end];
+        #endif
       }
     }
     /***********************
@@ -262,7 +279,11 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d->Vc[iVR][k][j_cap_inter_end][i] = d->Vc[iVR][k][j_cap_inter_end+1][i];
         d->Vc[iVZ][k][j_cap_inter_end][i] = -(d->Vc[iVZ][k][j_cap_inter_end+1][i]);
         // Magnetic Field
-        d->Vc[iBPHI][k][j_cap_inter_end][i] = 0.0;
+        #if IMPOSE_BWALL
+          d->Vc[iBPHI][k][j_cap_inter_end][i] = 0.0;
+        #else
+          d->Vc[iBPHI][k][j_cap_inter_end][i] = d->Vc[iBPHI][k][j_cap_inter_end+1][i];
+        #endif
         // Temperature (or pressure)
         #if IMPOSE_TWALL
           setT( d, Twall_K, i, j_cap_inter_end, k);
@@ -277,7 +298,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
                   decomment the one you like!)
     *********************/
     #if MULTIPLE_GHOSTS != YES
-      print1("\nBe careful! without multiple ghosts the bc for temperature(pressure) is not quite ok, you should implement it more carefully");
+      print1("\nBe careful! without multiple ghosts the bc for temperature(pressure) and mag.field is not quite ok, you should implement it more carefully");
       KTOT_LOOP(k) {
         /****ALGORITHM 1 *****/
         // // I should not change the grid size near the capillary end!
@@ -346,9 +367,13 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end+1] = d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end];
         d->Vc[iVR][k][j_cap_inter_end][i_cap_inter_end+1] = -(d->Vc[iVR][k][j_cap_inter_end][i_cap_inter_end]);
         d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end+1] = d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end];
-        //magnetic field
-        d->Vc[iBPHI][k][j_cap_inter_end][i_cap_inter_end+1] = 0.0;
-        //Temperature (or pressure)
+        // Magnetic field
+        #if IMPOSE_BWALL
+          d->Vc[iBPHI][k][j_cap_inter_end][i_cap_inter_end+1] = 0.0;
+        #else
+          d->Vc[iBPHI][k][j_cap_inter_end][i_cap_inter_end+1] = d->Vc[iBPHI][k][j_cap_inter_end][i_cap_inter_end];
+        #endif
+        // Temperature (or pressure)
         #if IMPOSE_TWALL
           setT( d, Twall_K, i_cap_inter_end+1, j_cap_inter_end, k);
         #else
@@ -372,9 +397,16 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d_correction[0].Vc[iVZ][k] = d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end];
         d_correction[0].Vc[iVPHI][k] = 0.0;
         d_correction[0].Vc[RHO][k] = d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end];
-        d_correction[0].Vc[iBZ][k] = 0.0;
-        d_correction[0].Vc[iBPHI][k] = 0.0;
-        d_correction[0].Vc[iBR][k] = 0.0;
+        #if IMPOSE_BWALL
+          d_correction[0].Vc[iBZ][k] = 0.0;
+          d_correction[0].Vc[iBPHI][k] = 0.0;
+          d_correction[0].Vc[iBR][k] = 0.0;
+        #else
+          d_correction[0].Vc[iBZ][k] = d->Vc[iBZ][k][j_cap_inter_end][i_cap_inter_end];
+          d_correction[0].Vc[iBPHI][k] = d->Vc[iBPHI][k][j_cap_inter_end][i_cap_inter_end];
+          d_correction[0].Vc[iBR][k] = d->Vc[iBR][k][j_cap_inter_end][i_cap_inter_end];
+        #endif
+        
         #if IMPOSE_TWALL
           #if EOS==IDEAL
               #error double internal ghost not implemented for ideas eos
@@ -408,11 +440,17 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         d_correction[1].k[k] = k;
         d_correction[1].Vc[iVR][k] = d->Vc[iVR][k][j_cap_inter_end+1][i_cap_inter_end+1];
         d_correction[1].Vc[iVZ][k] = -(d->Vc[iVZ][k][j_cap_inter_end+1][i_cap_inter_end+1]);
-        d_correction[0].Vc[iVPHI][k] = 0.0;
+        d_correction[1].Vc[iVPHI][k] = 0.0;
         d_correction[1].Vc[RHO][k] = d->Vc[RHO][k][j_cap_inter_end+1][i_cap_inter_end+1];
-        d_correction[1].Vc[iBZ][k] = 0.0;
-        d_correction[1].Vc[iBPHI][k] = 0.0;
-        d_correction[1].Vc[iBR][k] = 0.0;
+        #if IMPOSE_BWALL
+          d_correction[1].Vc[iBZ][k] = 0.0;
+          d_correction[1].Vc[iBPHI][k] = 0.0;
+          d_correction[1].Vc[iBR][k] = 0.0;
+        #else
+          d_correction[1].Vc[iBZ][k] = d->Vc[iBZ][k][j_cap_inter_end+1][i_cap_inter_end+1];
+          d_correction[1].Vc[iBPHI][k] = d->Vc[iBPHI][k][j_cap_inter_end+1][i_cap_inter_end+1];
+          d_correction[1].Vc[iBR][k] = d->Vc[iBR][k][j_cap_inter_end+1][i_cap_inter_end+1];
+        #endif
         #if IMPOSE_TWALL
           #if EOS==IDEAL
               #error double internal ghost not implemented for ideas eos

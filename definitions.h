@@ -58,12 +58,15 @@
 /*  Ema's additional macros                            */
 #define  FREEZE_FLUID
 // #define  TEST_ADI
+/* Macros to impose T (B) on walls also for advection (unphisical!)
+   (if NO, conduction and B diffusion can be modeled only via ADI scheme) */
 #define IMPOSE_TWALL NO
+#define IMPOSE_BWALL NO
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
 /*    CAPILLARY GEOMETRY SETTINGS                      */
-#define RCAP 0.02
-#define DZCAP 0.5 /*the electrodes are wide DZCAP cm*/
+#define RCAP 0.05
+#define DZCAP 0.1 /*the electrodes are wide DZCAP cm*/
 #define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 /* ---------------------------------------------------- */
