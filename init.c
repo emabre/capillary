@@ -19,7 +19,7 @@ void Init (double *us, double x1, double x2, double x3)
   double mu;/*Temperature in K and mean particle weight*/
   double curr, Bwall; //Bwall is in code units
   double unit_Mfield;
-  double alpha; //ratio between delta current density wall-axis and current density on axis
+  double alpha = g_inputParam[ALPHA_J]; //ratio between delta current density wall-axis and current density on axis
   double T0_K = g_inputParam[T0];
   double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
   double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
@@ -36,7 +36,6 @@ void Init (double *us, double x1, double x2, double x3)
   // print1("Current from tab: %g", curr);
   // Mag field at the capillary wall, in code units
   Bwall = (BIOTSAV_GAUSS_S_A(curr, RCAP))/unit_Mfield;
-  alpha = 0.7e8/1e8;
 
   #if GEOMETRY != CYLINDRICAL
    #error geometry not valid

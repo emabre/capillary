@@ -8,7 +8,7 @@
 #define  TIME_STEPPING           RK2
 #define  DIMENSIONAL_SPLITTING   YES
 #define  NTRACER                 0
-#define  USER_DEF_PARAMETERS     8
+#define  USER_DEF_PARAMETERS     9
 
 /* -- physics dependent declarations -- */
 
@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -31,6 +31,7 @@
 #define  T0                      5
 #define  DENS0                   6
 #define  VZ0                     7
+#define  ALPHA_J                 8
 
 /* [Beg] user-defined constants (do not change this line) */
 
@@ -62,7 +63,7 @@
 
 /* ---------------------------------------------------- */
 /*    CAPILLARY GEOMETRY SETTINGS                      */
-#define RCAP 0.05
+#define RCAP 0.02
 #define DZCAP 0.5 /*the electrodes are wide DZCAP cm*/
 #define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 /* ---------------------------------------------------- */
