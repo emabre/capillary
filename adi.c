@@ -295,6 +295,8 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
     double Bwall;
     double curr, unit_Mfield;
   #endif
+  // [Err]
+  double L = 0.02/UNIT_LENGTH;
 
   t_sec = t*(UNIT_LENGTH/UNIT_VELOCITY);
 
@@ -358,14 +360,20 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
         lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real;
       } else if (j >= j_elec_start && j <= j_cap_inter_end) {
         /* :::: Electrode :::: */
+        // lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+        // lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+        //     (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
+        //[Err]
         lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-            (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
+        if (grid[JDIR].x_glob[j]>zcap_real-dzcap_real+L) {
+          lines[IDIR].rbound[BDIFF][l].values[0] = 0;
+        } else {
+          lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+            (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/L );
+        }
       } else {
         /* :::: Outer domain boundary :::: */
-
-        // lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        lines[IDIR].rbound[BDIFF][l].kind = NEUMANN_HOM;
+        lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
         lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
       }
     }
@@ -379,12 +387,10 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
       } else {
         /* :::: Outer capillary wall :::: */
         lines[JDIR].lbound[BDIFF][l].kind = DIRICHLET;
-        // As alternative... (I don't belive it is right)
-        // lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;
         lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
       }
       /* :::: Outer domain boundary :::: */
-      lines[JDIR].rbound[BDIFF][l].kind = NEUMANN_HOM;
+      lines[JDIR].rbound[BDIFF][l].kind = DIRICHLET;
       lines[JDIR].rbound[BDIFF][l].values[0] = 0.0;
     }
   #endif

@@ -25,6 +25,9 @@ void Init (double *us, double x1, double x2, double x3)
   double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
   double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
 
+    // [Err]
+  double L = 0.02/UNIT_LENGTH;
+
   // Just a check that the geometrical settings makes sense:
   if (DZCAP > ZCAP){
     print1("\nElectrode is longer than whole capillary!");
@@ -50,7 +53,10 @@ void Init (double *us, double x1, double x2, double x3)
   /* -----------------------------------------------------
       Zones not covered in the next lines (except for zone "Everywhere")
     ----------------------------------------------------- */
-  us[RHO] = 0.001*dens0;
+  // us[RHO] = 0.001*dens0;
+    // [Err]
+  us[RHO] = dens0;
+  us[iVZ] = 0.0;
   /* -----------------------------------------------------
       Inside capillary, excluded near-electrode zone
      ----------------------------------------------------- */
@@ -67,7 +73,14 @@ void Init (double *us, double x1, double x2, double x3)
     /* the B field linearly decreses in z direction
     (this is provisory, better electrode have to be implemented) */
     // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
-    us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+    // us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+    //[Err]
+    if (x2>zcap-dzcap+L) {
+      us[iBPHI] = 0.0;
+    } else {
+    us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/L );
+    }
+    // [Err] end previous test
     us[RHO] = dens0;
     us[iVZ] = vz0;
   }
@@ -163,21 +176,21 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         }
       }
     }
-    /* Flatten the variables to conveniente values in points
-       in internal boundary (except for "ghosts") */
-    /* WARNING!! IN CASE OF PRESSURE/TEMPERATURE TABLE INTERPOLATION ERROR, IT MIGHT
-       BE ADVISABLE TO CHANGE THE VALUES HERE!!*/
-    KTOT_LOOP(k) {
-      for (j=0; j<=j_cap_inter_end-1; j++){
-        for (i=i_cap_inter_end+2; i<NX1_TOT; i++) {
-          d->Vc[RHO][k][j][i] = 1e-2;
-          d->Vc[iVZ][k][j][i] = 1e-3;
-          d->Vc[iVR][k][j][i] = 1e-3;
-          d->Vc[PRS][k][j][i] = 1e-3;
-          d->Vc[iBPHI][k][j][i] = 1e-3;
-        }
-      }
-    }
+    // /* Flatten the variables to conveniente values in points
+    //    in internal boundary (except for "ghosts") */
+    // /* WARNING!! IN CASE OF PRESSURE/TEMPERATURE TABLE INTERPOLATION ERROR, IT MIGHT
+    //    BE ADVISABLE TO CHANGE THE VALUES HERE!!*/
+    // KTOT_LOOP(k) {
+    //   for (j=0; j<=j_cap_inter_end-1; j++){
+    //     for (i=i_cap_inter_end+2; i<NX1_TOT; i++) {
+    //       d->Vc[RHO][k][j][i] = 1e-2;
+    //       d->Vc[iVZ][k][j][i] = 1e-3;
+    //       d->Vc[iVR][k][j][i] = 1e-3;
+    //       d->Vc[PRS][k][j][i] = 1e-3;
+    //       d->Vc[iBPHI][k][j][i] = 1e-3;
+    //     }
+    //   }
+    // }
     first_call = 0;
   }
 
