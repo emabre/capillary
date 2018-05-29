@@ -1,0 +1,26 @@
+{
+	"folders": [
+		{
+			"path": "/home/konrad/Codes/PLUTO"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+    "files.associations": {
+      "pluto.h": "c",
+      "prototypes.h": "c",
+      "current_table.h": "c",
+      "capillary_wall.h": "c",
+      "gamma_transp.h": "c",
+      "mod_defs.h": "c",
+      "shearingbox.h": "c",
+      "*.tcc": "c",
+      "array": "c",
+      "typeinfo": "c",
+      "initializer_list": "c",
+      "globals.h": "c"
+    }
+  }
+}

@@ -108,8 +108,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   }
 
   /* -------------------------------------------------------------------------
-      Compute the conservative vector in order to start the cycle. 
-      This step will be useless if the data structure 
+      Compute the conservative vector in order to start the cycle.
+      This step will be useless if the data structure
       contains Vc as well as Uc (for future improvements).
       [Ema] (Comment copied from sts.c)
     --------------------------------------------------------------------------- */
@@ -187,11 +187,16 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     /**********************************
      (a.1) Explicit update sweeping IDIR
     **********************************/
+    //[Err] Remove next 2 line
+    ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
+    ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Br, grid, &lines[JDIR], 0.5*dt, JDIR);
+    
     ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
-    #if (HAVE_ENERGY && JOULE_EFFECT)
-      ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
-    #endif
+    // [Err] Decomment next #if lines
+    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+    //   ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
+    // #endif
 
     /**********************************
      (a.2) Implicit update sweeping JDIR
@@ -199,29 +204,36 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
     ImplicitUpdate (Bra2, Bra1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                       lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
-    #if (HAVE_ENERGY && JOULE_EFFECT)
-      ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
-    #endif
+    // // [Err] Decomment next #if lines
+    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+    //   ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
+    // #endif
 
     /**********************************
      (b.1) Explicit update sweeping JDIR
     **********************************/
     ExplicitUpdate (Brb1, Bra2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
-    #if (HAVE_ENERGY && JOULE_EFFECT)
-    /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt instead of 0.5*dt
-       (but in this way it is more readable)*/
-      ResEnergyIncrease(dUres_b1, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
-    #endif
+    // [Err] Decomment next #if lines
+    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+    // /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt instead of 0.5*dt
+    //    (but in this way it is more readable)*/
+    //   ResEnergyIncrease(dUres_b1, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
+    // #endif
     /**********************************
      (b.2) Implicit update sweeping IDIR
     **********************************/
     BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
       ImplicitUpdate (Brb2, Brb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                       lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
-    #if (HAVE_ENERGY && JOULE_EFFECT)
-      ResEnergyIncrease(dUres_b2, Ip_B, Im_B, Brb1, grid, &lines[IDIR], 0.5*dt, IDIR);
-    #endif
+    // [Err] Decomment next two lines
+    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+    //   ResEnergyIncrease(dUres_b2, Ip_B, Im_B, Brb2, grid, &lines[IDIR], 0.5*dt, IDIR);
+    // #endif
+
+    //[Err] Remove next 2 line
+    ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Brb2, grid, &lines[IDIR], 0.5*dt, IDIR);
+    ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Brb2, grid, &lines[JDIR], 0.5*dt, JDIR);
   #endif
 /* ------------------------------------------------------------
    ------------------------------------------------------------
@@ -233,7 +245,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
         Uc[k][j][i][BX3] = Brb2[j][i]*r_1[i];
 
-        #if (HAVE_ENERGY && JOULE_EFFECT)
+        #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
           Uc[k][j][i][ENG] += dUres_a1[j][i]+dUres_a2[j][i]+dUres_b1[j][i]+dUres_b2[j][i];
         #endif
       #endif
@@ -263,7 +275,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
               for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
               rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
               rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN); // I guess in this way it is not conservative!
-              Uc[k][j][i][ENG] += rhoe_new-rhoe_old;              
+              Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
             #endif
         #else
           print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!");
@@ -399,7 +411,7 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
 #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
 /****************************************************************************
 Function to build the Ip,Im,Jp,Jm, CI, CJ (and also dEdT) for the thermal conduction problem
-Note that I must make available for outside dEdT, as I will use it later to 
+Note that I must make available for outside dEdT, as I will use it later to
 advance the energy in a way that conserves the energy
 *****************************************************************************/
 void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
@@ -916,14 +928,14 @@ void ExplicitUpdate (double **v, double **b, double **source,
   }
 }
 
-#if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT && HAVE_ENERGY && JOULE_EFFECT)
+#if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT && HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
 /****************************************************************************
-Function to build the a matrix which contain the amount of increase of the 
-energy due to joule effect and magnetic field energy (flux of poynting vector due to 
+Function to build the a matrix which contain the amount of increase of the
+energy due to joule effect and magnetic field energy (flux of poynting vector due to
 resistive magnetic diffusion)
 [Opt]: Note that in the actual implementation this function needs to take as
 input both the Hp_B and the Hm_B. But for the whole internal (i.e. boudary excluded)
-only one among Hp_B and Hm_B is necessary. The other one is used to fill F 
+only one among Hp_B and Hm_B is necessary. The other one is used to fill F
 at one side (left or right) of the domain.
 *****************************************************************************/
 void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br,
@@ -932,7 +944,7 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
         or from cell (i,j) to (i,j+1), when dir == JDIR.
   */
   static double **F;
-  double *dr, *dz, *r;
+  double *dr, *dz;
   int i,j,l;
   int lidx, ridx;
   int Nlines = lines->N;
@@ -963,11 +975,10 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   r_1 = grid[IDIR].r_1;
 
   if (dir == IDIR) {
-    r = grid[IDIR].x;
     rR = grid[IDIR].xr;
     rL = grid[IDIR].xl;
     dV = grid[IDIR].dV;
-    
+
     for (l = 0; l<Nlines; l++) {
       j = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
@@ -991,33 +1002,34 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       for (i=lidx; i<=ridx; i++)
         dUres[j][i] = -(rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
     }
-    
+
   } else if (dir == JDIR) {
     dz = grid[JDIR].dx;
     inv_dz = grid[JDIR].inv_dx;
-    
+
     for (l = 0; l<Nlines; l++) {
       i = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
       for (j=lidx; j<ridx; j++)
         F[j][i] = -Hp_B[j][i] * (Br[j+1][i] - Br[j][i])*dz[j]*r_1[i] * 0.5*(Br[j+1][i] * Br[j][i]);
-      
+
       /*Define boundary fluxes*/
       if (lbound[l].kind == DIRICHLET){
         Br_ghost = 2*lbound[l].values[0] - Br[lidx][i];
-        F[lidx-1][i] = -Hm_B[lidx][i] * (Br[lidx][i] - Br_ghost)*dz[lidx] * 0.5*r_1[lidx]*(Br[lidx][i] + Br_ghost);
+        F[lidx-1][i] = -Hm_B[lidx][i] * (Br[lidx][i] - Br_ghost)*dz[lidx] * 0.5*r_1[i]*(Br[lidx][i] + Br_ghost);
       } else if (lbound[l].kind == NEUMANN_HOM) {
         F[lidx-1][i] = 0.0;
       }
       if (rbound[l].kind == DIRICHLET){
-        F[ridx][i] = -Hp_B[ridx][i] * (Br_ghost - Br[ridx][i])*dz[ridx] * 0.5*r_1[ridx]*(Br_ghost + Br[ridx][i]);
+        Br_ghost = 2*rbound[l].values[0] - Br[ridx][i];
+        F[ridx][i] = -Hp_B[ridx][i] * (Br_ghost - Br[ridx][i])*dz[ridx] * 0.5*r_1[i]*(Br_ghost + Br[ridx][i]);
       } else if (rbound[l].kind == NEUMANN_HOM) {
         F[ridx][i] = 0.0;
       }
       // Build dU
       for (j=lidx; j<=ridx; j++)
-        dUres[j][i] = -(F[j][i] - F[j][i-1])*dt*inv_dz[i];
+        dUres[j][i] = -(F[j][i] - F[j-1][i])*dt*inv_dz[j];
     }
   }
 }
@@ -1141,5 +1153,5 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
  * 8) Le bc devono essere impostate in modo almeno parzialmente coerente con come sono fatte nel resto del programma:
  *    ovvero, se ho impostato al runtime OUTFLOW, REFLECTIVE.. (tranne al più USERDEF)
  *    le condizioni dell'adi dovranno essere concordi a ciò (rimane la questione di come imporre
- *    facilmente le bc per il caso userdef) 
+ *    facilmente le bc per il caso userdef)
  ********************************************************/

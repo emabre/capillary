@@ -74,7 +74,7 @@ void BuildIJ_forTC (const Data *d, Grid *grid, Lines *lines, double **Ip, double
 #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
 void BuildIJ_forRes (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
                      double **Jp, double **Jm, double **CI, double **CJ);
-  #if HAVE_ENERGY
+  #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
     void ResEnergyIncrease(double **dUres, double** Ip_B, double** Im_B, double **Br,
                            Grid *grid, Lines *lines, double dt, int dir);
   #endif
