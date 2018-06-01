@@ -187,10 +187,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     /**********************************
      (a.1) Explicit update sweeping IDIR
     **********************************/
-    //[Err] Remove next 2 line
-    ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
-    ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Br, grid, &lines[JDIR], 0.5*dt, JDIR);
-    
+    //[Err] Remove next #if lines
+    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+    //   ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
+    //   ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Br, grid, &lines[JDIR], 0.5*dt, JDIR);
+    // #endif
+
     ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
     // [Err] Decomment next #if lines
@@ -208,6 +210,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
     //   ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
     // #endif
+
+    // [Err] Remove next four lines
+    ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt, IDIR);
+    ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
+    ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt, IDIR);
+    ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
 
     /**********************************
      (b.1) Explicit update sweeping JDIR
@@ -231,9 +239,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     //   ResEnergyIncrease(dUres_b2, Ip_B, Im_B, Brb2, grid, &lines[IDIR], 0.5*dt, IDIR);
     // #endif
 
-    //[Err] Remove next 2 line
-    ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Brb2, grid, &lines[IDIR], 0.5*dt, IDIR);
-    ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Brb2, grid, &lines[JDIR], 0.5*dt, JDIR);
+    //[Err] Remove next #if lines
+    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+    //   ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Brb2, grid, &lines[IDIR], 0.5*dt, IDIR);
+    //   ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Brb2, grid, &lines[JDIR], 0.5*dt, JDIR);
+    // #endif
   #endif
 /* ------------------------------------------------------------
    ------------------------------------------------------------
@@ -372,17 +382,18 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
         lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real;
       } else if (j >= j_elec_start && j <= j_cap_inter_end) {
         /* :::: Electrode :::: */
-        // lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        // lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-        //     (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
-        //[Err]
         lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        if (grid[JDIR].x_glob[j]>zcap_real-dzcap_real+L) {
-          lines[IDIR].rbound[BDIFF][l].values[0] = 0;
-        } else {
-          lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-            (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/L );
-        }
+        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+            (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
+        //[Err]
+        // lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+        // if (grid[JDIR].x_glob[j]>zcap_real-dzcap_real+L) {
+        //   lines[IDIR].rbound[BDIFF][l].values[0] = 0;
+        // } else {
+        //   lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+        //     (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/L );
+        // }
+        // [Err] end err part
       } else {
         /* :::: Outer domain boundary :::: */
         lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
@@ -949,7 +960,7 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   int lidx, ridx;
   int Nlines = lines->N;
   int static first_call = 1;
-  double *dV, *inv_dz, *r_1;
+  double *dV, *inv_dz, *r_1, *r;
   double *rL, *rR;
   double Br_ghost;
   Bcs *rbound, *lbound;
@@ -978,6 +989,7 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
     rR = grid[IDIR].xr;
     rL = grid[IDIR].xl;
     dV = grid[IDIR].dV;
+    r = grid[IDIR].x_glob;
 
     for (l = 0; l<Nlines; l++) {
       j = lines->dom_line_idx[l];
@@ -987,19 +999,37 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
         F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1]*r_1[i+1] + Br[j][i]*r_1[i]);
       /*Define boundary fluxes*/
       if (lbound[l].kind == DIRICHLET){
-        Br_ghost = 2*lbound[l].values[0] - Br[j][lidx];
-        F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br_ghost)*dr[lidx] * 0.5*(Br[j][lidx]*r_1[lidx] + Br_ghost*r_1[lidx-1]);
+        // [Err] Delete next two lines
+        Br_ghost = r[lidx-1] * (2*lbound[l].values[0]/rL[lidx] - Br[j][lidx]*r_1[lidx]);
+        // [Err] Decomment next line (original)
+        // Br_ghost = 2*lbound[l].values[0] - Br[j][lidx];
+        // [Err] Remove next line (this is a test)
+        // Br_ghost = lbound[l].values[0];
+        // [Err] Original verison (decomment)
+        // F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br_ghost)*dr[lidx] * 0.5*(Br[j][lidx]*r_1[lidx] + Br_ghost*r_1[lidx-1]);
+        // [Err] Remove next line
+        F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br_ghost)*dr[lidx] * 0.0;
       } else if (lbound[l].kind == NEUMANN_HOM) {
         F[j][lidx-1] = 0.0;
       }
       if (rbound[l].kind == DIRICHLET){
-        Br_ghost = 2*rbound[l].values[0] - Br[j][ridx];
+        // [Err] Delete next two lines
+        Br_ghost = r[ridx+1] * (2*rbound[l].values[0]/rR[ridx] - Br[j][ridx]*r_1[ridx]);
+        // [Err] Decomment next 2 lines and comment previous (original)
+        // Br_ghost = 2*rbound[l].values[0] - Br[j][ridx];
+
+        // [Err] Remove next line (test)
+        // Br_ghost = rbound[l].values[0];
+
         F[j][ridx] = -Hp_B[j][ridx] * (Br_ghost - Br[j][ridx])*dr[ridx] * 0.5*(Br_ghost*r_1[ridx+1] + Br[j][ridx]*r_1[ridx]);
       } else if (rbound[l].kind == NEUMANN_HOM) {
         F[j][ridx] = 0.0;
       }
       // Build dU
       for (i=lidx; i<=ridx; i++)
+       //[Err] delete questa linea
+        // dUres[j][i] = (rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
+       //[Err] deccoment next line
         dUres[j][i] = -(rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
     }
 
@@ -1011,24 +1041,31 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       i = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
+      
       for (j=lidx; j<ridx; j++)
-        F[j][i] = -Hp_B[j][i] * (Br[j+1][i] - Br[j][i])*dz[j]*r_1[i] * 0.5*(Br[j+1][i] * Br[j][i]);
+        //[Err] ho aggiunto *r_1[i] nella formula
+        F[j][i] = -Hp_B[j][i] * (Br[j+1][i] - Br[j][i])*dz[j]*r_1[i]*r_1[i] * 0.5*(Br[j+1][i] + Br[j][i]);
 
       /*Define boundary fluxes*/
       if (lbound[l].kind == DIRICHLET){
         Br_ghost = 2*lbound[l].values[0] - Br[lidx][i];
-        F[lidx-1][i] = -Hm_B[lidx][i] * (Br[lidx][i] - Br_ghost)*dz[lidx] * 0.5*r_1[i]*(Br[lidx][i] + Br_ghost);
+        //[Err] ho aggiunto *r_1[i] nella formula
+        F[lidx-1][i] = -Hm_B[lidx][i] * (Br[lidx][i] - Br_ghost)*dz[lidx] * 0.5*r_1[i]*r_1[i]*(Br[lidx][i] + Br_ghost);
       } else if (lbound[l].kind == NEUMANN_HOM) {
         F[lidx-1][i] = 0.0;
       }
       if (rbound[l].kind == DIRICHLET){
         Br_ghost = 2*rbound[l].values[0] - Br[ridx][i];
-        F[ridx][i] = -Hp_B[ridx][i] * (Br_ghost - Br[ridx][i])*dz[ridx] * 0.5*r_1[i]*(Br_ghost + Br[ridx][i]);
+        //[Err] ho aggiunto *r_1[i] nella formula
+        F[ridx][i] = -Hp_B[ridx][i] * (Br_ghost - Br[ridx][i])*dz[ridx] * 0.5*r_1[i]*r_1[i]*(Br_ghost + Br[ridx][i]);
       } else if (rbound[l].kind == NEUMANN_HOM) {
         F[ridx][i] = 0.0;
       }
       // Build dU
       for (j=lidx; j<=ridx; j++)
+              //[Err] delete questa linea
+        // dUres[j][i] = (F[j][i] - F[j-1][i])*dt*inv_dz[j];
+        //[Err] deccoment next line
         dUres[j][i] = -(F[j][i] - F[j-1][i])*dt*inv_dz[j];
     }
   }
