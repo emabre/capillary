@@ -196,9 +196,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
     // [Err] Decomment next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-    //   ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
-    // #endif
+    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
+    #endif
 
     /**********************************
      (a.2) Implicit update sweeping JDIR
@@ -206,16 +206,16 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
     ImplicitUpdate (Bra2, Bra1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                       lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
-    // // [Err] Decomment next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-    //   ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
-    // #endif
+    // [Err] Decomment next #if lines
+    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
+    #endif
 
     // [Err] Remove next four lines
-    ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt, IDIR);
-    ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
-    ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt, IDIR);
-    ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
+    // ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt, IDIR);
+    // ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
+    // ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt, IDIR);
+    // ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
 
     /**********************************
      (b.1) Explicit update sweeping JDIR
@@ -223,11 +223,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ExplicitUpdate (Brb1, Bra2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
     // [Err] Decomment next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-    // /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt instead of 0.5*dt
-    //    (but in this way it is more readable)*/
-    //   ResEnergyIncrease(dUres_b1, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
-    // #endif
+    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+    /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt instead of 0.5*dt
+       (but in this way it is more readable)*/
+      ResEnergyIncrease(dUres_b1, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
+    #endif
     /**********************************
      (b.2) Implicit update sweeping IDIR
     **********************************/
@@ -235,9 +235,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       ImplicitUpdate (Brb2, Brb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                       lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
     // [Err] Decomment next two lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-    //   ResEnergyIncrease(dUres_b2, Ip_B, Im_B, Brb2, grid, &lines[IDIR], 0.5*dt, IDIR);
-    // #endif
+    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      ResEnergyIncrease(dUres_b2, Ip_B, Im_B, Brb2, grid, &lines[IDIR], 0.5*dt, IDIR);
+    #endif
 
     //[Err] Remove next #if lines
     // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
@@ -281,7 +281,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
               /*I think in this way the update should conserve the energy, but it seems unstable!(23052018)*/
               // Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
 
-              /*I think in this way the update does not conserve the energy*/
+              /*[Err]/[Rob] I think in this way the update does not conserve the energy*/
               for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
               rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
               rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN); // I guess in this way it is not conservative!
@@ -1000,7 +1000,7 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       /*Define boundary fluxes*/
       if (lbound[l].kind == DIRICHLET){
         // [Err] Delete next two lines
-        Br_ghost = r[lidx-1] * (2*lbound[l].values[0]/rL[lidx] - Br[j][lidx]*r_1[lidx]);
+        Br_ghost = r[lidx-1] * (0 - Br[j][lidx]*r_1[lidx]);
         // [Err] Decomment next line (original)
         // Br_ghost = 2*lbound[l].values[0] - Br[j][lidx];
         // [Err] Remove next line (this is a test)
