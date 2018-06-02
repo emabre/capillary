@@ -335,8 +335,14 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
       // [Opt] (I can avoid making so many if..)
       if (j <= j_cap_inter_end) {
         /* :::: Capillary wall :::: */
+
+        // [Err] Decomment next two lines
         lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
         lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
+
+        // [Err] Remove next two lines
+        // lines[IDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
+        // lines[IDIR].rbound[TDIFF][l].values[0] = 0.0;
       } else {
         /* :::: Outer domain boundary :::: */
         // lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
@@ -351,8 +357,14 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
       i = lines[JDIR].dom_line_idx[l];
       if (i <= i_cap_inter_end){
         /* :::: Capillary internal (symmetry plane) ::::*/
+
+        // [Err] Decomment next two lines
         lines[JDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
         lines[JDIR].lbound[TDIFF][l].values[0] = 0.0;
+
+        // [Err] Remove next two lines
+        // lines[JDIR].lbound[TDIFF][l].kind = DIRICHLET;
+        // lines[JDIR].lbound[TDIFF][l].values[0] = Twall;
       } else {
         /* :::: Outer capillary wall ::::*/
         lines[JDIR].lbound[TDIFF][l].kind = DIRICHLET;
@@ -512,7 +524,7 @@ void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
       #endif
       /* :::: CI :::: */
       CI[j][i] = dEdT[j][i]*dVr[i];
-
+      
       /* :::: CJ :::: */
       CJ[j][i] = dEdT[j][i]*dVz[j];
     }

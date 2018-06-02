@@ -73,13 +73,13 @@ void Init (double *us, double x1, double x2, double x3)
     /* the B field linearly decreses in z direction
     (this is provisory, better electrode have to be implemented) */
     // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
-    // us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+    us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     //[Err]
-    if (x2>zcap-dzcap+L) {
-      us[iBPHI] = 0.0;
-    } else {
-    us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/L );
-    }
+    // if (x2>zcap-dzcap+L) {
+    //   us[iBPHI] = 0.0;
+    // } else {
+    // us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/L );
+    // }
     // [Err] end previous test
     us[RHO] = dens0;
     us[iVZ] = vz0;
@@ -115,6 +115,11 @@ void Init (double *us, double x1, double x2, double x3)
   #endif
   us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
 
+  //[Err] Delete next 4 lines
+  // if (x2>zcap*0.495 && x2<zcap*0.505){
+  //   GetMu(T0_K, us[RHO], &mu);
+  //   us[PRS] = us[RHO]*8000.0 / (KELVIN*mu);
+  // }
 }
 
 /* ********************************************************************* */
