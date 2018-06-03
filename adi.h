@@ -25,11 +25,21 @@
   #define BDIFF 1
   #define NADI  2
 #elif THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+  // [Err] Decomment next 2 lines
+  // #define TDIFF 0
+  // #define NADI  1
+  // [Err] delete next 3 lines
   #define TDIFF 0
-  #define NADI  1
+  #define BDIFF 1
+  #define NADI  2
 #elif RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
-  #define BDIFF 0
-  #define NADI  1
+  // [Err] Decomment next 2 lines
+  // #define BDIFF 0
+  // #define NADI  1
+  // [Err] delete next 3 lines
+  #define TDIFF 0
+  #define BDIFF 1
+  #define NADI  2
 #else
   /* I still put 1 bc in the type definition (for ease of programming)
   but the kind won't be allocated so it's practically no problem */

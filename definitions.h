@@ -57,7 +57,7 @@
 /* ---------------------------------------------------- */
 /*  Ema's additional macros                            */
 #define  FREEZE_FLUID
-// #define  TEST_ADI
+#define  TEST_ADI
 #define JOULE_EFFECT_AND_MAG_ENG YES
 /* Macros to impose T (B) on walls also for advection (unphisical!)
    (if NO, conduction and B diffusion can be modeled only via ADI scheme) */

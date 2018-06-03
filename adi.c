@@ -145,81 +145,58 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   /*[Rob] Maybe I can partially couple the two problems:
     first do a half step of both, then recompute the quantities
     and do the second half-step of both*/
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-/* ------------------------------------------------------------
-    ------------------------------------------------------------
-    Advance thermal conduction problem
-    ------------------------------------------------------------
-    ------------------------------------------------------------ */
+
   /**********************************
    (a.1) Explicit update sweeping IDIR
   **********************************/
+  //[Err] Remove next #if lines
+  // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+  //   ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
+  //   ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Br, grid, &lines[JDIR], 0.5*dt, JDIR);
+  // #endif
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     ExplicitUpdate (Ta1, T, NULL, Ip_T, Im_T, CI_T, &lines[IDIR],
-                    lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
-
-  /**********************************
-   (a.2) Implicit update sweeping JDIR
-  **********************************/
-    BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
-    ImplicitUpdate (Ta2, Ta1, NULL, Jp_T, Jm_T, CJ_T, &lines[JDIR],
-                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, JDIR);
-
-  /**********************************
-   (b.1) Explicit update sweeping JDIR
-  **********************************/
-    ExplicitUpdate (Tb1, Ta2, NULL, Jp_T, Jm_T, CJ_T, &lines[JDIR],
-                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, JDIR);
-
-  /**********************************
-   (b.2) Implicit update sweeping IDIR
-  **********************************/
-    BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
-    ImplicitUpdate (Tb2, Tb1, NULL, Ip_T, Im_T, CI_T, &lines[IDIR],
-                    lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
+                  lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
   #endif
-
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-/* ------------------------------------------------------------
-   ------------------------------------------------------------
-    Advance magnetic diffusion problem
-   ------------------------------------------------------------
-   ------------------------------------------------------------ */
-    /**********************************
-     (a.1) Explicit update sweeping IDIR
-    **********************************/
-    //[Err] Remove next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-    //   ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
-    //   ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Br, grid, &lines[JDIR], 0.5*dt, JDIR);
-    // #endif
-
     ExplicitUpdate (Bra1, Br, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                     lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
     // [Err] Decomment next #if lines
     #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
       ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Br, grid, &lines[IDIR], 0.5*dt, IDIR);
     #endif
+  #endif
 
-    /**********************************
-     (a.2) Implicit update sweeping JDIR
-    **********************************/
-    BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
+  /**********************************
+   (a.2) Implicit update sweeping JDIR
+  **********************************/
+  BoundaryADI(lines, d, grid, t_start+0.5*dt); // Get bcs at half step (not exaclty at t+0.5*dt)
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+    ImplicitUpdate (Ta2, Ta1, NULL, Jp_T, Jm_T, CJ_T, &lines[JDIR],
+                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, JDIR);
+  #endif
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     ImplicitUpdate (Bra2, Bra1, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                       lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
     // [Err] Decomment next #if lines
     #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
       ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
     #endif
+  #endif
+  // [Err] Remove next four lines
+  // ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt, IDIR);
+  // ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
+  // ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt, IDIR);
+  // ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
 
-    // [Err] Remove next four lines
-    // ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt, IDIR);
-    // ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
-    // ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt, IDIR);
-    // ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
-
-    /**********************************
-     (b.1) Explicit update sweeping JDIR
-    **********************************/
+  /**********************************
+   (b.1) Explicit update sweeping JDIR
+  **********************************/
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+    ExplicitUpdate (Tb1, Ta2, NULL, Jp_T, Jm_T, CJ_T, &lines[JDIR],
+                    lines[JDIR].lbound[TDIFF], lines[JDIR].rbound[TDIFF], 0.5*dt, JDIR);
+  #endif
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     ExplicitUpdate (Brb1, Bra2, NULL, Jp_B, Jm_B, CJ_B, &lines[JDIR],
                     lines[JDIR].lbound[BDIFF], lines[JDIR].rbound[BDIFF], 0.5*dt, JDIR);
     // [Err] Decomment next #if lines
@@ -228,23 +205,30 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
        (but in this way it is more readable)*/
       ResEnergyIncrease(dUres_b1, Jp_B, Jm_B, Bra2, grid, &lines[JDIR], 0.5*dt, JDIR);
     #endif
-    /**********************************
-     (b.2) Implicit update sweeping IDIR
-    **********************************/
-    BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
-      ImplicitUpdate (Brb2, Brb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
+  #endif
+
+  /**********************************
+   (b.2) Implicit update sweeping IDIR
+  **********************************/
+  BoundaryADI(lines, d, grid, t_start+dt); // Get bcs at t+dt
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+    ImplicitUpdate (Tb2, Tb1, NULL, Ip_T, Im_T, CI_T, &lines[IDIR],
+                  lines[IDIR].lbound[TDIFF], lines[IDIR].rbound[TDIFF], 0.5*dt, IDIR);
+  #endif
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+    ImplicitUpdate (Brb2, Brb1, NULL, Ip_B, Im_B, CI_B, &lines[IDIR],
                       lines[IDIR].lbound[BDIFF], lines[IDIR].rbound[BDIFF], 0.5*dt, IDIR);
     // [Err] Decomment next two lines
     #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
       ResEnergyIncrease(dUres_b2, Ip_B, Im_B, Brb2, grid, &lines[IDIR], 0.5*dt, IDIR);
     #endif
-
-    //[Err] Remove next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-    //   ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Brb2, grid, &lines[IDIR], 0.5*dt, IDIR);
-    //   ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Brb2, grid, &lines[JDIR], 0.5*dt, JDIR);
-    // #endif
   #endif
+  //[Err] Remove next #if lines
+  // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+  //   ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Brb2, grid, &lines[IDIR], 0.5*dt, IDIR);
+  //   ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Brb2, grid, &lines[JDIR], 0.5*dt, JDIR);
+  // #endif
+
 /* ------------------------------------------------------------
    ------------------------------------------------------------
     Update data
