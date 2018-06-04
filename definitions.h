@@ -57,6 +57,7 @@
 /* ---------------------------------------------------- */
 /*  Ema's additional macros                            */
 #define  FREEZE_FLUID
+// #define REVERSE_ADI_DIRS
 // #define  TEST_ADI
 #define JOULE_EFFECT_AND_MAG_ENG NO
 /* Macros to impose T (B) on walls also for advection (unphisical!)
