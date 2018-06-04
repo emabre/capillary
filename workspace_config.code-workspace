@@ -20,7 +20,8 @@
       "array": "c",
       "typeinfo": "c",
       "initializer_list": "c",
-      "globals.h": "c"
+      "globals.h": "c",
+      "cmath": "c"
     }
   }
 }

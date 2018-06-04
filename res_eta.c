@@ -2,7 +2,7 @@
 #include "gamma_transp.h"
 #include "current_table.h"
 
-#define RESMAX 1.0e-10
+#define RESMAX 1.0e-9
 
 void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double *eta)
 {

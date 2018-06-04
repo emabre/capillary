@@ -263,13 +263,13 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
               // Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
             #else
               /*I think in this way the update should conserve the energy, but it seems unstable!(23052018)*/
-              // Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
+              Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
 
               /*[Err]/[Rob] I think in this way the update does not conserve the energy*/
-              for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
-              rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
-              rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN); // I guess in this way it is not conservative!
-              Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
+              // for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+              // rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
+              // rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN); // I guess in this way it is not conservative!
+              // Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
             #endif
         #else
           print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!");
@@ -992,32 +992,30 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
       for (i=lidx; i<ridx; i++) // I stop before ridx, as for the last interface(as for the first) I must use the BCs
+      // [Err] Decomment next line (original)
         F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1]*r_1[i+1] + Br[j][i]*r_1[i]);
+        // [Err] Delete next line (test)
+        // F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1] + Br[j][i])/rR[i];        
       /*Define boundary fluxes*/
       if (lbound[l].kind == DIRICHLET){
-        // [Err] Delete next two lines
-        Br_ghost = r[lidx-1] * (0 - Br[j][lidx]*r_1[lidx]);
-        // [Err] Decomment next line (original)
-        // Br_ghost = 2*lbound[l].values[0] - Br[j][lidx];
-        // [Err] Remove next line (this is a test)
-        // Br_ghost = lbound[l].values[0];
-        // [Err] Original verison (decomment)
-        // F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br_ghost)*dr[lidx] * 0.5*(Br[j][lidx]*r_1[lidx] + Br_ghost*r_1[lidx-1]);
-        // [Err] Remove next line
-        F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br_ghost)*dr[lidx] * 0.0;
+        if (fabs(rL[lidx]) < 1e-20  && fabs(lbound[l].values[0]) < 1e-20) { // this should guess that I am on axis
+          F[j][lidx-1] = 0.0;
+        } else {
+          // [Err] Decomment next line          
+          Br_ghost = 2*lbound[l].values[0] - Br[j][lidx];
+          //(this method was also working, and maybe it's more accurate, I do not use it only because not consiste with what is done in ImplicitUpdate and Explicit Update)
+          // Br_ghost = r[lidx-1] * (2*lbound[l].values[0]/rL[lidx] - Br[j][lidx]*r_1[lidx]);
+          F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br_ghost)*dr[lidx] * (lbound[l].values[0]/rL[lidx]);
+        }
       } else if (lbound[l].kind == NEUMANN_HOM) {
         F[j][lidx-1] = 0.0;
       }
       if (rbound[l].kind == DIRICHLET){
-        // [Err] Delete next two lines
-        Br_ghost = r[ridx+1] * (2*rbound[l].values[0]/rR[ridx] - Br[j][ridx]*r_1[ridx]);
-        // [Err] Decomment next 2 lines and comment previous (original)
-        // Br_ghost = 2*rbound[l].values[0] - Br[j][ridx];
-
-        // [Err] Remove next line (test)
-        // Br_ghost = rbound[l].values[0];
-
-        F[j][ridx] = -Hp_B[j][ridx] * (Br_ghost - Br[j][ridx])*dr[ridx] * 0.5*(Br_ghost*r_1[ridx+1] + Br[j][ridx]*r_1[ridx]);
+        // [Err] Decomment next line
+        Br_ghost = 2*rbound[l].values[0] - Br[j][ridx];
+        //(this method was also working, and maybe it's more accurate, I do not use it only because not consiste with what is done in ImplicitUpdate and Explicit Update)
+        // Br_ghost = r[ridx+1] * (2*rbound[l].values[0]/rR[ridx] - Br[j][ridx]*r_1[ridx]);
+        F[j][ridx] = -Hp_B[j][ridx] * (Br_ghost - Br[j][ridx])*dr[ridx] * (rbound[l].values[0]/rR[ridx]);
       } else if (rbound[l].kind == NEUMANN_HOM) {
         F[j][ridx] = 0.0;
       }
@@ -1170,7 +1168,6 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
 /*******************************************************
  * COSE DA FARE, ma che sono secondarie:
  *
- * 0) Mettere a zero all'inizio i Jp,Ip,Jm,Im,C alla prima chiamata?
  * 1) Mettere un po' di cicli #if di controllo che la geometria
  *    il modello (MHD) e altro siano ok.
  * 2) Pensare alla compatabilità con STS o EXPL
@@ -1178,13 +1175,12 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
  *    (è chiaro che comunque se stretcho la griglia lentamente va bene,
  *    ma rigorosamente parlando, va bene? Forse devo ragionare sullo sviluppo di taylor
  *    per trovarmi le derivate delle incognite sui punti di griglia)
- * 4) Pensare ad un warning in caso di eta con componenti diverse tra loro
  * 5) Alberto dice di provare dopo eventualemente (se vedo probelmi o se voglio migliorare accuratezzax) a far aggiornare a t+dt/2 Jmp,Imp
  * 6) fare che viene stampate nell'output di pluto anche il dt parabolico che ci sarebbe con step esplicito
  * 7) Attenzione alla griglia stretchata: forse devo cambiare la
  *    discretizzazione delle derivate se voglio usare rigorosamente una griglia stretchata
- * 8) Le bc devono essere impostate in modo almeno parzialmente coerente con come sono fatte nel resto del programma:
- *    ovvero, se ho impostato al runtime OUTFLOW, REFLECTIVE.. (tranne al più USERDEF)
- *    le condizioni dell'adi dovranno essere concordi a ciò (rimane la questione di come imporre
- *    facilmente le bc per il caso userdef)
+ * 8) Forse è meglio fare che ExplicitUpdate, ImplicitUpdate, ResEnergyIncrease usano il valore di bordo
+ *    contenuto nell bc punto e basta, senza calcolare il valore che avrebbe una cella di ghost situata oltre l'ultima cella fisica.
+ *    Le condizioni al contorno(di dirichlet) dicono il valore dell'incognita al bordo, quindi andrebbe sistemato anche il valore
+ *    di Ip,Im,Jp,Jm al bordo (perchè non si differenzia per dr o dz ma per rR[ridx]-r[ridx] (o r[lidx]-rL[lidx]))
  ********************************************************/
