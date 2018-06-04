@@ -116,11 +116,10 @@ void Init (double *us, double x1, double x2, double x3)
   us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
 
   //[Err] Delete next if cycle
-  // if (x2>zcap*0.495 && x2<zcap*0.505){
-    if (x2<zcap){
-    GetMu(T0_K, us[RHO], &mu);
-    us[PRS] = us[RHO]*8000.0 / (KELVIN*mu);
-  }
+  // if (x2<zcap && x1<=rcap){
+  //   GetMu(T0_K, us[RHO], &mu);
+  //   us[PRS] = us[RHO]*(T0_K*x1/rcap + T0_K*0.8) / (KELVIN*mu);
+  // }
 }
 
 /* ********************************************************************* */

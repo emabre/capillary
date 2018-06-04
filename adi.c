@@ -183,11 +183,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   /**********************************
    (a.1) Explicit update sweeping DIR1
   **********************************/
-  //[Err] Remove next #if lines
-  // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-  //   ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt, DIR1);
-  //   ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Br, grid, &lines[DIR2], 0.5*dt, DIR2);
-  // #endif
+  // [Err] Remove next #if lines
+  #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+    ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt, DIR1);
+    ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Br, grid, &lines[DIR2], 0.5*dt, DIR2);
+  #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     ExplicitUpdate (Ta1, T, NULL, H1p_T, H1m_T, C1_T, &lines[DIR1],
                   lines[DIR1].lbound[TDIFF], lines[DIR1].rbound[TDIFF], 0.5*dt, DIR1);
@@ -196,7 +196,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ExplicitUpdate (Bra1, Br, NULL, H1p_B, H1m_B, C1_B, &lines[DIR1],
                     lines[DIR1].lbound[BDIFF], lines[DIR1].rbound[BDIFF], 0.5*dt, DIR1);
     #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-      ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt, DIR1);
+    // [Err] Decomment next line    
+      // ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt, DIR1);
     #endif
   #endif
 
@@ -212,7 +213,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ImplicitUpdate (Bra2, Bra1, NULL, H2p_B, H2m_B, C2_B, &lines[DIR2],
                       lines[DIR2].lbound[BDIFF], lines[DIR2].rbound[BDIFF], 0.5*dt, DIR2);
     #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-      ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Bra2, grid, &lines[DIR2], 0.5*dt, DIR2);
+    // [Err] Decomment next line    
+      // ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Bra2, grid, &lines[DIR2], 0.5*dt, DIR2);
     #endif
   #endif
   // [Err] Remove next four lines
@@ -234,7 +236,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
     /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt instead of 0.5*dt
        (but in this way it is more readable)*/
-      ResEnergyIncrease(dUres_b1, H2p_B, H2m_B, Bra2, grid, &lines[DIR2], 0.5*dt, DIR2);
+    // [Err] Decomment next line       
+      // ResEnergyIncrease(dUres_b1, H2p_B, H2m_B, Bra2, grid, &lines[DIR2], 0.5*dt, DIR2);
     #endif
   #endif
 
@@ -250,14 +253,15 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ImplicitUpdate (Brb2, Brb1, NULL, H1p_B, H1m_B, C1_B, &lines[DIR1],
                       lines[DIR1].lbound[BDIFF], lines[DIR1].rbound[BDIFF], 0.5*dt, DIR1);
     #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-      ResEnergyIncrease(dUres_b2, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt, DIR1);
+    // [Err] Decomment next line
+      // ResEnergyIncrease(dUres_b2, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt, DIR1);
     #endif
   #endif
-  //[Err] Remove next #if lines
-  // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-  //   ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Brb2, grid, &lines[DIR1], 0.5*dt, DIR1);
-  //   ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Brb2, grid, &lines[DIR2], 0.5*dt, DIR2);
-  // #endif
+  // [Err] Remove next #if lines
+  #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+    ResEnergyIncrease(dUres_b1, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt, DIR1);
+    ResEnergyIncrease(dUres_b2, H2p_B, H2m_B, Brb2, grid, &lines[DIR2], 0.5*dt, DIR2);
+  #endif
 
 /* ------------------------------------------------------------
    ------------------------------------------------------------
