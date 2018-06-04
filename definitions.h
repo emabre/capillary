@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -57,8 +57,8 @@
 /* ---------------------------------------------------- */
 /*  Ema's additional macros                            */
 #define  FREEZE_FLUID
-#define  TEST_ADI
-#define JOULE_EFFECT_AND_MAG_ENG YES
+// #define  TEST_ADI
+#define JOULE_EFFECT_AND_MAG_ENG NO
 /* Macros to impose T (B) on walls also for advection (unphisical!)
    (if NO, conduction and B diffusion can be modeled only via ADI scheme) */
 #define IMPOSE_TWALL NO
