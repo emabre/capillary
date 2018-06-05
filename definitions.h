@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -69,6 +69,6 @@
 /* ---------------------------------------------------- */
 /*    CAPILLARY GEOMETRY SETTINGS                      */
 #define RCAP 0.05
-#define DZCAP 0.5 /*the electrodes are wide DZCAP cm*/
+#define DZCAP 0.3 /*the electrodes are wide DZCAP cm*/
 #define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 /* ---------------------------------------------------- */
