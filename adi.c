@@ -54,7 +54,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   
   // [Err] Are you sure you want to do multiple steps inside a single adi call?
   int s;
-  int const adi_steps = 10;
+  int const adi_steps = NSUBS_ADI;
   double t_start_sub, dt_reduced;
   
   static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
@@ -423,13 +423,20 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, const double t) {
       } else if (j >= j_elec_start && j <= j_cap_inter_end) {
         /* :::: Electrode :::: */
         // [Err] Delete next two lines
-        // lines[IDIR].rbound[BDIFF][l].kind = NEUMANN_HOM;
-        // lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
+        #ifdef ELECTR_NEUM
+          // [Err] Decomment next lines
+          lines[IDIR].rbound[BDIFF][l].kind = NEUMANN_HOM;
+          lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
 
-        //[Err] Original, DECOMMENT
-        lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-            (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
+          // [Err] remove next lines
+          // lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+          // lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+          //    (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
+        #else
+          lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+          lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+             (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
+        #endif
 
         //[Err]
         /* lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
@@ -456,11 +463,12 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, const double t) {
         lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
       } else {
         /* :::: Outer capillary wall :::: */
-        // [Err] original, decomment
-        lines[JDIR].lbound[BDIFF][l].kind = DIRICHLET;
-        // [Err] Delete next line
-        // lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;        
-        // lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
+        #ifdef ELECTR_NEUM
+          lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;        
+          lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
+        #else
+          lines[JDIR].lbound[BDIFF][l].kind = DIRICHLET;
+        #endif
       }
       /* :::: Outer domain boundary :::: */
       lines[JDIR].rbound[BDIFF][l].kind = DIRICHLET;
