@@ -54,7 +54,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   
   // [Err] Are you sure you want to do multiple steps inside a single adi call?
   int s;
-  int adi_steps = 1;
+  int const adi_steps = 10;
   double t_start_sub, dt_reduced;
   
   static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
@@ -148,6 +148,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   dt_reduced = dt/adi_steps;
   t_start_sub = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
   BoundaryADI(lines, d, grid, t_start_sub); // Get bcs at t
+
   for (s=0; s<adi_steps; s++) {
     /* -------------------------------------------------------------------------
         Compute the conservative vector in order to start the cycle.
@@ -160,6 +161,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     /* -------------------------------------------------------------------------
         Build the temperature (T) and/or the product magnetic field with radius (B*r)
       ------------------------------------------------------------------------- */
+    // [Rob] Maybe I should call also Boundary(), it sets the internal ghost cells,
+    // which will be later used to compute eta and k
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
       #if EOS==IDEAL
         DOM_LOOP(k,j,i) T[j][i] = Vc[PRS][k][j][i]/Vc[RHO][k][j][i];
@@ -318,13 +321,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         #endif
       }
     }
+    /* -------------------------------------------------------------------------
+      Compute back the primitive vector from the updated conservative vector.
+    ------------------------------------------------------------------------- */
+    ConsToPrimLines (Uc, Vc, d->flag, lines);
     t_start_sub += dt_reduced;
   }
-
-  /* -------------------------------------------------------------------------
-      Compute back the primitive vector from the updated conservative vector.
-     ------------------------------------------------------------------------- */
-  ConsToPrimLines (Uc, Vc, d->flag, lines);
 
 }
 
@@ -333,9 +335,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 * In the current implementation of this function Data *d is not used
 * but I leave it there since before or later it might be needed
 *****************************************************************************/
-void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
+void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, const double t) {
   int i,j,l;
-  double t_sec;
+  const double t_sec = t*(UNIT_LENGTH/UNIT_VELOCITY);
   # if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     double Twall;
     double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin
@@ -345,9 +347,8 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
     double curr, unit_Mfield;
   #endif
   // [Err]
-  double L = 0.02/UNIT_LENGTH;
+  // double L = 0.02/UNIT_LENGTH;
 
-  t_sec = t*(UNIT_LENGTH/UNIT_VELOCITY);
 
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     // I compute the wall temperature
@@ -407,7 +408,7 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
     // I compute the wall magnetic field
     unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
     curr = current_from_time(t_sec);
-    Bwall = BIOTSAV_GAUSS_S_A(curr, RCAP)/unit_Mfield;
+    Bwall = BIOTSAV_GAUSS_A_CM(curr, RCAP)/unit_Mfield;
 
     // IDIR lines
     for (l=0; l<lines[IDIR].N; l++) {
@@ -431,13 +432,14 @@ void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t) {
             (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
 
         //[Err]
-        // lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        // if (grid[JDIR].x_glob[j]>zcap_real-dzcap_real+L) {
-        //   lines[IDIR].rbound[BDIFF][l].values[0] = 0;
-        // } else {
-        //   lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-        //     (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/L );
-        // }
+        /* lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+           if (grid[JDIR].x_glob[j]>zcap_real-dzcap_real+L) {
+             lines[IDIR].rbound[BDIFF][l].values[0] = 0;
+           } else {
+             lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+               (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/L );
+           }
+        */
         // [Err] end err part
       } else {
         /* :::: Outer domain boundary :::: */

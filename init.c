@@ -26,7 +26,7 @@ void Init (double *us, double x1, double x2, double x3)
   double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
 
     // [Err]
-  double L = 0.02/UNIT_LENGTH;
+  // double L = 0.02/UNIT_LENGTH;
 
   // Just a check that the geometrical settings makes sense:
   if (DZCAP > ZCAP){
@@ -39,7 +39,7 @@ void Init (double *us, double x1, double x2, double x3)
   curr = current_from_time(0.0);
   // print1("Current from tab: %g", curr);
   // Mag field at the capillary wall, in code units
-  Bwall = (BIOTSAV_GAUSS_S_A(curr, RCAP))/unit_Mfield;
+  Bwall = (BIOTSAV_GAUSS_A_CM(curr, RCAP))/unit_Mfield;
 
   #if GEOMETRY != CYLINDRICAL
    #error geometry not valid
@@ -160,7 +160,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
     curr = current_from_time(t_sec);
     // print1("\nCurrent from tab: %g", curr);
-    Bwall = BIOTSAV_GAUSS_S_A(curr, RCAP)/unit_Mfield;
+    Bwall = BIOTSAV_GAUSS_A_CM(curr, RCAP)/unit_Mfield;
   #endif
 
   /**********************************

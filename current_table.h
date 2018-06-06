@@ -5,7 +5,7 @@
 
 // This is a particular form of biot-savart law, to compute B in gauss,
 // from current in Ampere and radius (g_domEnd[0]*UNIT_LENGTH) in cm
-#define BIOTSAV_GAUSS_S_A(curr_A, rad_cm) (0.2*(curr_A)/(rad_cm))
+#define BIOTSAV_GAUSS_A_CM(curr_A, rad_cm) (0.2*(curr_A)/(rad_cm))
 
 #define N_CURR_TAB 3
 
