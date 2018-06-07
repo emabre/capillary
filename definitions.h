@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -67,7 +67,9 @@
 /* Number of subcycles performed by ADI scheme*/
 #define NSUBS_ADI    10
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
-#define ELECTR_NEUM
+// #define ELECTR_NEUM
+/* To set to 0 the mag field in a region outside capillary*/
+#define FLATTEN_B_OUTCAP
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */

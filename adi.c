@@ -61,6 +61,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     static double **Ip_B, **Im_B, **Jp_B, **Jm_B, **CI_B, **CJ_B;
     static double **Bra1, **Bra2, **Brb1, **Brb2;
+    // static double **Br0, **Br_avg;
     static double **Br;
     // Energy increse(due to electro-magnetics) terms
     static double **dUres_a1, **dUres_a2, **dUres_b1, **dUres_b2;
@@ -110,6 +111,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       Brb2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
       Br = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+
+      // Br0 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      // Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
       dUres_a1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       dUres_a2 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -181,8 +185,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     #endif
     #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
       // Build a handy magnetic field matrix
-      DOM_LOOP(k,j,i)
+      DOM_LOOP(k,j,i) {
         Br[j][i] = r[i]*Uc[k][j][i][BX3];
+        // [Err] Delete next line
+        // Br0[j][i] = Br[j][i];
+      }
       BuildIJ_forRes(d, grid, lines, Ip_B, Im_B, Jp_B, Jm_B, CI_B, CJ_B);
     #endif
 
@@ -284,6 +291,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
           Uc[k][j][i][BX3] = Brb2[j][i]*r_1[i];
 
           #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+          // [Err] Decomment next line
             Uc[k][j][i][ENG] += dUres_a1[j][i]+dUres_a2[j][i]+dUres_b1[j][i]+dUres_b2[j][i];
           #endif
         #endif
@@ -327,6 +335,24 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ConsToPrimLines (Uc, Vc, d->flag, lines);
     t_start_sub += dt_reduced;
   }
+
+  // //[Err] Delete next #if lines
+  // #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
+  //   DOM_LOOP(k,j,i) {
+  //     Br_avg[j][i] = 0.5*( Br0[j][i] + Brb2[j][i]);
+  //   }
+  //   ResEnergyIncrease(dUres_b2, H2p_B, H2m_B, Br_avg, grid, &lines[DIR2], dt, DIR2);
+  //   ResEnergyIncrease(dUres_b1, H1p_B, H1m_B, Br_avg, grid, &lines[DIR1], dt, DIR1);
+  //   KDOM_LOOP(k) {
+  //       LINES_LOOP(lines[IDIR], l, j, i) {
+  //         #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+  //         // [Err] Decomment next line
+  //           Uc[k][j][i][ENG] += 0.0 + 0.0 + dUres_b1[j][i]+dUres_b2[j][i];
+  //         #endif
+  //       }
+  //   }
+  //   ConsToPrimLines (Uc, Vc, d->flag, lines);
+  // #endif
 
 }
 

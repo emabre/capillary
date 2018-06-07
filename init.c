@@ -136,6 +136,9 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
  *********************************************************************** */
 {
   int  i, j, k;
+  #ifdef FLATTEN_B_OUTCAP
+    int j_start_flatten;
+  #endif
   double t_sec; // t_sec is in seconds
   int  vsign[NVAR]; /*vector containing signs which will be set by Flipsign*/
   // double T,mu;/*Temperature in K and mean particle weight, for the usage of macro "KELVIN" see page 45 of the manual*/
@@ -486,6 +489,15 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
 
       // No correction for the k direction
       d_correction[2].Npoints = 0;
+    #endif
+
+    #ifdef FLATTEN_B_OUTCAP
+      j_start_flatten = (j_cap_inter_end+NX2_TOT)/2;    
+      KDOM_LOOP(k) {
+        for (j=j_start_flatten; j<=JEND; j++)
+          for (i=IBEG; i<=IEND; i++)
+            d->Vc[iBPHI][k][j][i] = 0.0;
+      }
     #endif
 
     /*********************
