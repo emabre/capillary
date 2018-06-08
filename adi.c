@@ -3,9 +3,6 @@ and thermal conduction) terms with the Alternating Directino Implicit algorithm*
 #include "pluto.h"
 #include "adi.h"
 #include "capillary_wall.h"
-#include "current_table.h"
-#include "Thermal_Conduction/tc.h"
-#include "pvte_law_heat_capacity.h"
 
 #if KBEG != KEND
   #error grid in k direction should only be of 1 point
@@ -151,7 +148,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
   dt_reduced = dt/adi_steps;
   t_start_sub = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
-  BoundaryADI(lines, d, grid, t_start_sub); // Get bcs at t
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+    BoundaryRes_ADI(lines, d, grid, t_start_sub);
+  #endif
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+    BoundaryTC_ADI(lines, d, grid, t_start_sub);
+  #endif
 
   for (s=0; s<adi_steps; s++) {
     /* -------------------------------------------------------------------------
@@ -181,7 +183,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #else
         print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
       #endif
-      BuildIJ_forTC(d, grid, lines, Ip_T, Im_T, Jp_T, Jm_T, CI_T, CJ_T, dEdT);
+      BuildIJ_TC(d, grid, lines, Ip_T, Im_T, Jp_T, Jm_T, CI_T, CJ_T, dEdT);
     #endif
     #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
       // Build a handy magnetic field matrix
@@ -190,7 +192,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         // [Err] Delete next line
         // Br0[j][i] = Br[j][i];
       }
-      BuildIJ_forRes(d, grid, lines, Ip_B, Im_B, Jp_B, Jm_B, CI_B, CJ_B);
+      BuildIJ_Res(d, grid, lines, Ip_B, Im_B, Jp_B, Jm_B, CI_B, CJ_B);
     #endif
 
     /*[Rob] Maybe I can partially couple the two problems:
@@ -221,12 +223,13 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
-    BoundaryADI(lines, d, grid, t_start_sub+0.5*dt_reduced); // Get bcs at half step (not exaclty at t+0.5*dt_reduced)
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+      BoundaryTC_ADI(lines, d, grid, t_start_sub+0.5*dt_reduced); // Get bcs at half step (not exaclty at t+0.5*dt_reduced)
       ImplicitUpdate (Ta2, Ta1, NULL, H2p_T, H2m_T, C2_T, &lines[DIR2],
                       lines[DIR2].lbound[TDIFF], lines[DIR2].rbound[TDIFF], 0.5*dt_reduced, DIR2);
     #endif
     #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+      BoundaryRes_ADI(lines, d, grid, t_start_sub+0.5*dt_reduced);
       ImplicitUpdate (Bra2, Bra1, NULL, H2p_B, H2m_B, C2_B, &lines[DIR2],
                         lines[DIR2].lbound[BDIFF], lines[DIR2].rbound[BDIFF], 0.5*dt_reduced, DIR2);
       #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
@@ -261,12 +264,14 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     /**********************************
      (b.2) Implicit update sweeping DIR1
     **********************************/
-    BoundaryADI(lines, d, grid, t_start_sub+dt_reduced); // Get bcs at t+dt
+    
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+      BoundaryTC_ADI(lines, d, grid, t_start_sub+dt_reduced);
       ImplicitUpdate (Tb2, Tb1, NULL, H1p_T, H1m_T, C1_T, &lines[DIR1],
                     lines[DIR1].lbound[TDIFF], lines[DIR1].rbound[TDIFF], 0.5*dt_reduced, DIR1);
     #endif
     #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+      BoundaryRes_ADI(lines, d, grid, t_start_sub+dt_reduced); // Get bcs at t+dt   
       ImplicitUpdate (Brb2, Brb1, NULL, H1p_B, H1m_B, C1_B, &lines[DIR1],
                         lines[DIR1].lbound[BDIFF], lines[DIR1].rbound[BDIFF], 0.5*dt_reduced, DIR1);
       #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
@@ -355,390 +360,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   // #endif
 
 }
-
-/****************************************************************************
-* Function to build the bcs of lines
-* In the current implementation of this function Data *d is not used
-* but I leave it there since before or later it might be needed
-*****************************************************************************/
-void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, const double t) {
-  int i,j,l;
-  const double t_sec = t*(UNIT_LENGTH/UNIT_VELOCITY);
-  # if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    double Twall;
-    double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin
-  #endif
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    double Bwall;
-    double curr, unit_Mfield;
-  #endif
-  // [Err]
-  // double L = 0.02/UNIT_LENGTH;
-
-
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    // I compute the wall temperature
-    Twall = Twall_K / KELVIN;
-
-    // IDIR lines
-    for (l=0; l<lines[IDIR].N; l++) {
-      j = lines[IDIR].dom_line_idx[l];
-      /* :::: Axis ::::*/
-      lines[IDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
-      lines[IDIR].lbound[TDIFF][l].values[0] = 0.0;
-      // [Opt] (I can avoid making so many if..)
-      if (j <= j_cap_inter_end) {
-        /* :::: Capillary wall :::: */
-
-        // [Err] Decomment next two lines
-        lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
-        lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
-
-        // [Err] Remove next two lines
-        // lines[IDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
-        // lines[IDIR].rbound[TDIFF][l].values[0] = 0.0;
-      } else {
-        /* :::: Outer domain boundary :::: */
-        // lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
-        // // IS THIS OK?? Before or later change here, and also in its equivalent in init.c
-        // lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
-        lines[IDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
-        lines[IDIR].rbound[TDIFF][l].values[0] = 0.0;
-      }
-    }
-    // JDIR lines
-    for (l=0; l<lines[JDIR].N; l++) {
-      i = lines[JDIR].dom_line_idx[l];
-      if (i <= i_cap_inter_end){
-        /* :::: Capillary internal (symmetry plane) ::::*/
-
-        // [Err] Decomment next two lines
-        lines[JDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
-        lines[JDIR].lbound[TDIFF][l].values[0] = 0.0;
-
-        // [Err] Remove next two lines
-        // lines[JDIR].lbound[TDIFF][l].kind = DIRICHLET;
-        // lines[JDIR].lbound[TDIFF][l].values[0] = Twall;
-      } else {
-        /* :::: Outer capillary wall ::::*/
-        lines[JDIR].lbound[TDIFF][l].kind = DIRICHLET;
-        lines[JDIR].lbound[TDIFF][l].values[0] = Twall;
-      }
-      /* :::: Outer domain boundary ::::*/
-      lines[JDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
-      lines[JDIR].rbound[TDIFF][l].values[0] = 0.0;
-    }
-  #endif
-
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    // I compute the wall magnetic field
-    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
-    curr = current_from_time(t_sec);
-    Bwall = BIOTSAV_GAUSS_A_CM(curr, RCAP)/unit_Mfield;
-
-    // IDIR lines
-    for (l=0; l<lines[IDIR].N; l++) {
-      j = lines[IDIR].dom_line_idx[l];
-      /* :::: Axis :::: */
-      lines[IDIR].lbound[BDIFF][l].kind = DIRICHLET;
-      lines[IDIR].lbound[BDIFF][l].values[0] = 0.0;
-      if ( j < j_elec_start) {
-        /* :::: Capillary wall (no electrode) :::: */
-        lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real;
-      } else if (j >= j_elec_start && j <= j_cap_inter_end) {
-        /* :::: Electrode :::: */
-        // [Err] Delete next two lines
-        #ifdef ELECTR_NEUM
-          // [Err] Decomment next lines
-          lines[IDIR].rbound[BDIFF][l].kind = NEUMANN_HOM;
-          lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
-
-          // [Err] remove next lines
-          // lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-          // lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-          //    (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
-        #else
-          lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-          lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-             (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
-        #endif
-
-        //[Err]
-        /* lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-           if (grid[JDIR].x_glob[j]>zcap_real-dzcap_real+L) {
-             lines[IDIR].rbound[BDIFF][l].values[0] = 0;
-           } else {
-             lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-               (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/L );
-           }
-        */
-        // [Err] end err part
-      } else {
-        /* :::: Outer domain boundary :::: */
-        lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
-      }
-    }
-    // JDIR lines
-    for (l=0; l<lines[JDIR].N; l++) {
-      i = lines[JDIR].dom_line_idx[l];
-      if ( i <= i_cap_inter_end) {
-        /* :::: Capillary internal (symmetry plane) :::: */
-        lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;
-        lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
-      } else {
-        /* :::: Outer capillary wall :::: */
-        #ifdef ELECTR_NEUM
-          lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;        
-          lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
-        #else
-          lines[JDIR].lbound[BDIFF][l].kind = DIRICHLET;
-        #endif
-      }
-      /* :::: Outer domain boundary :::: */
-      lines[JDIR].rbound[BDIFF][l].kind = DIRICHLET;
-      lines[JDIR].rbound[BDIFF][l].values[0] = 0.0;
-    }
-  #endif
-}
-
-#if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-/****************************************************************************
-Function to build the Ip,Im,Jp,Jm, CI, CJ (and also dEdT) for the thermal conduction problem
-Note that I must make available for outside dEdT, as I will use it later to
-advance the energy in a way that conserves the energy
-*****************************************************************************/
-void BuildIJ_forTC(const Data *d, Grid *grid, Lines *lines,
-                   double **Ip, double **Im, double **Jp,
-                   double **Jm, double **CI, double **CJ, double **dEdT) {
-  int i,j,k;
-  int nv, l;
-  double kpar, knor, phi; // Thermal conductivity
-  double v[NVAR];
-  double ****Vc;
-  double *inv_dri, *inv_dzi;
-  double *zL, *zR;
-  double *rL, *rR;
-  double *ArR, *ArL;
-  double *dVr, *dVz;
-  double *r, *z, *theta;
-  double T;
-
-  /* -- set a pointer to the primitive vars array --
-    I do this because it is done also in other parts of the code
-    maybe it makes the program faster or just easier to write/read...*/
-  Vc = d->Vc;
-
-  inv_dzi = grid[JDIR].inv_dxi;
-  inv_dri = grid[IDIR].inv_dxi;
-
-  theta = grid[KDIR].x;
-
-  r = grid[IDIR].x;
-  z = grid[JDIR].x;
-  rL = grid[IDIR].xl;
-  rR = grid[IDIR].xr;
-  zL = grid[JDIR].xl;
-  zR = grid[JDIR].xr;
-  ArR = grid[IDIR].A;
-  ArL = grid[IDIR].A - 1;
-  dVr = grid[IDIR].dV;
-  dVz = grid[JDIR].dV;
-
-  /*[Opt] This is probably useless, it is here just for debugging purposes*/
-  TOT_LOOP(k, j, i) {
-    Ip[j][i] = 0.0;
-    Im[j][i] = 0.0;
-    Jp[j][i] = 0.0;
-    Jm[j][i] = 0.0;
-    CI[j][i] = 0.0;
-    CJ[j][i] = 0.0;
-    dEdT[j][i] = 0.0;
-  }
-  // lines->lidx
-  KDOM_LOOP(k) {
-    LINES_LOOP(lines[IDIR], l, j, i) {
-      /* :::: Ip :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
-      TC_kappa( v, rR[i], z[j], theta[k], &kpar, &knor, &phi);
-      Ip[j][i] = knor*ArR[i]*inv_dri[i];
-      /* [Opt] Here I could use the already computed k to compute
-      also Im[1,i+1] (since it needs k at the same interface).
-      Doing so I would reduce the calls to TC_kappa by almost a factor 1/2
-      (obviously I could do the same for Im/Ip) */
-
-      /* :::: Im :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i-1]);
-      TC_kappa( v, rL[i], z[j], theta[k], &kpar, &knor, &phi);
-      Im[j][i] = knor*ArL[i]*inv_dri[i-1];
-
-      /* :::: Jp :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
-      TC_kappa( v, r[i], zR[j], theta[k], &kpar, &knor, &phi);
-      Jp[j][i] = knor*inv_dzi[j];
-
-      /* :::: Jm :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
-      TC_kappa( v, r[i], zL[j], theta[k], &kpar, &knor, &phi);
-      Jm[j][i] = knor*inv_dzi[j-1];
-      #ifdef TEST_ADI
-        HeatCapacity_test(v, r[i], z[j], theta[k], &(dEdT[j][i]) );
-      #else
-        if (GetPV_Temperature(v, &(T) )!=0) {
-          print1("\nTC_kappa:[Ema] Error computing temperature!");
-        }
-        HeatCapacity(v, T, &(dEdT[j][i]) );
-      #endif
-      /* :::: CI :::: */
-      CI[j][i] = dEdT[j][i]*dVr[i];
-      
-      /* :::: CJ :::: */
-      CJ[j][i] = dEdT[j][i]*dVz[j];
-    }
-  }
-}
-
-#ifdef TEST_ADI
-/**************************************************************************
- * GetHeatCapacity: Computes the derivative dE/dT (E is the internal energy
- * per unit volume, T is the temperature). This function also normalizes
- * the dEdT.
- * ************************************************************************/
-void HeatCapacity_test(double *v, double r, double z, double theta, double *dEdT) {
-  double c;
-//
-  /*[Opt] This should be done with a table or something similar (also I should
-    make a more general computation as soon as possible)*/
-  /*[Opt] I could also include the normalization in the definition so that I
-    do not do the computations twice!*/
-
-  // Specific heat (heat to increase of 1 Kelvin 1 gram of Hydrogen)
-    // Low temperature case, no ionization
-    c = 3/2*(1/CONST_mp)*CONST_kB;
-    // High temperature case, full ionization
-    // c = 3/2*(2/CONST_mp)*CONST_kB;
-
-    // Heat capacity (heat to increas of 1 Kelvin 1 cm³ of Hydrogen)
-    *dEdT = c*v[RHO]*UNIT_DENSITY;
-
-
-  // Normalization
-  *dEdT = (*dEdT)/(UNIT_DENSITY*CONST_kB/CONST_mp);
-}
-#endif
-#endif
-
-#if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-/****************************************************************************
-Function to build the Ip,Im,Jp,Jm for the electrical resistivity problem
-*****************************************************************************/
-void BuildIJ_forRes(const Data *d, Grid *grid, Lines *lines,
-                   double **Ip, double **Im, double **Jp,
-                   double **Jm, double **CI, double **CJ) {
-  int i,j,k;
-  int nv, l;
-  double eta[3]; // Electr. resistivity
-  double v[NVAR];
-  double ****Vc;
-  double *inv_dri, *inv_dzi, *inv_dr, *inv_dz, *r_1;
-  double *zL, *zR;
-  double *rL, *rR;
-  double *r, *z, *theta;
-
-  /* -- set a pointer to the primitive vars array --
-    I do this because it is done also in other parts of the code
-    maybe it makes the program faster or just easier to write/read...*/
-  Vc = d->Vc;
-
-  inv_dzi = grid[JDIR].inv_dxi;
-  inv_dri = grid[IDIR].inv_dxi;
-  inv_dz = grid[JDIR].inv_dx;
-  inv_dr = grid[IDIR].inv_dx;
-  r_1 = grid[IDIR].r_1;
-
-  theta = grid[KDIR].x;
-
-  r = grid[IDIR].x;
-  z = grid[JDIR].x;
-  rL = grid[IDIR].xl;
-  rR = grid[IDIR].xr;
-  zL = grid[JDIR].xl;
-  zR = grid[JDIR].xr;
-
-  /*[Opt] This is probably useless, it is here just for debugging purposes*/
-  TOT_LOOP(k, j, i) {
-    Ip[j][i] = 0.0;
-    Im[j][i] = 0.0;
-    Jp[j][i] = 0.0;
-    Jm[j][i] = 0.0;
-    CI[j][i] = 0.0;
-    CJ[j][i] = 0.0;
-  }
-  // lines->lidx
-  KDOM_LOOP(k) {
-    LINES_LOOP(lines[IDIR], l, j, i) {
-      /* :::: Ip :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
-      /*[Rob] I should give also J to Resistive_eta().
-        I don't, but I could simply compute it by modifying easily the GetCurrent()
-        function, as it only uses J and B element of the Data structure.
-        Even easier: I could change the whole adi implementation and make it
-        advance directly d->Vc instead of allocating vectors for T and Br */
-      Resistive_eta( v, rR[i], z[j], theta[k], NULL, eta);
-      if (eta[0] != eta[1] || eta[1] != eta[2]) {
-        print1("Anisotropic resistivity is not implemented in ADI!");
-        QUIT_PLUTO(1);
-      }
-      Ip[j][i] = eta[0]*inv_dr[i]*inv_dri[i]/rR[i];
-      /* [Opt] Here I could use the already computed eta to compute
-      also Im[1,i+1] (since it needs eta at the same interface).
-      Doing so I would reduce the calls to Resistive_eta by almost a factor 1/2
-      (obviously I could do the same for Im/Ip) */
-
-      /* :::: Im :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i-1]);
-      Resistive_eta( v, rL[i], z[j], theta[k], NULL, eta);
-      if (eta[0] != eta[1] || eta[1] != eta[2]) {
-        print1("Anisotropic resistivity is not implemented in ADI!");
-        QUIT_PLUTO(1);
-      }
-      if (rL[i]!=0.0)
-        Im[j][i] = eta[0]*inv_dri[i-1]*inv_dr[i]/rL[i];
-      else
-        Im[j][i] = eta[0]/(r[i]*r[i])/rR[i];
-
-      /* :::: Jp :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
-      Resistive_eta( v, r[i], zR[j], theta[k], NULL, eta);
-      if (eta[0] != eta[1] || eta[1] != eta[2]) {
-        print1("Anisotropic resistivity is not implemented in ADI!");
-        QUIT_PLUTO(1);
-      }
-      Jp[j][i] = eta[0]*inv_dz[j]*inv_dzi[j];
-
-      /* :::: Jm :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
-      Resistive_eta( v, r[i], zL[j], theta[k], NULL, eta);
-      Jm[j][i] = eta[0]*inv_dz[j]*inv_dzi[j-1];
-
-      /* :::: CI :::: */
-      CI[j][i] = r_1[i];
-
-      /* :::: CJ :::: */
-      CJ[j][i] = 1.0;
-    }
-  }
-}
-#endif
 
 /****************************************************************************
 Performs an implicit update of a diffusive problem (either for B or for T)
@@ -1022,137 +643,6 @@ void ExplicitUpdate (double **v, double **b, double **source,
     QUIT_PLUTO(1);
   }
 }
-
-#if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT && HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-/****************************************************************************
-Function to build the a matrix which contain the amount of increase of the
-energy due to joule effect and magnetic field energy (flux of poynting vector due to
-resistive magnetic diffusion)
-[Opt]: Note that in the actual implementation this function needs to take as
-input both the Hp_B and the Hm_B. But for the whole internal (i.e. boudary excluded)
-only one among Hp_B and Hm_B is necessary. The other one is used to fill F
-at one side (left or right) of the domain.
-*****************************************************************************/
-void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br,
-                       Grid *grid, Lines *lines, double dt, int dir){
-  /* F :Power flux flowing from cell (i,j) to (i+1,j), when dir==IDIR;
-        or from cell (i,j) to (i,j+1), when dir == JDIR.
-  */
-  static double **F;
-  double *dr, *dz;
-  int i,j,l;
-  int lidx, ridx;
-  int Nlines = lines->N;
-  int static first_call = 1;
-  double *dV, *inv_dz, *r_1, *r;
-  double *rL, *rR;
-  double Br_ghost;
-  Bcs *rbound, *lbound;
-
-  /*[Opt] Maybe I could do that it allocates static arrays with size NMAX_POINT (=max(NX1_TOT,NX2_TOT)) ?*/
-  if (first_call) {
-    /* I define it 2d in case I need to export it later*/
-    F = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    /*This is useless, it's just for debugging purposes*/
-    ITOT_LOOP(i)
-      JTOT_LOOP(j)
-        F[j][i] = 0.0;
-    first_call = 0;
-  }
-  /*This is useless, it's just for debugging purposes*/
-  ITOT_LOOP(i)
-    JTOT_LOOP(j)
-      dUres[j][i] = 0.0;
-
-  lbound = lines->lbound[BDIFF];
-  rbound = lines->rbound[BDIFF];
-  dr = grid[IDIR].dx;
-  r_1 = grid[IDIR].r_1;
-
-  if (dir == IDIR) {
-    rR = grid[IDIR].xr;
-    rL = grid[IDIR].xl;
-    dV = grid[IDIR].dV;
-    r = grid[IDIR].x_glob;
-
-    for (l = 0; l<Nlines; l++) {
-      j = lines->dom_line_idx[l];
-      lidx = lines->lidx[l];
-      ridx = lines->ridx[l];
-      for (i=lidx; i<ridx; i++) // I stop before ridx, as for the last interface(as for the first) I must use the BCs
-      // [Err] Decomment next line (original)
-        F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1]*r_1[i+1] + Br[j][i]*r_1[i]);
-        // [Err] Delete next line (test)
-        // F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1] + Br[j][i])/rR[i];        
-      /*Define boundary fluxes*/
-      if (lbound[l].kind == DIRICHLET){
-        if (fabs(rL[lidx]) < 1e-20  && fabs(lbound[l].values[0]) < 1e-20) { // this should guess that I am on axis
-          F[j][lidx-1] = 0.0;
-        } else {
-          // [Err] Decomment next line          
-          Br_ghost = 2*lbound[l].values[0] - Br[j][lidx];
-          //(this method was also working, and maybe it's more accurate, I do not use it only because not consiste with what is done in ImplicitUpdate and Explicit Update)
-          // Br_ghost = r[lidx-1] * (2*lbound[l].values[0]/rL[lidx] - Br[j][lidx]*r_1[lidx]);
-          F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br_ghost)*dr[lidx] * (lbound[l].values[0]/rL[lidx]);
-        }
-      } else if (lbound[l].kind == NEUMANN_HOM) {
-        F[j][lidx-1] = 0.0;
-      }
-      if (rbound[l].kind == DIRICHLET){
-        // [Err] Decomment next line
-        Br_ghost = 2*rbound[l].values[0] - Br[j][ridx];
-        //(this method was also working, and maybe it's more accurate, I do not use it only because not consiste with what is done in ImplicitUpdate and Explicit Update)
-        // Br_ghost = r[ridx+1] * (2*rbound[l].values[0]/rR[ridx] - Br[j][ridx]*r_1[ridx]);
-        F[j][ridx] = -Hp_B[j][ridx] * (Br_ghost - Br[j][ridx])*dr[ridx] * (rbound[l].values[0]/rR[ridx]);
-      } else if (rbound[l].kind == NEUMANN_HOM) {
-        F[j][ridx] = 0.0;
-      }
-      // Build dU
-      for (i=lidx; i<=ridx; i++)
-       //[Err] delete questa linea
-        // dUres[j][i] = (rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
-       //[Err] deccoment next line
-        dUres[j][i] = -(rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
-    }
-
-  } else if (dir == JDIR) {
-    dz = grid[JDIR].dx;
-    inv_dz = grid[JDIR].inv_dx;
-
-    for (l = 0; l<Nlines; l++) {
-      i = lines->dom_line_idx[l];
-      lidx = lines->lidx[l];
-      ridx = lines->ridx[l];
-      
-      for (j=lidx; j<ridx; j++)
-        //[Err] ho aggiunto *r_1[i] nella formula ( e questa modifica sembra ok!)
-        F[j][i] = -Hp_B[j][i] * (Br[j+1][i] - Br[j][i])*dz[j]*r_1[i]*r_1[i] * 0.5*(Br[j+1][i] + Br[j][i]);
-
-      /*Define boundary fluxes*/
-      if (lbound[l].kind == DIRICHLET){
-        Br_ghost = 2*lbound[l].values[0] - Br[lidx][i];
-        //[Err] ho aggiunto *r_1[i] nella formula
-        F[lidx-1][i] = -Hm_B[lidx][i] * (Br[lidx][i] - Br_ghost)*dz[lidx] * 0.5*r_1[i]*r_1[i]*(Br[lidx][i] + Br_ghost);
-      } else if (lbound[l].kind == NEUMANN_HOM) {
-        F[lidx-1][i] = 0.0;
-      }
-      if (rbound[l].kind == DIRICHLET){
-        Br_ghost = 2*rbound[l].values[0] - Br[ridx][i];
-        //[Err] ho aggiunto *r_1[i] nella formula
-        F[ridx][i] = -Hp_B[ridx][i] * (Br_ghost - Br[ridx][i])*dz[ridx] * 0.5*r_1[i]*r_1[i]*(Br_ghost + Br[ridx][i]);
-      } else if (rbound[l].kind == NEUMANN_HOM) {
-        F[ridx][i] = 0.0;
-      }
-      // Build dU
-      for (j=lidx; j<=ridx; j++)
-              //[Err] delete questa linea
-        // dUres[j][i] = (F[j][i] - F[j-1][i])*dt*inv_dz[j];
-        //[Err] deccoment next line
-        dUres[j][i] = -(F[j][i] - F[j-1][i])*dt*inv_dz[j];
-    }
-  }
-}
-#endif
 
 /****************************************************************************
 Function to initialize lines, I hope this kind of initialization is ok and

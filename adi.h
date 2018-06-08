@@ -63,7 +63,9 @@ typedef struct LINES{
 
 void InitializeLines (Lines *, int);
 void GeometryADI (Lines *lines, Grid *grid);
-void BoundaryADI(Lines lines[2], const Data *d, Grid *grid, double t);
+void BoundaryRes_ADI(Lines lines[2], const Data *d, Grid *grid, double t);
+void BoundaryTC_ADI(Lines lines[2], const Data *d, Grid *grid, double t);
+
 void ExplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt, int const dir);
@@ -74,7 +76,7 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
                 double const *lower, double const *right_hand_side, int const N);
                      
 #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-void BuildIJ_forTC (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
+void BuildIJ_TC (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
                     double **Jp, double **Jm, double **CI, double **CJ, double **dEdT);
 #ifdef TEST_ADI
   void HeatCapacity_test(double *v, double r, double z, double theta, double *dEdT);
@@ -82,7 +84,7 @@ void BuildIJ_forTC (const Data *d, Grid *grid, Lines *lines, double **Ip, double
 #endif
 
 #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-void BuildIJ_forRes (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
+void BuildIJ_Res (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
                      double **Jp, double **Jm, double **CI, double **CJ);
   #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
     void ResEnergyIncrease(double **dUres, double** Ip_B, double** Im_B, double **Br,
