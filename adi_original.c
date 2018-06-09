@@ -53,18 +53,17 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   
   // [Err] Are you sure you want to do multiple steps inside a single adi call?
   int s;
-  double t_start_sub_res, t_start_sub_tc;
+  int const adi_steps = NSUBS_ADI;
+  double t_start_sub, dt_reduced;
   
   static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     static double **Ip_B, **Im_B, **Jp_B, **Jm_B, **CI_B, **CJ_B;
     static double **Bra1, **Bra2, **Brb1, **Brb2;
-    // static double **Br_avg;
+    // static double **Br0, **Br_avg;
     static double **Br;
     // Energy increse(due to electro-magnetics) terms
     static double **dUres_a1, **dUres_a2, **dUres_b1, **dUres_b2;
-    int const adi_res_steps = NSUBS_RES_ADI;
-    double dt_res_reduced;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     static double **Ip_T, **Im_T, **Jp_T, **Jm_T, **CI_T, **CJ_T;
@@ -74,8 +73,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
     // double rhoe_old, rhoe_new;
     int nv;
-    int const adi_tc_steps = NSUBS_TC_ADI;
-    double dt_tc_reduced;
   #endif
   const double dt = g_dt;
   double ****Uc, ****Vc;
@@ -114,6 +111,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
       Br = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
+      // Br0 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       // Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
 
       dUres_a1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -150,205 +148,219 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     first_call=0;
   }
 
-  t_start_sub_res = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
-  t_start_sub_tc = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
+  dt_reduced = dt/adi_steps;
+  t_start_sub = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    dt_res_reduced = dt/adi_res_steps;
-    BoundaryRes_ADI(lines, d, grid, t_start_sub_res);
+    BoundaryRes_ADI(lines, d, grid, t_start_sub);
   #endif
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    dt_tc_reduced = dt/adi_tc_steps;
-    BoundaryTC_ADI(lines, d, grid, t_start_sub_tc);
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+    BoundaryTC_ADI(lines, d, grid, t_start_sub);
   #endif
 
-  /* -------------------------------------------------------------------------
-      Compute the conservative vector in order to start the cycle.
-      This step will be useless if the data structure
-      contains Vc as well as Uc (for future improvements).
-      [Ema] (Comment copied from sts.c)
-    --------------------------------------------------------------------------- */
-  PrimToConsLines (Vc, Uc, lines);
+  for (s=0; s<adi_steps; s++) {
+    /* -------------------------------------------------------------------------
+        Compute the conservative vector in order to start the cycle.
+        This step will be useless if the data structure
+        contains Vc as well as Uc (for future improvements).
+        [Ema] (Comment copied from sts.c)
+      --------------------------------------------------------------------------- */
+    PrimToConsLines (Vc, Uc, lines);
 
-  // [Rob] Maybe I should call also Boundary(), it sets the internal ghost cells,
-  // which will be later used to compute eta and k
-  Boundary(d, ALL_DIR, grid);
-
-  /* -------------------------------------------------------------------------
+    /* -------------------------------------------------------------------------
         Build the temperature (T) and/or the product magnetic field with radius (B*r)
       ------------------------------------------------------------------------- */
-
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    #if EOS==IDEAL
-      DOM_LOOP(k,j,i) T[j][i] = Vc[PRS][k][j][i]/Vc[RHO][k][j][i];
-    #elif EOS==PVTE_LAW
-      DOM_LOOP(k,j,i) {
-        for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
-        if (GetPV_Temperature(v, &(T[j][i]) )!=0) {
-          print1("ADI:[Ema] Error computing temperature!\n");
+    // [Rob] Maybe I should call also Boundary(), it sets the internal ghost cells,
+    // which will be later used to compute eta and k
+    #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+      #if EOS==IDEAL
+        DOM_LOOP(k,j,i) T[j][i] = Vc[PRS][k][j][i]/Vc[RHO][k][j][i];
+      #elif EOS==PVTE_LAW
+        DOM_LOOP(k,j,i) {
+          for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+          if (GetPV_Temperature(v, &(T[j][i]) )!=0) {
+            print1("ADI:[Ema] Error computing temperature!\n");
+          }
+          T[j][i] = T[j][i] / KELVIN;
         }
-        Tb2[j][i] = T[j][i] = T[j][i] / KELVIN;
-      }
-    #else
-      print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
+      #else
+        print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
+      #endif
+      BuildIJ_TC(d, grid, lines, Ip_T, Im_T, Jp_T, Jm_T, CI_T, CJ_T, dEdT);
     #endif
-    BuildIJ_TC(d, grid, lines, Ip_T, Im_T, Jp_T, Jm_T, CI_T, CJ_T, dEdT);
-  #endif
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    // Build a handy magnetic field matrix
-    DOM_LOOP(k,j,i) {
-      Brb2[j][i] = Br[j][i] = r[i]*Uc[k][j][i][BX3];
-    }
-    BuildIJ_Res(d, grid, lines, Ip_B, Im_B, Jp_B, Jm_B, CI_B, CJ_B);
-  #endif
+    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+      // Build a handy magnetic field matrix
+      DOM_LOOP(k,j,i) {
+        Br[j][i] = r[i]*Uc[k][j][i][BX3];
+        // [Err] Delete next line
+        // Br0[j][i] = Br[j][i];
+      }
+      BuildIJ_Res(d, grid, lines, Ip_B, Im_B, Jp_B, Jm_B, CI_B, CJ_B);
+    #endif
 
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    for (s=0; s<adi_tc_steps; s++) {
-   /* --------------------------------------------------------
-      Peachman-Rachford Algorithm
-     -------------------------------------------------------- */
-      
-      /**********************************
-       (a.1) Explicit update sweeping DIR1
-      **********************************/
-      ExplicitUpdate (Ta1, Tb2, NULL, H1p_T, H1m_T, C1_T, &lines[DIR1],
-                        lines[DIR1].lbound[TDIFF], lines[DIR1].rbound[TDIFF], 0.5*dt_tc_reduced, DIR1);
-      /**********************************
-       (a.2) Implicit update sweeping DIR2
-      **********************************/
-      BoundaryTC_ADI(lines, d, grid, t_start_sub_tc+0.5*dt_tc_reduced); // Get bcs at half step (not exaclty at t+0.5*dt_reduced)
-      ImplicitUpdate (Ta2, Ta1, NULL, H2p_T, H2m_T, C2_T, &lines[DIR2],
-                      lines[DIR2].lbound[TDIFF], lines[DIR2].rbound[TDIFF], 0.5*dt_tc_reduced, DIR2);
-      /**********************************
-        (b.1) Explicit update sweeping DIR2
-      **********************************/
-      ExplicitUpdate (Tb1, Ta2, NULL, H2p_T, H2m_T, C2_T, &lines[DIR2],
-                      lines[DIR2].lbound[TDIFF], lines[DIR2].rbound[TDIFF], 0.5*dt_tc_reduced, DIR2);
-      /**********************************
-        (b.2) Implicit update sweeping DIR1
-      **********************************/
-      BoundaryTC_ADI(lines, d, grid, t_start_sub_tc+dt_tc_reduced);
-      ImplicitUpdate (Tb2, Tb1, NULL, H1p_T, H1m_T, C1_T, &lines[DIR1],
-                    lines[DIR1].lbound[TDIFF], lines[DIR1].rbound[TDIFF], 0.5*dt_tc_reduced, DIR1);
-      t_start_sub_tc += dt_tc_reduced;
-    }
-  #endif
-
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-  for (s=0; s<adi_res_steps; s++) {    
-  /* --------------------------------------------------------
-      Peachman-Rachford Algorithm
-     -------------------------------------------------------- */
+    /*[Rob] Maybe I can partially couple the two problems:
+      first do a half step of both, then recompute the quantities
+      and do the second half-step of both*/
     
     /**********************************
      (a.1) Explicit update sweeping DIR1
     **********************************/
     // [Err] Remove next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-      // ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
-      // ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Br, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
-    // #endif
-    ExplicitUpdate (Bra1, Brb2, NULL, H1p_B, H1m_B, C1_B, &lines[DIR1],
-                    lines[DIR1].lbound[BDIFF], lines[DIR1].rbound[BDIFF], 0.5*dt_res_reduced, DIR1);
     #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-    // [Err] Decomment next line    
-      ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
+      // ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt_reduced, DIR1);
+      // ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Br, grid, &lines[DIR2], 0.5*dt_reduced, DIR2);
+    #endif
+    #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+      ExplicitUpdate (Ta1, T, NULL, H1p_T, H1m_T, C1_T, &lines[DIR1],
+                    lines[DIR1].lbound[TDIFF], lines[DIR1].rbound[TDIFF], 0.5*dt_reduced, DIR1);
+    #endif
+    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+      ExplicitUpdate (Bra1, Br, NULL, H1p_B, H1m_B, C1_B, &lines[DIR1],
+                      lines[DIR1].lbound[BDIFF], lines[DIR1].rbound[BDIFF], 0.5*dt_reduced, DIR1);
+      #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      // [Err] Decomment next line    
+        ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt_reduced, DIR1);
+      #endif
     #endif
 
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
-    BoundaryRes_ADI(lines, d, grid, t_start_sub_res+0.5*dt_res_reduced);
-    ImplicitUpdate (Bra2, Bra1, NULL, H2p_B, H2m_B, C2_B, &lines[DIR2],
-                      lines[DIR2].lbound[BDIFF], lines[DIR2].rbound[BDIFF], 0.5*dt_res_reduced, DIR2);
-    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-    // [Err] Decomment next line    
-      ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Bra2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
+    #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+      BoundaryTC_ADI(lines, d, grid, t_start_sub+0.5*dt_reduced); // Get bcs at half step (not exaclty at t+0.5*dt_reduced)
+      ImplicitUpdate (Ta2, Ta1, NULL, H2p_T, H2m_T, C2_T, &lines[DIR2],
+                      lines[DIR2].lbound[TDIFF], lines[DIR2].rbound[TDIFF], 0.5*dt_reduced, DIR2);
+    #endif
+    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+      BoundaryRes_ADI(lines, d, grid, t_start_sub+0.5*dt_reduced);
+      ImplicitUpdate (Bra2, Bra1, NULL, H2p_B, H2m_B, C2_B, &lines[DIR2],
+                        lines[DIR2].lbound[BDIFF], lines[DIR2].rbound[BDIFF], 0.5*dt_reduced, DIR2);
+      #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      // [Err] Decomment next line    
+        ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Bra2, grid, &lines[DIR2], 0.5*dt_reduced, DIR2);
+      #endif
     #endif
     // [Err] Remove next four lines
-    // ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt_res_reduced, IDIR);
-    // ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
-    // ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt_res_reduced, IDIR);
-    // ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Bra2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
+    // ResEnergyIncrease(dUres_a1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt_reduced, IDIR);
+    // ResEnergyIncrease(dUres_a2, Jp_B, Jm_B, Bra2, grid, &lines[DIR2], 0.5*dt_reduced, DIR2);
+    // ResEnergyIncrease(dUres_b1, Ip_B, Im_B, Bra2, grid, &lines[IDIR], 0.5*dt_reduced, IDIR);
+    // ResEnergyIncrease(dUres_b2, Jp_B, Jm_B, Bra2, grid, &lines[DIR2], 0.5*dt_reduced, DIR2);
 
     /**********************************
      (b.1) Explicit update sweeping DIR2
     **********************************/
-    ExplicitUpdate (Brb1, Bra2, NULL, H2p_B, H2m_B, C2_B, &lines[DIR2],
-                    lines[DIR2].lbound[BDIFF], lines[DIR2].rbound[BDIFF], 0.5*dt_res_reduced, DIR2);
-    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-    /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
-      (but in this way it is more readable)*/
-    // [Err] Decomment next line       
-      ResEnergyIncrease(dUres_b1, H2p_B, H2m_B, Bra2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
+    #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+      ExplicitUpdate (Tb1, Ta2, NULL, H2p_T, H2m_T, C2_T, &lines[DIR2],
+                      lines[DIR2].lbound[TDIFF], lines[DIR2].rbound[TDIFF], 0.5*dt_reduced, DIR2);
+    #endif
+    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+      ExplicitUpdate (Brb1, Bra2, NULL, H2p_B, H2m_B, C2_B, &lines[DIR2],
+                      lines[DIR2].lbound[BDIFF], lines[DIR2].rbound[BDIFF], 0.5*dt_reduced, DIR2);
+      #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_reduced instead of 0.5*dt_reduced
+        (but in this way it is more readable)*/
+      // [Err] Decomment next line       
+        ResEnergyIncrease(dUres_b1, H2p_B, H2m_B, Bra2, grid, &lines[DIR2], 0.5*dt_reduced, DIR2);
+      #endif
     #endif
 
     /**********************************
      (b.2) Implicit update sweeping DIR1
     **********************************/
-    BoundaryRes_ADI(lines, d, grid, t_start_sub_res+dt_res_reduced); // Get bcs at t+dt   
-    ImplicitUpdate (Brb2, Brb1, NULL, H1p_B, H1m_B, C1_B, &lines[DIR1],
-                      lines[DIR1].lbound[BDIFF], lines[DIR1].rbound[BDIFF], 0.5*dt_res_reduced, DIR1);
-    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-    // [Err] Decomment next line
-      ResEnergyIncrease(dUres_b2, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
+    
+    #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+      BoundaryTC_ADI(lines, d, grid, t_start_sub+dt_reduced);
+      ImplicitUpdate (Tb2, Tb1, NULL, H1p_T, H1m_T, C1_T, &lines[DIR1],
+                    lines[DIR1].lbound[TDIFF], lines[DIR1].rbound[TDIFF], 0.5*dt_reduced, DIR1);
+    #endif
+    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+      BoundaryRes_ADI(lines, d, grid, t_start_sub+dt_reduced); // Get bcs at t+dt   
+      ImplicitUpdate (Brb2, Brb1, NULL, H1p_B, H1m_B, C1_B, &lines[DIR1],
+                        lines[DIR1].lbound[BDIFF], lines[DIR1].rbound[BDIFF], 0.5*dt_reduced, DIR1);
+      #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      // [Err] Decomment next line
+        ResEnergyIncrease(dUres_b2, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt_reduced, DIR1);
+      #endif
     #endif
     // [Err] Remove next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-      // ResEnergyIncrease(dUres_b1, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
-      // ResEnergyIncrease(dUres_b2, H2p_B, H2m_B, Brb2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
-    // #endif
-    t_start_sub_res += dt_res_reduced;
-  }
-  #endif
+    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      // ResEnergyIncrease(dUres_b1, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt_reduced, DIR1);
+      // ResEnergyIncrease(dUres_b2, H2p_B, H2m_B, Brb2, grid, &lines[DIR2], 0.5*dt_reduced, DIR2);
+    #endif
 
   /* ------------------------------------------------------------
-  ------------------------------------------------------------
-    Update data
-  ------------------------------------------------------------
-  ------------------------------------------------------------ */
-  KDOM_LOOP(k) {
-    LINES_LOOP(lines[IDIR], l, j, i) {
-      #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
-        Uc[k][j][i][BX3] = Brb2[j][i]*r_1[i];
+    ------------------------------------------------------------
+      Update data
+    ------------------------------------------------------------
+    ------------------------------------------------------------ */
+    KDOM_LOOP(k) {
+      LINES_LOOP(lines[IDIR], l, j, i) {
+        #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
+          Uc[k][j][i][BX3] = Brb2[j][i]*r_1[i];
 
-        #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-        // [Err] Decomment next line
-          Uc[k][j][i][ENG] += dUres_a1[j][i]+dUres_a2[j][i]+dUres_b1[j][i]+dUres_b2[j][i];
+          #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+          // [Err] Decomment next line
+            Uc[k][j][i][ENG] += dUres_a1[j][i]+dUres_a2[j][i]+dUres_b1[j][i]+dUres_b2[j][i];
+          #endif
         #endif
-      #endif
 
-      #if (THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT)
-        // I get the int. energy from the temperature
-        #if EOS==IDEAL
-          #error Not implemented for ideal eos (but it is easy to add it!)
-        #elif EOS==PVTE_LAW
-            #ifdef TEST_ADI
-              for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+        #if (THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT)
+          // I get the int. energy from the temperature
+          #if EOS==IDEAL
+            #error Not implemented for ideal eos (but it is easy to add it!)
+          #elif EOS==PVTE_LAW
+              #ifdef TEST_ADI
+                for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
 
-              /*I think in this way the update does not conserve the energy*/
-              rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
-              rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
-              rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*Tb2[j][i]*KELVIN;
-              rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
-              Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
+                /*I think in this way the update does not conserve the energy*/
+                rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
+                rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+                rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*Tb2[j][i]*KELVIN;
+                rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+                Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
 
-              /*I think in this way the update should conserve the energy(23052018)*/
-              // Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
-            #else
-              /*I think in this way the update should conserve the energy*/
-              Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
-            #endif
-        #else
-          print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!");
+                /*I think in this way the update should conserve the energy, but it seems unstable!(23052018)*/
+                // Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
+              #else
+                /*I think in this way the update should conserve the energy, but it seems unstable!(23052018)*/
+                Uc[k][j][i][ENG] += dEdT[j][i]*(Tb2[j][i]-T[j][i]);
+
+                /*[Err]/[Rob] I think in this way the update does not conserve the energy*/
+                // for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+                // rhoe_old = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
+                // rhoe_new = InternalEnergyFunc(v, Tb2[j][i]*KELVIN); // I guess in this way it is not conservative!
+                // Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
+              #endif
+          #else
+            print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!");
+          #endif
         #endif
-      #endif
+      }
     }
+    /* -------------------------------------------------------------------------
+      Compute back the primitive vector from the updated conservative vector.
+    ------------------------------------------------------------------------- */
+    ConsToPrimLines (Uc, Vc, d->flag, lines);
+    t_start_sub += dt_reduced;
   }
 
-  /* -------------------------------------------------------------------------
-    Compute back the primitive vector from the updated conservative vector.
-  ------------------------------------------------------------------------- */
-  ConsToPrimLines (Uc, Vc, d->flag, lines);
+  // //[Err] Delete next #if lines
+  // #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
+  //   DOM_LOOP(k,j,i) {
+  //     Br_avg[j][i] = 0.5*( Br0[j][i] + Brb2[j][i]);
+  //   }
+  //   ResEnergyIncrease(dUres_b2, H2p_B, H2m_B, Br_avg, grid, &lines[DIR2], dt, DIR2);
+  //   ResEnergyIncrease(dUres_b1, H1p_B, H1m_B, Br_avg, grid, &lines[DIR1], dt, DIR1);
+  //   KDOM_LOOP(k) {
+  //       LINES_LOOP(lines[IDIR], l, j, i) {
+  //         #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+  //         // [Err] Decomment next line
+  //           Uc[k][j][i][ENG] += 0.0 + 0.0 + dUres_b1[j][i]+dUres_b2[j][i];
+  //         #endif
+  //       }
+  //   }
+  //   ConsToPrimLines (Uc, Vc, d->flag, lines);
+  // #endif
+
 }
 
 /****************************************************************************
