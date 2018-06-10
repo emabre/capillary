@@ -243,7 +243,7 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
 * In the current implementation of this function Data *d is not used
 * but I leave it there since before or later it might be needed
 *****************************************************************************/
-void BoundaryRes_ADI(Lines lines[2], const Data *d, Grid *grid, const double t) {
+void BoundaryRes_ADI(Lines lines[2], const Data *d, Grid *grid, double t) {
   int i,j,l;
   const double t_sec = t*(UNIT_LENGTH/UNIT_VELOCITY);
   double Bwall;

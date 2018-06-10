@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      NO
+#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 

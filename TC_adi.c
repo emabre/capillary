@@ -135,7 +135,7 @@ void HeatCapacity_test(double *v, double r, double z, double theta, double *dEdT
 * In the current implementation of this function Data *d is not used
 * but I leave it there since before or later it might be needed
 *****************************************************************************/
-void BoundaryTC_ADI(Lines lines[2], const Data *d, Grid *grid, const double t) {
+void BoundaryTC_ADI(Lines lines[2], const Data *d, Grid *grid, double t) {
   int i,j,l;
   double Twall;
   double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin

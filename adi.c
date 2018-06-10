@@ -154,10 +154,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   t_start_sub_tc = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     dt_res_reduced = dt/adi_res_steps;
+    //[Opt] Move this call inside  BuildIJ_X()
     BoundaryRes_ADI(lines, d, grid, t_start_sub_res);
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     dt_tc_reduced = dt/adi_tc_steps;
+    //[Opt] Move this call inside  BuildIJ_X()
     BoundaryTC_ADI(lines, d, grid, t_start_sub_tc);
   #endif
 
@@ -169,8 +171,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     --------------------------------------------------------------------------- */
   PrimToConsLines (Vc, Uc, lines);
 
-  // [Rob] Maybe I should call also Boundary(), it sets the internal ghost cells,
-  // which will be later used to compute eta and k
+  //[Opt] Move this call inside  BuildIJ_X()
   Boundary(d, ALL_DIR, grid);
 
   /* -------------------------------------------------------------------------
@@ -313,6 +314,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
         #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
         // [Err] Decomment next line
+          print1("C'è un errore perchè non hai sommato bene tutti i dUresX");
           Uc[k][j][i][ENG] += dUres_a1[j][i]+dUres_a2[j][i]+dUres_b1[j][i]+dUres_b2[j][i];
         #endif
       #endif
@@ -357,7 +359,7 @@ Performs an implicit update of a diffusive problem (either for B or for T)
 void ImplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
-                     int const dir) {
+                     int dir) {
   /*[Opt] Maybe I could pass to this func. an integer which tells which bc has to be
   used inside the structure *lines, instead of passing separately the bcs (which are
   still also contained inside *lines)*/
@@ -525,7 +527,7 @@ Performs an explicit update of a diffusive problem (either for B or for T)
 void ExplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
-                     int const dir) {
+                     int dir) {
   int i,j,l;
   int ridx, lidx;
   int Nlines = lines->N;
@@ -735,15 +737,138 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
 
 /* ***********************************************************
  * Peachman-Rachford ADI method.
+ * 
+ * input: diff = BDIFF or TDIFF
+ *        rz = 1 or 0: tells whether the order of the directions
+ *                     must be r, z (1) or z, r (0).
  * ***********************************************************/
-void PeacemanRachford(double **v_new, double **v_old,
-                      double **H1p, double **H1m, double **C1,
-                      double **H2p, double **H2m, double **C2,
-                      Lines *lines, int const diff,
-                      double const dt, double const t0) {
-  
-  
+void PeacemanRachford(double **v_new, double **v_old, double **dUres,
+                      const Data *d, Grid *grid,
+                      double **Ip, double **Im, double **CI,
+                      double **Jp, double **Jm, double **CJ,
+                      Lines *lines, int diff, int rz,
+                      double dt, double t0) {
+    
+    static double **v_aux; // auxiliary solution vector
+    static int first_call = 1;
+    double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
+    double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
+    int dir1, dir2;
+    // void (*BoundaryADI) (Lines, const Data, Grid, double);
+    BoundaryADI *ApplyBCs;
+    int k,j,i,l;
 
+    if (first_call) {
+      v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+        dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      #endif
+      first_call = 0;
+    }
+
+    /* Set the direction order*/
+    if (rz == 1) {
+      H1p = Ip;     H1m = Im;
+      H2p = Jp;     H2m = Jm;
+      C1 = CI;      C2 = CJ;
+      dir1 = IDIR;  dir2 = JDIR;
+    } else if (rz == 0) {
+      H1p = Jp;     H1m = Jm;
+      H2p = Ip;     H2m = Im;
+      C1 = CJ;      C2 = CI;
+      dir1 = JDIR;  dir2 = IDIR;
+    }
+
+    if (diff == BDIFF)
+      ApplyBCs = BoundaryRes_ADI;
+    else if (diff == TDIFF)
+      ApplyBCs = BoundaryTC_ADI;
+    else {
+      print1("\n[PeachmanRachford]Wrong setting for diffusion (diff) problem");
+      QUIT_PLUTO(1);
+    }
+
+    /**********************************
+     (a.1) Explicit update sweeping DIR1
+    **********************************/
+    ApplyBCs(lines, d, grid, t0);
+    // [Err] Remove next #if lines
+    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      // ResEnergyIncrease(dUres_a1, H1p, H1m, Br, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
+      // ResEnergyIncrease(dUres_a2, H2p, H2m, Br, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
+    // #endif
+    ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
+    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      if (diff == BDIFF) {
+        // [Err] Decomment next line
+        // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
+        //       instead of doing it a line later 
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_aux, grid, &lines[dir1], 0.5*dt, dir1);
+        KDOM_LOOP(k)
+          LINES_LOOP(lines[IDIR], l, j, i)
+            dUres[j][i] += dUres_aux[j][i];
+      }
+    #endif
+
+    /**********************************
+     (a.2) Implicit update sweeping DIR2
+    **********************************/
+    ApplyBCs(lines, d, grid, t0 + dt*0.5);
+    ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
+    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      if (diff == BDIFF) {
+        // [Err] Decomment next line
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
+        KDOM_LOOP(k)
+          LINES_LOOP(lines[IDIR], l, j, i)
+            dUres[j][i] += dUres_aux[j][i];
+      }
+    #endif
+    // [Err] Remove next four lines
+    // ResEnergyIncrease(dUres_a1, Ip, Im, Bra2, grid, &lines[IDIR], 0.5*dt_res_reduced, IDIR);
+    // ResEnergyIncrease(dUres_a2, Jp, Jm, Bra2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
+    // ResEnergyIncrease(dUres_b1, Ip, Im, Bra2, grid, &lines[IDIR], 0.5*dt_res_reduced, IDIR);
+    // ResEnergyIncrease(dUres_b2, Jp, Jm, Bra2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
+
+    /**********************************
+     (b.1) Explicit update sweeping DIR2
+    **********************************/
+    ExplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
+                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
+    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      if (diff == BDIFF) {
+        /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
+           (but in this way it is more readable)*/
+        // [Err] Decomment next line       
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_aux, grid, &lines[DIR2], 0.5*dt, DIR2);
+        KDOM_LOOP(k)
+          LINES_LOOP(lines[IDIR], l, j, i)
+            dUres[j][i] += dUres_aux[j][i];
+      }    
+    #endif
+
+    /**********************************
+     (b.2) Implicit update sweeping DIR1
+    **********************************/
+    ApplyBCs(lines, d, grid, t0 + dt);
+    ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
+    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      if (diff == BDIFF) {
+        // [Err] Decomment next line
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], 0.5*dt, dir1);
+        KDOM_LOOP(k)
+          LINES_LOOP(lines[IDIR], l, j, i)
+            dUres[j][i] += dUres_aux[j][i];
+      }
+    #endif
+    // [Err] Remove next #if lines
+    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      // ResEnergyIncrease(dUres_b1, H1p, H1m, Brb2, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
+      // ResEnergyIncrease(dUres_b2, H2p, H2m, Brb2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
+    // #endif
 }
 
 /*******************************************************
