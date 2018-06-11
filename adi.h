@@ -17,6 +17,14 @@
 #define LINES_LOOP(lines, l, line_idx , line_sweeper) \
   for ((line_idx)=lines.dom_line_idx[(l)=0]; (l)<lines.N; (line_idx)=lines.dom_line_idx[++(l)]) \
   for ((line_sweeper)=lines.lidx[(l)]; (line_sweeper)<=lines.ridx[(l)]; (line_sweeper)++)
+
+#define FIRST_IDIR 0
+#define FIRST_JDIR 1
+#ifdef FIRST_JDIR_THEN_IDIR
+  #define ORDER FIRST_IDIR
+#else
+  #define ORDER FIRST_JDIR
+#endif
 /**********************/
 
 #if (THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT) && \
@@ -66,11 +74,20 @@ typedef struct LINES{
 // I define a function pointer type, that will take the value of the right bc function
 // typedef void (*BoundaryADI) (Lines lines[2], const Data *d, Grid *grid, double t);
 typedef void BoundaryADI (Lines lines[2], const Data *d, Grid *grid, double t);
+// I define a function pointer type, that will take the value of the right IJ builder function
+typedef void BuildIJ (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
+                      double **Jp, double **Jm, double **CI, double **CJ, double **dEdT);
 
 void InitializeLines (Lines *, int);
 void GeometryADI (Lines *lines, Grid *grid);
 void BoundaryRes_ADI(Lines lines[2], const Data *d, Grid *grid, double t);
 void BoundaryTC_ADI(Lines lines[2], const Data *d, Grid *grid, double t);
+
+void PeacemanRachford(double **v_new, double **v_old,
+                      double **dUres, double **dEdT,
+                      const Data *d, Grid *grid,
+                      Lines *lines, int diff, int order,
+                      double dt, double t0);
 
 void ExplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
@@ -80,26 +97,28 @@ void ImplicitUpdate (double **v, double **rhs, double **source,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt, int dir);
 void tdm_solver(double *x, double const *diagonal, double const *upper,
                 double const *lower, double const *right_hand_side, int const N);
-                     
-#if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-void BuildIJ_TC (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
-                    double **Jp, double **Jm, double **CI, double **CJ, double **dEdT);
-#ifdef TEST_ADI
-  void HeatCapacity_test(double *v, double r, double z, double theta, double *dEdT);
-#endif
+
+#if THERMAL_CONDUCTION  == ALTERNATING_DIRECTION_IMPLICIT
+  void BuildIJ_TC (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
+                  double **Jp, double **Jm, double **CI, double **CJ, double **dEdT);
+  #ifdef TEST_ADI
+    void HeatCapacity_test(double *v, double r, double z, double theta, double *dEdT);
+  #endif
 #endif
 
 #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-void BuildIJ_Res (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
-                     double **Jp, double **Jm, double **CI, double **CJ);
+  void BuildIJ_Res (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
+                      double **Jp, double **Jm, double **CI, double **CJ, double **useless);
   #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
     void ResEnergyIncrease(double **dUres, double** Ip_B, double** Im_B, double **Br,
-                           Grid *grid, Lines *lines, double dt, int dir);
+                            Grid *grid, Lines *lines, double dt, int dir);
   #endif
 #endif
 
 /* Stuff to do prim->cons and cons->prim conversions*/
 void ConsToPrimLines (Data_Arr U, Data_Arr V, unsigned char ***flag, Lines *lines);
 void PrimToConsLines (Data_Arr V, Data_Arr U, Lines *lines);
+
+void SwapDoublePointers (double **a, double **b);
 
 #endif

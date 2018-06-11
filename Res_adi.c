@@ -3,13 +3,17 @@
 #include "capillary_wall.h"
 #include "current_table.h"
 
+#define UNUSED(x) (void)(x)
 
+#if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
 /****************************************************************************
 Function to build the Ip,Im,Jp,Jm for the electrical resistivity problem
+(**useless parameter is intentionally unused, to make this function suitable for a pointer
+ which also wants that parameter)
 *****************************************************************************/
 void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
                    double **Ip, double **Im, double **Jp,
-                   double **Jm, double **CI, double **CJ) {
+                   double **Jm, double **CI, double **CJ, double **useless) {
   int i,j,k;
   int nv, l;
   double eta[3]; // Electr. resistivity
@@ -19,6 +23,7 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
   double *zL, *zR;
   double *rL, *rR;
   double *r, *z, *theta;
+  UNUSED(**useless);
 
   /* -- set a pointer to the primitive vars array --
     I do this because it is done also in other parts of the code
@@ -321,3 +326,5 @@ void BoundaryRes_ADI(Lines lines[2], const Data *d, Grid *grid, double t) {
     lines[JDIR].rbound[BDIFF][l].values[0] = 0.0;
   }
 }
+
+#endif

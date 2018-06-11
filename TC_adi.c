@@ -4,6 +4,8 @@
 #include "Thermal_Conduction/tc.h"
 #include "pvte_law_heat_capacity.h"
 
+#if THERMAL_CONDUCTION  == ALTERNATING_DIRECTION_IMPLICIT
+
 /****************************************************************************
 Function to build the Ip,Im,Jp,Jm, CI, CJ (and also dEdT) for the thermal conduction problem
 Note that I must make available for outside dEdT, as I will use it later to
@@ -194,3 +196,5 @@ void BoundaryTC_ADI(Lines lines[2], const Data *d, Grid *grid, double t) {
     lines[JDIR].rbound[TDIFF][l].values[0] = 0.0;
   }
 }
+
+#endif
