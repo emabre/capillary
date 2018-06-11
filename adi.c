@@ -14,18 +14,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static int first_call=1;
   int i,j,k, l;
   
-  // [Err] Are you sure you want to do multiple steps inside a single adi call?
-  int s;
-  double t_start_sub_res, t_start_sub_tc;
-  
   static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     static double **Br_new, **Br_old, **Br;
     // static double **Br_avg;
     // Energy increse(due to electro-magnetics) terms
     static double **dUres;
-    int const adi_res_steps = NSUBS_RES_ADI;
-    double dt_res_reduced;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     static double **T_new, **T_old, **T;
@@ -33,9 +27,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
     // double rhoe_old, rhoe_new;
     int nv;
-    int const adi_tc_steps = NSUBS_TC_ADI;
-    double dt_tc_reduced;
   #endif
+
+  int s;
+  double t_start_sub;
+  double dt_reduced;  
+  int const adi_steps = NSUBS_ADI;
   const double dt = g_dt;
   double ****Uc, ****Vc;
   double *r, *r_1;
@@ -88,14 +85,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     first_call=0;
   }
 
-  t_start_sub_res = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
-  t_start_sub_tc = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    dt_res_reduced = dt/adi_res_steps;
-  #endif
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    dt_tc_reduced = dt/adi_tc_steps;
-  #endif
+  t_start_sub = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
+  dt_reduced = dt/adi_steps;
 
   /* -------------------------------------------------------------------------
       Compute the conservative vector in order to start the cycle.
@@ -103,115 +94,104 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       contains Vc as well as Uc (for future improvements).
       [Ema] (Comment copied from sts.c)
     --------------------------------------------------------------------------- */
-  Boundary(d, ALL_DIR, grid);
   PrimToConsLines (Vc, Uc, lines);
+  Boundary(d, ALL_DIR, grid);
 
-  /* -------------------------------------------------------------------------
-        Build the temperature (T) and/or the product magnetic field with radius (B*r)
-      ------------------------------------------------------------------------- */
+  for (s=0; s<adi_steps; s++) {
 
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    #if EOS==IDEAL
-      DOM_LOOP(k,j,i) T[j][i] = Vc[PRS][k][j][i]/Vc[RHO][k][j][i];
-    #elif EOS==PVTE_LAW
-      DOM_LOOP(k,j,i) {
-        for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
-        if (GetPV_Temperature(v, &(T[j][i]) )!=0) {
-          print1("ADI:[Ema] Error computing temperature!\n");
+    /* ---- Build temperature vector ---- */
+    #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+      #if EOS==PVTE_LAW
+        DOM_LOOP(k,j,i) {
+          for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+          if (GetPV_Temperature(v, &(T[j][i]) )!=0) {
+            print1("ADI:[Ema] Error computing temperature!\n");
+          }
+          T_old[j][i] = T[j][i] = T[j][i] / KELVIN;
         }
-        T_old[j][i] = T[j][i] = T[j][i] / KELVIN;
-      }
-    #else
-      print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
-    #endif
-  #endif
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    // Build a handy magnetic field matrix
-    DOM_LOOP(k,j,i) {
-      Br_old[j][i] = Br[j][i] = r[i]*Uc[k][j][i][BX3];
-    }
-  #endif
+      #else
+        print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
+      #endif
 
-  /* ------------------------------------------------------------
-     ------------------------------------------------------------
-      Actual ADI calls
-     ------------------------------------------------------------
-     ------------------------------------------------------------ */
-  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    for (s=0; s<adi_tc_steps; s++) {
-      PeacemanRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_tc_reduced, t_start_sub_tc);
-      SwapDoublePointers (&T_new, &T_old);
+      /* ---- Avdance T with ADI ---- */
+      PeacemanRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub);
 
+      /* ---- Update total energy ---- */
       KDOM_LOOP(k)
         LINES_LOOP(lines[IDIR], l, j, i) {
-          #if (THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT)
-            // I get the int. energy from the temperature
-            #if EOS==IDEAL
-              #error Not implemented for ideal eos (but it is easy to add it!)
-            #elif EOS==PVTE_LAW
-                #ifdef TEST_ADI
-                  for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+          // I get the int. energy from the temperature
+          #if EOS==IDEAL
+            #error Not implemented for ideal eos (but it is easy to add it!)
+          #elif EOS==PVTE_LAW
+              #ifdef TEST_ADI
+                for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
 
-                  /*I think in this way the update does not conserve the energy*/
-                  rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
-                  rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
-                  rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T_new[j][i]*KELVIN;
-                  rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
-                  Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
+                /*I think in this way the update does not conserve the energy*/
+                rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
+                rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+                rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T_new[j][i]*KELVIN;
+                rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+                Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
 
-                  /*I think in this way the update should conserve the energy(23052018)*/
-                  // Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T[j][i]);
-                #else
-                  /*I think in this way the update should conserve the energy*/
-                  Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T[j][i]);
-                #endif
-            #else
-              print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!");
-            #endif
+                /*I think in this way the update should conserve the energy(23052018)*/
+                // Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T[j][i]);
+              #else
+                /*I think in this way the update should conserve the energy*/
+                Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T_old[j][i]);
+              #endif
+          #else
+            print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!");
           #endif
         }
 
-      t_start_sub_tc += dt_tc_reduced;
-    }
-    SwapDoublePointers (&T_new, &T_old);
-  #endif
+      /* ---- Swap pointers to be ready for next cycle ---*/
+      SwapDoublePointers (&T_new, &T_old);
+    #endif
 
-  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-    DOM_LOOP(k,j,i)
-      dUres[j][i] = 0.0;
-    for (s=0; s<adi_res_steps; s++) {
+    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+
+      /* ---- Build B*r vector ---- */
+      DOM_LOOP(k,j,i) {
+        Br_old[j][i] = Br[j][i] = r[i]*Uc[k][j][i][BX3];
+      }
+
       // [Err] Remove next #if lines
       // #if (JOULE_EFFECT_AND_MAG_ENG)
         // ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
         // ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Br, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
       // #endif
-      PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_res_reduced, t_start_sub_res);
-      SwapDoublePointers (&Br_new, &Br_old);
+
+      /* ---- Avdance B*r with ADI ---- */
+      PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
+      
       // [Err] Remove next #if lines
       // #if (JOULE_EFFECT_AND_MAG_ENG)
         // ResEnergyIncrease(dUres_b1, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
         // ResEnergyIncrease(dUres_b2, H2p_B, H2m_B, Brb2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
       // #endif
+
+      /* ---- Update total energy ---- */
       KDOM_LOOP(k)
         LINES_LOOP(lines[IDIR], l, j, i) {
-          #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
-            Uc[k][j][i][BX3] = Br_new[j][i]*r_1[i];
+          Uc[k][j][i][BX3] = Br_new[j][i]*r_1[i];
 
-            #if (JOULE_EFFECT_AND_MAG_ENG)
-              // [Err] Decomment next line
-              Uc[k][j][i][ENG] += dUres[j][i];
-            #endif
+          #if (JOULE_EFFECT_AND_MAG_ENG)
+            // [Err] Decomment next line
+            Uc[k][j][i][ENG] += dUres[j][i];
           #endif
         }
-      t_start_sub_res += dt_res_reduced;
-    }
-    SwapDoublePointers (&Br_new, &Br_old);
-  #endif
 
-  /* -------------------------------------------------------------------------
-    Compute back the primitive vector from the updated conservative vector.
-  ------------------------------------------------------------------------- */
-  ConsToPrimLines (Uc, Vc, d->flag, lines);
+      /* ---- Swap pointers to be ready for next cycle ---*/
+      SwapDoublePointers (&Br_new, &Br_old);
+    #endif
+
+    /* -------------------------------------------------------------------------
+        Compute back the primitive vector from the updated conservative vector.
+        ------------------------------------------------------------------------- */
+    ConsToPrimLines (Uc, Vc, d->flag, lines);
+
+    t_start_sub += dt_reduced;
+  }
 }
 
 /****************************************************************************
@@ -684,7 +664,7 @@ void PeacemanRachford(double **v_new, double **v_old,
         //       instead of doing it a line later 
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], 0.5*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
-          dUres[j][i] += dUres_aux[j][i];
+          dUres[j][i] = dUres_aux[j][i];
       }
     #endif
 

@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      NO
+#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -56,7 +56,7 @@
 
 /* ---------------------------------------------------- */
 /*  Ema's additional macros                            */
-// #define  FREEZE_FLUID
+// #define FREEZE_FLUID
 #define FIRST_JDIR_THEN_IDIR NO
 // #define  TEST_ADI
 #define JOULE_EFFECT_AND_MAG_ENG (YES  &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
@@ -65,8 +65,7 @@
 #define IMPOSE_TWALL NO
 #define IMPOSE_BWALL NO
 /* Number of subcycles performed by ADI scheme*/
-#define NSUBS_RES_ADI    40
-#define NSUBS_TC_ADI    1
+#define NSUBS_ADI    10
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
 // #define ELECTR_NEUM
 /* To set to 0 the mag field in a region outside capillary*/
