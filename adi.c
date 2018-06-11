@@ -141,6 +141,36 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     for (s=0; s<adi_tc_steps; s++) {
       PeacemanRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_tc_reduced, t_start_sub_tc);
       SwapDoublePointers (&T_new, &T_old);
+
+      KDOM_LOOP(k)
+        LINES_LOOP(lines[IDIR], l, j, i) {
+          #if (THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT)
+            // I get the int. energy from the temperature
+            #if EOS==IDEAL
+              #error Not implemented for ideal eos (but it is easy to add it!)
+            #elif EOS==PVTE_LAW
+                #ifdef TEST_ADI
+                  for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+
+                  /*I think in this way the update does not conserve the energy*/
+                  rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
+                  rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+                  rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T_new[j][i]*KELVIN;
+                  rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
+                  Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
+
+                  /*I think in this way the update should conserve the energy(23052018)*/
+                  // Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T[j][i]);
+                #else
+                  /*I think in this way the update should conserve the energy*/
+                  Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T[j][i]);
+                #endif
+            #else
+              print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!");
+            #endif
+          #endif
+        }
+
       t_start_sub_tc += dt_tc_reduced;
     }
     SwapDoublePointers (&T_new, &T_old);
@@ -151,65 +181,32 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       dUres[j][i] = 0.0;
     for (s=0; s<adi_res_steps; s++) {
       // [Err] Remove next #if lines
-      // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      // #if (JOULE_EFFECT_AND_MAG_ENG)
         // ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
         // ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Br, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
       // #endif
       PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_res_reduced, t_start_sub_res);
       SwapDoublePointers (&Br_new, &Br_old);
       // [Err] Remove next #if lines
-      // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      // #if (JOULE_EFFECT_AND_MAG_ENG)
         // ResEnergyIncrease(dUres_b1, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
         // ResEnergyIncrease(dUres_b2, H2p_B, H2m_B, Brb2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
       // #endif
+      KDOM_LOOP(k)
+        LINES_LOOP(lines[IDIR], l, j, i) {
+          #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
+            Uc[k][j][i][BX3] = Br_new[j][i]*r_1[i];
+
+            #if (JOULE_EFFECT_AND_MAG_ENG)
+              // [Err] Decomment next line
+              Uc[k][j][i][ENG] += dUres[j][i];
+            #endif
+          #endif
+        }
       t_start_sub_res += dt_res_reduced;
     }
     SwapDoublePointers (&Br_new, &Br_old);
   #endif
-
-  /* ------------------------------------------------------------
-     ------------------------------------------------------------
-      Update data
-     ------------------------------------------------------------
-     ------------------------------------------------------------ */
-  KDOM_LOOP(k) {
-    LINES_LOOP(lines[IDIR], l, j, i) {
-      #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
-        Uc[k][j][i][BX3] = Br_new[j][i]*r_1[i];
-
-        #if (JOULE_EFFECT_AND_MAG_ENG)
-          // [Err] Decomment next line
-          Uc[k][j][i][ENG] += dUres[j][i];
-        #endif
-      #endif
-
-      #if (THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT)
-        // I get the int. energy from the temperature
-        #if EOS==IDEAL
-          #error Not implemented for ideal eos (but it is easy to add it!)
-        #elif EOS==PVTE_LAW
-            #ifdef TEST_ADI
-              for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
-
-              /*I think in this way the update does not conserve the energy*/
-              rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
-              rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
-              rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T_new[j][i]*KELVIN;
-              rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
-              Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
-
-              /*I think in this way the update should conserve the energy(23052018)*/
-              // Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T[j][i]);
-            #else
-              /*I think in this way the update should conserve the energy*/
-              Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T[j][i]);
-            #endif
-        #else
-          print1("ADI:[Ema] Error computing internal energy, this EOS not implemented!");
-        #endif
-      #endif
-    }
-  }
 
   /* -------------------------------------------------------------------------
     Compute back the primitive vector from the updated conservative vector.
