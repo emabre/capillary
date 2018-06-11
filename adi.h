@@ -2,7 +2,17 @@
 #define ADI_H
 /* Contains some structures used for the adi method*/
 
-// #define TEST_ADI
+#if KBEG != KEND
+  #error grid in k direction should only be of 1 point
+#endif
+
+#if !HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG
+  #error You need an energy to accunt for Joule effect and mag. energy
+#endif
+
+#if (JOULE_EFFECT_AND_MAG_ENG && RESISTIVITY!=ALTERNATING_DIRECTION_IMPLICIT)
+  #error Joule effect and mag. energy requires ADI for resistivity
+#endif
 
 /*********************
  * Some useful macros
@@ -25,6 +35,9 @@
 #else
   #define ORDER FIRST_JDIR
 #endif
+
+// // For swapping arrays
+// #define SWAP_DOUBLE_POINTERS
 /**********************/
 
 #if (THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT) && \
@@ -80,8 +93,8 @@ typedef void BuildIJ (const Data *d, Grid *grid, Lines *lines, double **Ip, doub
 
 void InitializeLines (Lines *, int);
 void GeometryADI (Lines *lines, Grid *grid);
-void BoundaryRes_ADI(Lines lines[2], const Data *d, Grid *grid, double t);
-void BoundaryTC_ADI(Lines lines[2], const Data *d, Grid *grid, double t);
+void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t);
+void BoundaryADI_TC(Lines lines[2], const Data *d, Grid *grid, double t);
 
 void PeacemanRachford(double **v_new, double **v_old,
                       double **dUres, double **dEdT,
@@ -119,6 +132,6 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
 void ConsToPrimLines (Data_Arr U, Data_Arr V, unsigned char ***flag, Lines *lines);
 void PrimToConsLines (Data_Arr V, Data_Arr U, Lines *lines);
 
-void SwapDoublePointers (double **a, double **b);
+void SwapDoublePointers (double ***a, double ***b);
 
 #endif

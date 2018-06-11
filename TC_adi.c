@@ -59,6 +59,9 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
     dEdT[j][i] = 0.0;
   }
   // lines->lidx
+  // [Opt] I could compose the grid-related part once forever (in static variables) and only update kappa
+  //       in this case I could make that this function allocates Ip Im Jp Jm , instead of letting the rest of
+  //       the program do that
   KDOM_LOOP(k) {
     LINES_LOOP(lines[IDIR], l, j, i) {
       /* :::: Ip :::: */
@@ -137,7 +140,7 @@ void HeatCapacity_test(double *v, double r, double z, double theta, double *dEdT
 * In the current implementation of this function Data *d is not used
 * but I leave it there since before or later it might be needed
 *****************************************************************************/
-void BoundaryTC_ADI(Lines lines[2], const Data *d, Grid *grid, double t) {
+void BoundaryADI_TC(Lines lines[2], const Data *d, Grid *grid, double t) {
   int i,j,l;
   double Twall;
   double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin

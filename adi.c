@@ -10,10 +10,6 @@ and thermal conduction) terms with the Alternating Direction Implicit algorithm*
 #include "adi.h"
 #include "capillary_wall.h"
 
-#if KBEG != KEND
-  #error grid in k direction should only be of 1 point
-#endif
-
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static int first_call=1;
   int i,j,k, l;
@@ -69,9 +65,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       Br_old = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       // Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       dUres = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      
+      // This is just for debug purposes
       TOT_LOOP (k,j,i) {
         Br_new[j][i] = 0.0;
         Br[j][i] = 0.0;
+        // dUres[j][i] = 0.0;
       }
     #endif
 
@@ -141,27 +140,31 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
     for (s=0; s<adi_tc_steps; s++) {
       PeacemanRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_tc_reduced, t_start_sub_tc);
-      SwapDoublePointers (T_new, T_old);
+      SwapDoublePointers (&T_new, &T_old);
       t_start_sub_tc += dt_tc_reduced;
     }
+    SwapDoublePointers (&T_new, &T_old);
   #endif
 
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-  for (s=0; s<adi_res_steps; s++) {
-    // [Err] Remove next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-      // ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
-      // ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Br, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
-    // #endif
-    PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_res_reduced, t_start_sub_res);
-    SwapDoublePointers (Br_new, Br_old);
-    // [Err] Remove next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-      // ResEnergyIncrease(dUres_b1, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
-      // ResEnergyIncrease(dUres_b2, H2p_B, H2m_B, Brb2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
-    // #endif
-    t_start_sub_res += dt_res_reduced;
-  }
+    DOM_LOOP(k,j,i)
+      dUres[j][i] = 0.0;
+    for (s=0; s<adi_res_steps; s++) {
+      // [Err] Remove next #if lines
+      // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+        // ResEnergyIncrease(dUres_a1, H1p_B, H1m_B, Br, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
+        // ResEnergyIncrease(dUres_a2, H2p_B, H2m_B, Br, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
+      // #endif
+      PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_res_reduced, t_start_sub_res);
+      SwapDoublePointers (&Br_new, &Br_old);
+      // [Err] Remove next #if lines
+      // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+        // ResEnergyIncrease(dUres_b1, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
+        // ResEnergyIncrease(dUres_b2, H2p_B, H2m_B, Brb2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
+      // #endif
+      t_start_sub_res += dt_res_reduced;
+    }
+    SwapDoublePointers (&Br_new, &Br_old);
   #endif
 
   /* ------------------------------------------------------------
@@ -174,7 +177,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #if (RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT)
         Uc[k][j][i][BX3] = Br_new[j][i]*r_1[i];
 
-        #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+        #if (JOULE_EFFECT_AND_MAG_ENG)
           // [Err] Decomment next line
           Uc[k][j][i][ENG] += dUres[j][i];
         #endif
@@ -612,20 +615,20 @@ void PeacemanRachford(double **v_new, double **v_old,
     
     static double **v_aux; // auxiliary solution vector
     static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
-    static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
     static int first_call = 1;
     double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
     // void (*BoundaryADI) (Lines, const Data, Grid, double);
     BoundaryADI *ApplyBCs;
     BuildIJ *MakeIJ;
     int dir1, dir2;
-    #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+    #if (JOULE_EFFECT_AND_MAG_ENG)
+      static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
       int l,i,j;
     #endif
 
     if (first_call) {
       v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
+      #if (JOULE_EFFECT_AND_MAG_ENG)
         dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       #endif
       Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -653,13 +656,13 @@ void PeacemanRachford(double **v_new, double **v_old,
     switch (diff) {
       #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
         case BDIFF:
-          ApplyBCs = BoundaryRes_ADI;
+          ApplyBCs = BoundaryADI_Res;
           MakeIJ = BuildIJ_Res;
           break;
       #endif
       #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
         case TDIFF:
-          ApplyBCs = BoundaryTC_ADI;
+          ApplyBCs = BoundaryADI_TC;
           MakeIJ = BuildIJ_TC;
           break;
       #endif
@@ -675,19 +678,14 @@ void PeacemanRachford(double **v_new, double **v_old,
     /**********************************
      (a.1) Explicit update sweeping DIR1
     **********************************/
-    // [Err] Remove next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-      // ResEnergyIncrease(dUres_a1, H1p, H1m, Br, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
-      // ResEnergyIncrease(dUres_a2, H2p, H2m, Br, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
-    // #endif
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
-    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG && RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
+    #if (JOULE_EFFECT_AND_MAG_ENG)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
         //       instead of doing it a line later 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_aux, grid, &lines[dir1], 0.5*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], 0.5*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -699,7 +697,7 @@ void PeacemanRachford(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt*0.5);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
-    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG && RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
+    #if (JOULE_EFFECT_AND_MAG_ENG)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
@@ -707,23 +705,18 @@ void PeacemanRachford(double **v_new, double **v_old,
           dUres[j][i] += dUres_aux[j][i];
       }
     #endif
-    // [Err] Remove next four lines
-    // ResEnergyIncrease(dUres_a1, Ip, Im, Bra2, grid, &lines[IDIR], 0.5*dt_res_reduced, IDIR);
-    // ResEnergyIncrease(dUres_a2, Jp, Jm, Bra2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
-    // ResEnergyIncrease(dUres_b1, Ip, Im, Bra2, grid, &lines[IDIR], 0.5*dt_res_reduced, IDIR);
-    // ResEnergyIncrease(dUres_b2, Jp, Jm, Bra2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
 
     /**********************************
      (b.1) Explicit update sweeping DIR2
     **********************************/
     ExplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
                     lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
-    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG && RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
+    #if (JOULE_EFFECT_AND_MAG_ENG)
       if (diff == BDIFF) {
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
            (but in this way it is more readable)*/
         // [Err] Decomment next line       
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_aux, grid, &lines[dir2], 0.5*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }    
@@ -735,7 +728,7 @@ void PeacemanRachford(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
                       lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
-    #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG && RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
+    #if (JOULE_EFFECT_AND_MAG_ENG)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], 0.5*dt, dir1);
@@ -743,21 +736,16 @@ void PeacemanRachford(double **v_new, double **v_old,
           dUres[j][i] += dUres_aux[j][i];
       }
     #endif
-    // [Err] Remove next #if lines
-    // #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
-      // ResEnergyIncrease(dUres_b1, H1p, H1m, Brb2, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
-      // ResEnergyIncrease(dUres_b2, H2p, H2m, Brb2, grid, &lines[DIR2], 0.5*dt_res_reduced, DIR2);
-    // #endif
 }
 
 /* ***********************************************************
  * Function to swap double pointers to double
  * ***********************************************************/
-void SwapDoublePointers (double **a, double **b) {
+void SwapDoublePointers (double ***a, double ***b) {
   double **temp;
-  temp = a;
-  a = b;
-  b = temp;
+  temp = *a;
+  *a = *b;
+  *b = temp;
 }
 
 /*******************************************************

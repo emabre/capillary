@@ -54,6 +54,9 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
     CI[j][i] = 0.0;
     CJ[j][i] = 0.0;
   }
+  // [Opt] I could compose the grid-related part once forever (in static variables) and only update eta
+  //       in this case I could make that this function allocates Ip Im Jp Jm , instead of letting the rest of
+  //       the program do that
   // lines->lidx
   KDOM_LOOP(k) {
     LINES_LOOP(lines[IDIR], l, j, i) {
@@ -248,7 +251,7 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
 * In the current implementation of this function Data *d is not used
 * but I leave it there since before or later it might be needed
 *****************************************************************************/
-void BoundaryRes_ADI(Lines lines[2], const Data *d, Grid *grid, double t) {
+void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t) {
   int i,j,l;
   const double t_sec = t*(UNIT_LENGTH/UNIT_VELOCITY);
   double Bwall;

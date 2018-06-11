@@ -57,16 +57,16 @@
 /* ---------------------------------------------------- */
 /*  Ema's additional macros                            */
 // #define  FREEZE_FLUID
-// #define FIRST_JDIR_THEN_IDIR YES
+#define FIRST_JDIR_THEN_IDIR NO
 // #define  TEST_ADI
-#define JOULE_EFFECT_AND_MAG_ENG YES
+#define JOULE_EFFECT_AND_MAG_ENG (YES  &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
 /* Macros to impose T (B) on walls also for advection (unphisical!)
    (if NO, conduction and B diffusion can be modeled only via ADI scheme) */
 #define IMPOSE_TWALL NO
 #define IMPOSE_BWALL NO
 /* Number of subcycles performed by ADI scheme*/
-#define NSUBS_RES_ADI    10
-#define NSUBS_TC_ADI    3
+#define NSUBS_RES_ADI    40
+#define NSUBS_TC_ADI    1
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
 // #define ELECTR_NEUM
 /* To set to 0 the mag field in a region outside capillary*/
