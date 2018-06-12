@@ -95,9 +95,23 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       [Ema] (Comment copied from sts.c)
     --------------------------------------------------------------------------- */
   PrimToConsLines (Vc, Uc, lines);
-  Boundary(d, ALL_DIR, grid);
+  // Boundary(d, ALL_DIR, grid);
+  /* ---- Build B*r vector ---- */
+  // [Err] remove
+  DOM_LOOP(k,j,i) {
+    Br_old[j][i] = Br[j][i] = r[i]*Uc[k][j][i][BX3];
+  }
+
+  //[Err] remove next #if lines
+  // #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+  //   BoundaryADI_Res(lines, d, grid, t_start_sub);
+  // #endif
+  // #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+  //   BoundaryADI_TC(lines, d, grid, t_start_sub);
+  // #endif
 
   for (s=0; s<adi_steps; s++) {
+    Boundary(d, ALL_DIR, grid);
 
     /* ---- Build temperature vector ---- */
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
@@ -150,10 +164,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
     #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
 
-      /* ---- Build B*r vector ---- */
-      DOM_LOOP(k,j,i) {
-        Br_old[j][i] = Br[j][i] = r[i]*Uc[k][j][i][BX3];
-      }
+      // No need to re-build the magnetic field, as it does not depend on the temperature
 
       // [Err] Remove next #if lines
       // #if (JOULE_EFFECT_AND_MAG_ENG)
