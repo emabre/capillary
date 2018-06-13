@@ -251,7 +251,7 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
 * In the current implementation of this function Data *d is not used
 * but I leave it there since before or later it might be needed
 *****************************************************************************/
-void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t) {
+void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t, int dir) {
   int i,j,l;
   const double t_sec = t*(UNIT_LENGTH/UNIT_VELOCITY);
   double Bwall;
@@ -264,69 +264,76 @@ void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t) {
   curr = current_from_time(t_sec);
   Bwall = BIOTSAV_GAUSS_A_CM(curr, RCAP)/unit_Mfield;
 
-  // IDIR lines
-  for (l=0; l<lines[IDIR].N; l++) {
-    j = lines[IDIR].dom_line_idx[l];
-    /* :::: Axis :::: */
-    lines[IDIR].lbound[BDIFF][l].kind = DIRICHLET;
-    lines[IDIR].lbound[BDIFF][l].values[0] = 0.0;
-    if ( j < j_elec_start) {
-      /* :::: Capillary wall (no electrode) :::: */
-      lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-      lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real;
-    } else if (j >= j_elec_start && j <= j_cap_inter_end) {
-      /* :::: Electrode :::: */
-      // [Err] Delete next two lines
-      #ifdef ELECTR_NEUM
-        // [Err] Decomment next lines
-        lines[IDIR].rbound[BDIFF][l].kind = NEUMANN_HOM;
-        lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
-
-        // [Err] remove next lines
-        // lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        // lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-        //    (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
-      #else
+  if (dir == IDIR) {
+    /*-----------------------------------------------*/
+    /*----  Set bcs for lines in direction IDIR  ----*/
+    /*-----------------------------------------------*/
+    for (l=0; l<lines[IDIR].N; l++) {
+      j = lines[IDIR].dom_line_idx[l];
+      /* :::: Axis :::: */
+      lines[IDIR].lbound[BDIFF][l].kind = DIRICHLET;
+      lines[IDIR].lbound[BDIFF][l].values[0] = 0.0;
+      if ( j < j_elec_start) {
+        /* :::: Capillary wall (no electrode) :::: */
         lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-            (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
-      #endif
+        lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real;
+      } else if (j >= j_elec_start && j <= j_cap_inter_end) {
+        /* :::: Electrode :::: */
+        // [Err] Delete next two lines
+        #ifdef ELECTR_NEUM
+          // [Err] Decomment next lines
+          lines[IDIR].rbound[BDIFF][l].kind = NEUMANN_HOM;
+          lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
 
-      //[Err]
-      /* lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-          if (grid[JDIR].x_glob[j]>zcap_real-dzcap_real+L) {
-            lines[IDIR].rbound[BDIFF][l].values[0] = 0;
-          } else {
-            lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
-              (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/L );
-          }
-      */
-      // [Err] end err part
-    } else {
-      /* :::: Outer domain boundary :::: */
-      lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
-      lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
+          // [Err] remove next lines
+          // lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+          // lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+          //    (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
+        #else
+          lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+          lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+              (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap_real );
+        #endif
+
+        //[Err]
+        /* lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+            if (grid[JDIR].x_glob[j]>zcap_real-dzcap_real+L) {
+              lines[IDIR].rbound[BDIFF][l].values[0] = 0;
+            } else {
+              lines[IDIR].rbound[BDIFF][l].values[0] = Bwall*rcap_real * \
+                (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/L );
+            }
+        */
+        // [Err] end err part
+      } else {
+        /* :::: Outer domain boundary :::: */
+        lines[IDIR].rbound[BDIFF][l].kind = DIRICHLET;
+        lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
+      }
     }
-  }
-  // JDIR lines
-  for (l=0; l<lines[JDIR].N; l++) {
-    i = lines[JDIR].dom_line_idx[l];
-    if ( i <= i_cap_inter_end) {
-      /* :::: Capillary internal (symmetry plane) :::: */
-      lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;
-      lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
-    } else {
-      /* :::: Outer capillary wall :::: */
-      #ifdef ELECTR_NEUM
-        lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;        
+  } else if (dir == JDIR) {
+    /*-----------------------------------------------*/
+    /*----  Set bcs for lines in direction JDIR  ----*/
+    /*-----------------------------------------------*/
+    for (l=0; l<lines[JDIR].N; l++) {
+      i = lines[JDIR].dom_line_idx[l];
+      if ( i <= i_cap_inter_end) {
+        /* :::: Capillary internal (symmetry plane) :::: */
+        lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;
         lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
-      #else
-        lines[JDIR].lbound[BDIFF][l].kind = DIRICHLET;
-      #endif
+      } else {
+        /* :::: Outer capillary wall :::: */
+        #ifdef ELECTR_NEUM
+          lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;        
+          lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
+        #else
+          lines[JDIR].lbound[BDIFF][l].kind = DIRICHLET;
+        #endif
+      }
+      /* :::: Outer domain boundary :::: */
+      lines[JDIR].rbound[BDIFF][l].kind = DIRICHLET;
+      lines[JDIR].rbound[BDIFF][l].values[0] = 0.0;
     }
-    /* :::: Outer domain boundary :::: */
-    lines[JDIR].rbound[BDIFF][l].kind = DIRICHLET;
-    lines[JDIR].rbound[BDIFF][l].values[0] = 0.0;
   }
 }
 

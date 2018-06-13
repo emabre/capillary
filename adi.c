@@ -591,9 +591,13 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
  * Peachman-Rachford ADI method.
  * 
  * input: diff = BDIFF or TDIFF
- *        rz = 1 or 0: tells whether the order of the directions
- *                     must be r, z (1) or z, r (0).
+ *        int order = FIRST_IDIR or FIRST_JDIR: tells whether the order of the directions
+ *                     must be IDIR, JDIR (FIRST_IDIR) or JDIR, IDIR (FIRST_JDIR).
  *        **dEdT: may point to NULL in case diff == BDIFF
+ *        **dUres: will not be updated if diff != BDIFF
+ *                 (it is my opinion that for the sake of clarity it is better not to
+ *                  "merge" in one single variable the quantities **dEdT and **dUres,
+ *                  even though I never need both of them at the same time)
  * ***********************************************************/
 void PeacemanRachford(double **v_new, double **v_old,
                       double **dUres, double **dEdT,
@@ -660,7 +664,7 @@ void PeacemanRachford(double **v_new, double **v_old,
         break;
     }
 
-    ApplyBCs(lines, d, grid, t0);
+    ApplyBCs(lines, d, grid, t0, dir1);
     MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
     
     /**********************************
@@ -682,7 +686,7 @@ void PeacemanRachford(double **v_new, double **v_old,
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt*0.5);
+    ApplyBCs(lines, d, grid, t0 + dt*0.5, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG)
@@ -713,7 +717,151 @@ void PeacemanRachford(double **v_new, double **v_old,
     /**********************************
      (b.2) Implicit update sweeping DIR1
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt);
+    ApplyBCs(lines, d, grid, t0 + dt, dir1);
+    ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
+    #if (JOULE_EFFECT_AND_MAG_ENG)
+      if (diff == BDIFF) {
+        // [Err] Decomment next line
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], 0.5*dt, dir1);
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] += dUres_aux[j][i];
+      }
+    #endif
+}
+
+/* ***********************************************************
+ * Fractional-Theta (ADI) method
+ * (see Glowinski, R.: Splitting methods for the numerical solution of the incompressible Navier-Stokes equations, 1985)
+ * 
+ * input: diff = BDIFF or TDIFF
+ *        int order = FIRST_IDIR or FIRST_JDIR: tells whether the order of the directions
+ *                     must be IDIR, JDIR (FIRST_IDIR) or JDIR, IDIR (FIRST_JDIR).
+ *        **dEdT: may point to NULL in case diff == BDIFF
+ *        **dUres: will not be updated if diff != BDIFF
+ *                 (it is my opinion that for the sake of clarity it is better not to
+ *                  "merge" in one single variable the quantities **dEdT and **dUres,
+ *                  even though I never need both of them at the same time)
+ * ***********************************************************/
+void FractionalTheta(double **v_new, double **v_old,
+                     double **dUres, double **dEdT,
+                     const Data *d, Grid *grid,
+                     Lines *lines, int diff, int order,
+                     double dt, double t0) {
+    
+    static double **v_aux; // auxiliary solution vector
+    static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
+    static int first_call = 1;
+    double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
+    // void (*BoundaryADI) (Lines, const Data, Grid, double);
+    BoundaryADI *ApplyBCs;
+    BuildIJ *MakeIJ;
+    int dir1, dir2;
+    #if (JOULE_EFFECT_AND_MAG_ENG)
+      static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
+      int l,i,j;
+    #endif
+
+    if (first_call) {
+      v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      #if (JOULE_EFFECT_AND_MAG_ENG)
+        dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      #endif
+      Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      Jp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      Jm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      CI = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      CJ = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      first_call = 0;
+    }
+
+    /* Set the direction order*/
+    if (order == FIRST_IDIR) {
+      H1p = Ip;     H1m = Im;
+      H2p = Jp;     H2m = Jm;
+      C1 = CI;      C2 = CJ;
+      dir1 = IDIR;  dir2 = JDIR;
+    } else if (order == FIRST_JDIR) {
+      H1p = Jp;     H1m = Jm;
+      H2p = Ip;     H2m = Im;
+      C1 = CJ;      C2 = CI;
+      dir1 = JDIR;  dir2 = IDIR;
+    }
+
+    switch (diff) {
+      #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
+        case BDIFF:
+          ApplyBCs = BoundaryADI_Res;
+          MakeIJ = BuildIJ_Res;
+          break;
+      #endif
+      #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+        case TDIFF:
+          ApplyBCs = BoundaryADI_TC;
+          MakeIJ = BuildIJ_TC;
+          break;
+      #endif
+      default:
+        print1("\n[PeachmanRachford]Wrong setting for diffusion (diff) problem");
+        QUIT_PLUTO(1);
+        break;
+    }
+
+    ApplyBCs(lines, d, grid, t0, dir1);
+    MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
+    
+    /**********************************
+     (a.1) Explicit update sweeping DIR1
+    **********************************/
+    ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
+    #if (JOULE_EFFECT_AND_MAG_ENG)
+      if (diff == BDIFF) {
+        // [Err] Decomment next line
+        // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
+        //       instead of doing it a line later 
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], 0.5*dt, dir1);
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] = dUres_aux[j][i];
+      }
+    #endif
+
+    /**********************************
+     (a.2) Implicit update sweeping DIR2
+    **********************************/
+    ApplyBCs(lines, d, grid, t0 + dt*0.5, dir2);
+    ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
+    #if (JOULE_EFFECT_AND_MAG_ENG)
+      if (diff == BDIFF) {
+        // [Err] Decomment next line
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] += dUres_aux[j][i];
+      }
+    #endif
+
+    /**********************************
+     (b.1) Explicit update sweeping DIR2
+    **********************************/
+    ExplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
+                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
+    #if (JOULE_EFFECT_AND_MAG_ENG)
+      if (diff == BDIFF) {
+        /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
+           (but in this way it is more readable)*/
+        // [Err] Decomment next line       
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] += dUres_aux[j][i];
+      }    
+    #endif
+
+    /**********************************
+     (b.2) Implicit update sweeping DIR1
+    **********************************/
+    ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
                       lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG)

@@ -140,7 +140,7 @@ void HeatCapacity_test(double *v, double r, double z, double theta, double *dEdT
 * In the current implementation of this function Data *d is not used
 * but I leave it there since before or later it might be needed
 *****************************************************************************/
-void BoundaryADI_TC(Lines lines[2], const Data *d, Grid *grid, double t) {
+void BoundaryADI_TC(Lines lines[2], const Data *d, Grid *grid, double t, int dir) {
   int i,j,l;
   double Twall;
   double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin
@@ -150,53 +150,60 @@ void BoundaryADI_TC(Lines lines[2], const Data *d, Grid *grid, double t) {
   // I compute the wall temperature
   Twall = Twall_K / KELVIN;
 
-  // IDIR lines
-  for (l=0; l<lines[IDIR].N; l++) {
-    j = lines[IDIR].dom_line_idx[l];
-    /* :::: Axis ::::*/
-    lines[IDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
-    lines[IDIR].lbound[TDIFF][l].values[0] = 0.0;
-    // [Opt] (I can avoid making so many if..)
-    if (j <= j_cap_inter_end) {
-      /* :::: Capillary wall :::: */
+  if (dir == IDIR) {
+    /*-----------------------------------------------*/
+    /*----  Set bcs for lines in direction IDIR  ----*/
+    /*-----------------------------------------------*/
+    for (l=0; l<lines[IDIR].N; l++) {
+      j = lines[IDIR].dom_line_idx[l];
+      /* :::: Axis ::::*/
+      lines[IDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
+      lines[IDIR].lbound[TDIFF][l].values[0] = 0.0;
+      // [Opt] (I can avoid making so many if..)
+      if (j <= j_cap_inter_end) {
+        /* :::: Capillary wall :::: */
 
-      // [Err] Decomment next two lines
-      lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
-      lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
+        // [Err] Decomment next two lines
+        lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
+        lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
 
-      // [Err] Remove next two lines
-      // lines[IDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
-      // lines[IDIR].rbound[TDIFF][l].values[0] = 0.0;
-    } else {
-      /* :::: Outer domain boundary :::: */
-      // lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
-      // // IS THIS OK?? Before or later change here, and also in its equivalent in init.c
-      // lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
-      lines[IDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
-      lines[IDIR].rbound[TDIFF][l].values[0] = 0.0;
+        // [Err] Remove next two lines
+        // lines[IDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
+        // lines[IDIR].rbound[TDIFF][l].values[0] = 0.0;
+      } else {
+        /* :::: Outer domain boundary :::: */
+        // lines[IDIR].rbound[TDIFF][l].kind = DIRICHLET;
+        // // IS THIS OK?? Before or later change here, and also in its equivalent in init.c
+        // lines[IDIR].rbound[TDIFF][l].values[0] = Twall;
+        lines[IDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
+        lines[IDIR].rbound[TDIFF][l].values[0] = 0.0;
+      }
     }
-  }
-  // JDIR lines
-  for (l=0; l<lines[JDIR].N; l++) {
-    i = lines[JDIR].dom_line_idx[l];
-    if (i <= i_cap_inter_end){
-      /* :::: Capillary internal (symmetry plane) ::::*/
+  } else if (dir == JDIR) {
+    /*-----------------------------------------------*/
+    /*----  Set bcs for lines in direction JDIR  ----*/
+    /*-----------------------------------------------*/
+    for (l=0; l<lines[JDIR].N; l++) {
+      i = lines[JDIR].dom_line_idx[l];
+      if (i <= i_cap_inter_end){
+        /* :::: Capillary internal (symmetry plane) ::::*/
 
-      // [Err] Decomment next two lines
-      lines[JDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
-      lines[JDIR].lbound[TDIFF][l].values[0] = 0.0;
+        // [Err] Decomment next two lines
+        lines[JDIR].lbound[TDIFF][l].kind = NEUMANN_HOM;
+        lines[JDIR].lbound[TDIFF][l].values[0] = 0.0;
 
-      // [Err] Remove next two lines
-      // lines[JDIR].lbound[TDIFF][l].kind = DIRICHLET;
-      // lines[JDIR].lbound[TDIFF][l].values[0] = Twall;
-    } else {
-      /* :::: Outer capillary wall ::::*/
-      lines[JDIR].lbound[TDIFF][l].kind = DIRICHLET;
-      lines[JDIR].lbound[TDIFF][l].values[0] = Twall;
+        // [Err] Remove next two lines
+        // lines[JDIR].lbound[TDIFF][l].kind = DIRICHLET;
+        // lines[JDIR].lbound[TDIFF][l].values[0] = Twall;
+      } else {
+        /* :::: Outer capillary wall ::::*/
+        lines[JDIR].lbound[TDIFF][l].kind = DIRICHLET;
+        lines[JDIR].lbound[TDIFF][l].values[0] = Twall;
+      }
+      /* :::: Outer domain boundary ::::*/
+      lines[JDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
+      lines[JDIR].rbound[TDIFF][l].values[0] = 0.0;
     }
-    /* :::: Outer domain boundary ::::*/
-    lines[JDIR].rbound[TDIFF][l].kind = NEUMANN_HOM;
-    lines[JDIR].rbound[TDIFF][l].values[0] = 0.0;
   }
 }
 

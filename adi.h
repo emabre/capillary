@@ -86,15 +86,15 @@ typedef struct LINES{
 
 // I define a function pointer type, that will take the value of the right bc function
 // typedef void (*BoundaryADI) (Lines lines[2], const Data *d, Grid *grid, double t);
-typedef void BoundaryADI (Lines lines[2], const Data *d, Grid *grid, double t);
+typedef void BoundaryADI (Lines lines[2], const Data *d, Grid *grid, double t, int dir);
 // I define a function pointer type, that will take the value of the right IJ builder function
 typedef void BuildIJ (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
                       double **Jp, double **Jm, double **CI, double **CJ, double **dEdT);
 
 void InitializeLines (Lines *, int);
 void GeometryADI (Lines *lines, Grid *grid);
-void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t);
-void BoundaryADI_TC(Lines lines[2], const Data *d, Grid *grid, double t);
+void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t, int dir);
+void BoundaryADI_TC(Lines lines[2], const Data *d, Grid *grid, double t, int dir);
 
 void PeacemanRachford(double **v_new, double **v_old,
                       double **dUres, double **dEdT,
