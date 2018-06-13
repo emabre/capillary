@@ -95,12 +95,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       [Ema] (Comment copied from sts.c)
     --------------------------------------------------------------------------- */
   PrimToConsLines (Vc, Uc, lines);
-  // Boundary(d, ALL_DIR, grid);
-  /* ---- Build B*r vector ---- */
-  // [Err] remove
-  DOM_LOOP(k,j,i) {
-    Br_old[j][i] = Br[j][i] = r[i]*Uc[k][j][i][BX3];
-  }
+
+  #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
+    DOM_LOOP(k,j,i) {
+      Br_old[j][i] = Br[j][i] = r[i]*Uc[k][j][i][BX3];
+    }
+  #endif
 
   //[Err] remove next #if lines
   // #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
@@ -114,6 +114,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     Boundary(d, ALL_DIR, grid);
 
     /* ---- Build temperature vector ---- */
+    // I must re-buil the temperature at every step as it depends on U[][][][ENG]
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
       #if EOS==PVTE_LAW
         DOM_LOOP(k,j,i) {
@@ -128,7 +129,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #endif
 
       /* ---- Avdance T with ADI ---- */
-      PeacemanRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub);
+      #ifdef FRACTIONAL_THETA
+        FractionalTheta(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA);
+      #else
+        PeacemanRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub);
+      #endif
 
       /* ---- Update total energy ---- */
       KDOM_LOOP(k)
@@ -164,7 +169,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
     #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
 
-      // No need to re-build the magnetic field, as it does not depend on the temperature
+      // No need to re-build the magnetic field, as it does not depend on U[][][][whatever]
 
       // [Err] Remove next #if lines
       // #if (JOULE_EFFECT_AND_MAG_ENG)
@@ -173,8 +178,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       // #endif
 
       /* ---- Avdance B*r with ADI ---- */
-      PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
-      
+      #ifdef FRACTIONAL_THETA
+        FractionalTheta(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA);
+      #else
+        PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
+      #endif
+
       // [Err] Remove next #if lines
       // #if (JOULE_EFFECT_AND_MAG_ENG)
         // ResEnergyIncrease(dUres_b1, H1p_B, H1m_B, Brb2, grid, &lines[DIR1], 0.5*dt_res_reduced, DIR1);
@@ -747,7 +756,7 @@ void FractionalTheta(double **v_new, double **v_old,
                      double **dUres, double **dEdT,
                      const Data *d, Grid *grid,
                      Lines *lines, int diff, int order,
-                     double dt, double t0) {
+                     double dt, double t0, double theta) {
     
     static double **v_aux; // auxiliary solution vector
     static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
@@ -761,6 +770,12 @@ void FractionalTheta(double **v_new, double **v_old,
       static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
       int l,i,j;
     #endif
+
+    // Check theta correctness
+    if (theta<0.0 || theta > 0.5){
+      print1("theta=%d, outisde range ]0,0.5[");
+      QUIT_PLUTO(1);
+    }
 
     if (first_call) {
       v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -815,13 +830,13 @@ void FractionalTheta(double **v_new, double **v_old,
      (a.1) Explicit update sweeping DIR1
     **********************************/
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], theta*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
         //       instead of doing it a line later 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], 0.5*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], theta*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
       }
@@ -830,13 +845,13 @@ void FractionalTheta(double **v_new, double **v_old,
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt*0.5, dir2);
+    ApplyBCs(lines, d, grid, t0 + theta*dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], theta*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], theta*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -846,13 +861,13 @@ void FractionalTheta(double **v_new, double **v_old,
      (b.1) Explicit update sweeping DIR2
     **********************************/
     ExplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
-                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
+                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], (1-2*theta)*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG)
       if (diff == BDIFF) {
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
            (but in this way it is more readable)*/
         // [Err] Decomment next line       
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], (1-2*theta)*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }    
@@ -861,13 +876,44 @@ void FractionalTheta(double **v_new, double **v_old,
     /**********************************
      (b.2) Implicit update sweeping DIR1
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt, dir1);
+    ApplyBCs(lines, d, grid, t0 + (1-theta)*dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-2*theta)*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], 0.5*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], (1-2*theta)*dt, dir1);
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] += dUres_aux[j][i];
+      }
+    #endif
+
+    /**********************************
+     (c.1) Explicit update sweeping DIR1
+    **********************************/
+    ExplicitUpdate (v_aux, v_new, NULL, H1p, H1m, C1, &lines[dir1],
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], theta*dt, dir1);
+    #if (JOULE_EFFECT_AND_MAG_ENG)
+      if (diff == BDIFF) {
+        // [Err] Decomment next line
+        // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
+        //       instead of doing it a line later 
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], theta*dt, dir1);
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] = dUres_aux[j][i];
+      }
+    #endif
+
+    /**********************************
+     (c.2) Implicit update sweeping DIR2
+    **********************************/
+    ApplyBCs(lines, d, grid, t0 + dt, dir2);
+    ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], theta*dt, dir2);
+    #if (JOULE_EFFECT_AND_MAG_ENG)
+      if (diff == BDIFF) {
+        // [Err] Decomment next line
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], theta*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }

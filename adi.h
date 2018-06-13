@@ -102,6 +102,12 @@ void PeacemanRachford(double **v_new, double **v_old,
                       Lines *lines, int diff, int order,
                       double dt, double t0);
 
+void FractionalTheta(double **v_new, double **v_old,
+                     double **dUres, double **dEdT,
+                     const Data *d, Grid *grid,
+                     Lines *lines, int diff, int order,
+                     double dt, double t0, double theta);
+
 void ExplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt, int dir);

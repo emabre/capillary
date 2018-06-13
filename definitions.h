@@ -16,7 +16,7 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
+#define  RESISTIVITY             NO
 #define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
@@ -57,15 +57,18 @@
 /* ---------------------------------------------------- */
 /*  Ema's additional macros                            */
 // #define FREEZE_FLUID
-#define FIRST_JDIR_THEN_IDIR NO
+/* Either give value in ]0,0.5[
+   or comment if you prefer to use Peaceman-Rachford scheme */
+// #define FRACTIONAL_THETA           0.27
+#define FIRST_JDIR_THEN_IDIR       NO
 // #define  TEST_ADI
-#define JOULE_EFFECT_AND_MAG_ENG (YES  &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
+#define JOULE_EFFECT_AND_MAG_ENG   (YES  &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
 /* Macros to impose T (B) on walls also for advection (unphisical!)
    (if NO, conduction and B diffusion can be modeled only via ADI scheme) */
-#define IMPOSE_TWALL NO
-#define IMPOSE_BWALL NO
+#define IMPOSE_TWALL               NO
+#define IMPOSE_BWALL               NO
 /* Number of subcycles performed by ADI scheme*/
-#define NSUBS_ADI    10
+#define NSUBS_ADI                  1
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
 // #define ELECTR_NEUM
 /* To set to 0 the mag field in a region outside capillary*/
@@ -74,7 +77,7 @@
 
 /* ---------------------------------------------------- */
 /*    CAPILLARY GEOMETRY SETTINGS                      */
-#define RCAP 0.05
-#define DZCAP 0.3 /*the electrodes are wide DZCAP cm*/
-#define ZCAP 1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
+#define RCAP                       0.05
+#define DZCAP                      0.3 /*the electrodes are wide DZCAP cm*/
+#define ZCAP                       1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 /* ---------------------------------------------------- */
