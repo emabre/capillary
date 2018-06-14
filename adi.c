@@ -818,7 +818,7 @@ void FractionalTheta(double **v_new, double **v_old,
           break;
       #endif
       default:
-        print1("\n[PeachmanRachford]Wrong setting for diffusion (diff) problem");
+        print1("\n[FractionalTheta]Wrong setting for diffusion (diff) problem");
         QUIT_PLUTO(1);
         break;
     }
@@ -900,7 +900,7 @@ void FractionalTheta(double **v_new, double **v_old,
         //       instead of doing it a line later 
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], theta*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
-          dUres[j][i] = dUres_aux[j][i];
+          dUres[j][i] += dUres_aux[j][i];
       }
     #endif
 
