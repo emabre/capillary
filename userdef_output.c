@@ -5,6 +5,8 @@
 #include "prototypes.h"
 
 #define WRITE_T_MU_NE_IONIZ YES
+#define WRITE_ETA0 YES
+
 #ifndef WRITE_J1D
   #define WRITE_J1D NO
 #endif
@@ -48,6 +50,11 @@ void ComputeUserVar (const Data *d, Grid *grid)
 {
   int i, j, k;
   double ***interBound;
+  #if WRITE_ETA0
+    double ***eta0;
+    const double eta_adim = 4*CONST_PI/(CONST_c*CONST_c)*UNIT_VELOCITY*UNIT_LENGTH;/*unit of eta for adimensionalization*/
+    double eta[3];
+  #endif
 
   /*[Rob] I could exploit the (I think) globally available runtime structure to get the number and name of variables
   set for output so that I do not need to modify consistently bot the pluto.ini and the definition of these macros.
@@ -227,6 +234,13 @@ tion RuntimeGet(), e.g. ..."*/
     ComputeJforOutput(d, grid, Jr, Jz);
   #endif
 
+  #if WRITE_ETA0
+    eta0 = GetUserVar("eta0");
+    DOM_LOOP(k,j,i) {
+      Resistive_eta( v, grid[IDIR].x_glob[i], grid[JDIR].x_glob[j], grid[KDIR].x_glob[k], NULL, eta);
+      eta0[k][j][i] = eta[0]*eta_adim;
+    }
+  #endif
 
   // free_Data(&d_corrected_r);
   // free_Data(&d_corrected_z);
