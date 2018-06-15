@@ -21,7 +21,8 @@
       "typeinfo": "c",
       "initializer_list": "c",
       "globals.h": "c",
-      "cmath": "c"
+      "cmath": "c",
+      "stdlib.h": "c"
     }
   }
 }

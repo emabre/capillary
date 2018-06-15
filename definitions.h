@@ -16,8 +16,8 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             NO
-#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
+#define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -53,6 +53,7 @@
 #define  LIMITER                   DEFAULT
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
+#define  SHOW_TIME_STEPS           YES
 
 /* ---------------------------------------------------- */
 /*  Ema's additional macros                            */
@@ -60,7 +61,8 @@
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */
 // #define FRACTIONAL_THETA           0.27
-#define FIRST_JDIR_THEN_IDIR       NO
+// to set the order of the ADI scheme, allowed values: YES, NO, RANDOM
+#define FIRST_JDIR_THEN_IDIR       RANDOM
 // #define  TEST_ADI
 #define JOULE_EFFECT_AND_MAG_ENG   (YES  &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
 /* Macros to impose T (B) on walls also for advection (unphisical!)
@@ -81,3 +83,7 @@
 #define DZCAP                      0.3 /*the electrodes are wide DZCAP cm*/
 #define ZCAP                       1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 /* ---------------------------------------------------- */
+
+/* ---------------------------------------------------- */
+/*     ADDITTIONAL OUTPUT                               */
+#define WRITE_J                  YES

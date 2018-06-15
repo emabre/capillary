@@ -5,9 +5,15 @@
 #include "prototypes.h"
 
 #define WRITE_T_MU_NE_IONIZ YES
-#define WRITE_J1D NO
-#define WRITE_J2D NO
-#define WRITE_J NO
+#ifndef WRITE_J1D
+  #define WRITE_J1D NO
+#endif
+#ifndef WRITE_J2D
+  #define WRITE_J2D NO
+#endif
+#ifndef WRITE_J
+  #define WRITE_J NO
+#endif
 
 #if WRITE_J1D == YES
   void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz);
@@ -55,9 +61,7 @@ tion RuntimeGet(), e.g. ..."*/
     double ***Jr;
   #endif
   #if  WRITE_J2D == YES
-    double ***Jr;
-    double ***Jz;
-    double ***Jphi;
+    double ***Jr, ***Jz, ***Jphi;
   #endif
 
   #if WRITE_T_MU_NE_IONIZ==YES
@@ -275,7 +279,7 @@ void ChangeDumpVar ()
       J_jsweep_avg[JDIR][k][j][i]= 0.0;
     }
 
-    print1("MEMENTO: \nattento a come fai la media delle J, siamo in geometria cilindrica, ricontrollare!");
+    // print1("MEMENTO: \nattento a come fai la media delle J, siamo in geometria cilindrica, ricontrollare!");
 
     // I do a TOT_LOOP as J is defined in the same way as Vc (in therms of memory),
     // see capillary_wall.c/void alloc_Data(Data *data).

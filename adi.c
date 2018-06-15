@@ -9,6 +9,8 @@ and thermal conduction) terms with the Alternating Direction Implicit algorithm*
 #include "pluto.h"
 #include "adi.h"
 #include "capillary_wall.h"
+#include <time.h>
+#include <stdlib.h>
 
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static int first_call=1;
@@ -36,6 +38,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   const double dt = g_dt;
   double ****Uc, ****Vc;
   double *r, *r_1;
+
+  #if FIRST_JDIR_THEN_IDIR == RANDOM
+    if (first_call)
+      srand(time(NULL));   // should only be called once
+  #endif
 
   // Find the remarkable indexes (if they had not been found before)
   if (capillary_not_set) {
