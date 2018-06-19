@@ -61,13 +61,13 @@
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */
 // #define FRACTIONAL_THETA           0.3
-#define SPLIT_IMPLICIT
+// #define SPLIT_IMPLICIT
 // to set the order of the ADI scheme, allowed values: YES, NO, RANDOM
-#define FIRST_JDIR_THEN_IDIR       YES
+#define FIRST_JDIR_THEN_IDIR       NO
 // #define  TEST_ADI
-#define JOULE_EFFECT_AND_MAG_ENG   (NO  &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
+#define JOULE_EFFECT_AND_MAG_ENG   (YES &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
 // If YES: power flux is computed inside adi schemes (if NO, outside)
-#define POW_INSIDE_ADI             NO
+#define POW_INSIDE_ADI             YES
 /* Macros to impose T (B) on walls also for advection (unphisical!)
    (if NO, conduction and B diffusion can be modeled only via ADI scheme) */
 #define IMPOSE_TWALL               NO
