@@ -618,15 +618,22 @@ void PeacemanRachford(double **v_new, double **v_old,
     BoundaryADI *ApplyBCs;
     BuildIJ *MakeIJ;
     int dir1, dir2;
-    #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
+    #if (JOULE_EFFECT_AND_MAG_ENG)
       static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
       int l,i,j;
+    #endif
+    #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
+      static double **Br_avg, **dUres_aux1;
     #endif
 
     if (first_call) {
       v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
+      #if (JOULE_EFFECT_AND_MAG_ENG)
         dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      #endif
+      #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
+        Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+        dUres_aux1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       #endif
       Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -731,6 +738,23 @@ void PeacemanRachford(double **v_new, double **v_old,
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], 0.5*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
+      }
+    #endif
+    #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
+      if (diff == BDIFF) {
+        // I average Br
+        LINES_LOOP(lines[IDIR], l, j, i) {
+          // Br_avg[j][i] = 0.5*(v_new[j][i] + v_old[j][i]);
+          Br_avg[j][i] = sqrt((v_new[j][i]*v_new[j][i] + v_new[j][i]*v_old[j][i] + v_old[j][i]*v_old[j][i])/3);
+        }
+        // I compute the fluxes of poynting vector
+        ResEnergyIncrease(dUres_aux, H2p, H2m, Br_avg, grid, &lines[dir2], dt, dir2);
+        ResEnergyIncrease(dUres_aux1, H1p, H1m, Br_avg, grid, &lines[dir1], dt, dir1);
+        // I update the increase in energy
+        LINES_LOOP(lines[IDIR], l, j, i) {
+          dUres[j][i] = dUres_aux[j][i];
+          dUres[j][i] += dUres_aux1[j][i];
+        }
       }
     #endif
 }
@@ -946,18 +970,11 @@ void SplitImplicit(double **v_new, double **v_old,
       static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
       int l,i,j;
     #endif
-    #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
-      static double **Br_avg, **dUres_aux1;
-    #endif
 
     if (first_call) {
       v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       #if (JOULE_EFFECT_AND_MAG_ENG)
         dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #endif
-      #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
-        Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-        dUres_aux1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       #endif
       Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -1031,17 +1048,6 @@ void SplitImplicit(double **v_new, double **v_old,
         ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
-      }
-    #endif
-
-    #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
-      if (diff == BDIFF) {
-        LINES_LOOP(lines[IDIR], l, j, i)
-          Br_avg[j][i] = 0.5*(v_new[j][i] + v_old[j][i]);
-        ResEnergyIncrease(dUres_aux, H2p, H2m, Br_avg, grid, &lines[dir2], dt, dir2);
-        ResEnergyIncrease(dUres_aux1, H1p, H1m, Br_avg, grid, &lines[dir1], dt, dir1);
-        LINES_LOOP(lines[IDIR], l, j, i)
-          dUres[j][i] += dUres_aux[j][i] + dUres_aux1[j][i];
       }
     #endif
 }
