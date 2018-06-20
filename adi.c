@@ -99,7 +99,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       contains Vc as well as Uc (for future improvements).
       [Ema] (Comment copied from sts.c)
     --------------------------------------------------------------------------- */
+  //[Err] Remove next line
+  Boundary(d, ALL_DIR, grid);
   PrimToConsLines (Vc, Uc, lines);
+  //[Err] Remove next line
+  Boundary(d, ALL_DIR, grid);
 
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     DOM_LOOP(k,j,i) {
@@ -116,7 +120,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   // #endif
 
   for (s=0; s<adi_steps; s++) {
-    Boundary(d, ALL_DIR, grid);
+    // [Err] Test, decomment later
+    // Boundary(d, ALL_DIR, grid);
 
     /* ---- Build temperature vector ---- */
     // I must re-buil the temperature at every step as it depends on U[][][][ENG]
@@ -207,11 +212,15 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ConsToPrimLines (Uc, Vc, d->flag, lines);
 
     t_start_sub += dt_reduced;
+    //[Err] Remove next line
+    Boundary(d, ALL_DIR, grid);
   }
 }
 
 /****************************************************************************
-Performs an implicit update of a diffusive problem (either for B or for T)
+Performs an implicit update of a diffusive problem (either for B or for T).
+It also applies the bcs on the ghost cells of the output matrix (**v) (useful later
+for instance for ResEnergyIncrease())
 *****************************************************************************/
 void ImplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
@@ -311,11 +320,35 @@ void ImplicitUpdate (double **v, double **b, double **source,
         print1("\n[ImplicitUpdate]Error setting right bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
       }
-      // Now I solve the system
+
+      /* --- Now I solve the system --- */
       tdm_solver( x+lidx, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
       /*[Opt] Is this for a waste of time? maybe I could engineer better the use of tdm_solver function(or the way it is written)*/
       for (i=lidx; i<=ridx; i++)
         v[j][i] = x[i];
+      
+      /*--- I set the boundary values (ghost cells) in the solution
+            [I do it now as I for the NEUMANN conditions I could't do it before solving the tridiag. system] ---*/
+      // Cells near left boundary
+      if (lbound[l].kind == DIRICHLET){
+        // I assign the ghost value (needed by ResEnergyIncrease and maybe others..)
+        v[j][lidx-1] = 2*lbound[l].values[0] - b[j][lidx];
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        /* I assign the ghost value (needed by ResEnergyIncrease and maybe others..).*/
+        v[j][lidx-1] = v[j][lidx];
+      } else {
+        print1("\n[ImplcitUpdate]Error setting left ghost in solution (in dir i), not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+      // Cells near right boundary
+      if (rbound[l].kind == DIRICHLET){
+        v[j][ridx+1] = 2*rbound[l].values[0] - v[j][ridx];
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        v[j][ridx+1] = v[j][ridx];
+      } else {
+        print1("\n[ImplcitUpdate]Error setting right ghost in solution (in dir i), not known bc kind!");
+        QUIT_PLUTO(1);
+      }
     }
   } else if (dir == JDIR) {
     /********************
@@ -361,10 +394,33 @@ void ImplicitUpdate (double **v, double **b, double **source,
         print1("\n[ImplicitUpdate]Error setting right bcs (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
-      // Now I solve the system
+
+      /* --- Now I solve the system --- */
       tdm_solver( x+lidx, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
       for (j=lidx; j<=ridx; j++)
         v[j][i] = x[j];
+
+      /*--- I set the boundary values (ghost cells) in the solution
+            [I do it now as I for the NEUMANN conditions I could't do it before solving the tridiag. system] ---*/
+            /*--- I set the boundary values (ghost cells) ---*/
+      // Cells near left boundary
+      if (lbound[l].kind == DIRICHLET){
+        v[lidx-1][i] = 2*lbound[l].values[0] - v[lidx][i];
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        v[lidx-1][i] = v[lidx][i];
+      } else {
+        print1("\n[ImplcitUpdate]Error setting left ghost in solution (in dir j), not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+      // Cells near right boundary
+      if (rbound[l].kind == DIRICHLET){
+        v[ridx+1][i] = 2*rbound[l].values[0] - v[ridx][i];
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        v[ridx+1][i] = v[ridx][i];
+      } else {
+        print1("\n[ImplcitUpdate]Error setting right ghost in solution (in dir j), not known bc kind!");
+        QUIT_PLUTO(1);
+      }
     }
   } else {
     print1("[ImplicitUpdate] Unimplemented choice for 'dir'!");
@@ -379,7 +435,9 @@ void ImplicitUpdate (double **v, double **b, double **source,
 }
 //
 /****************************************************************************
-Performs an explicit update of a diffusive problem (either for B or for T)
+Performs an explicit update of a diffusive problem (either for B or for T).
+It also applies the bcs on the ghost cells of the input matrix (**b) (useful later
+for instance for ResEnergyIncrease())
 *****************************************************************************/
 void ExplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
@@ -388,7 +446,6 @@ void ExplicitUpdate (double **v, double **b, double **source,
   int i,j,l;
   int ridx, lidx;
   int Nlines = lines->N;
-  double b_ghost;
   static double **rhs;
   static int first_call = 1;
 
@@ -418,29 +475,31 @@ void ExplicitUpdate (double **v, double **b, double **source,
           rhs[j][i] = b[j][i];
       }
 
-      // Actual update
-      for (i = lidx+1; i < ridx; i++)
-        v[j][i] = rhs[j][i] + dt/C[j][i] * (b[j][i+1]*Hp[j][i] - b[j][i]*(Hp[j][i]+Hm[j][i]) + b[j][i-1]*Hm[j][i]);
+      /*--- I set the boundary values (ghost cells) ---*/
       // Cells near left boundary
       if (lbound[l].kind == DIRICHLET){
-        b_ghost = 2*lbound[l].values[0] - b[j][lidx];
-        v[j][lidx] = rhs[j][lidx] + dt/C[j][lidx] * (b[j][lidx+1]*Hp[j][lidx] - b[j][lidx]*(Hp[j][lidx]+Hm[j][lidx]) + b_ghost*Hm[j][lidx]);
+        // I assign the ghost value (needed by ResEnergyIncrease and maybe others..)
+        b[j][lidx-1] = 2*lbound[l].values[0] - b[j][lidx];
       } else if (lbound[l].kind == NEUMANN_HOM) {
-        v[j][lidx] = rhs[j][lidx] + dt/C[j][lidx] * (b[j][lidx+1]*Hp[j][lidx] - b[j][lidx]*Hp[j][lidx]);
+        /* I assign the ghost value (needed by ResEnergyIncrease and maybe others..).*/
+        b[j][lidx-1] = b[j][lidx];
       } else {
         print1("\n[ExplicitUpdate]Error setting left bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
       }
       // Cells near right boundary
       if (rbound[l].kind == DIRICHLET){
-        b_ghost = 2*rbound[l].values[0] - b[j][ridx];
-        v[j][ridx] = rhs[j][ridx] + dt/C[j][ridx] * (b_ghost*Hp[j][ridx] - b[j][ridx]*(Hp[j][ridx]+Hm[j][ridx]) + b[j][ridx-1]*Hm[j][ridx]);
+        b[j][ridx+1] = 2*rbound[l].values[0] - b[j][ridx];
       } else if (rbound[l].kind == NEUMANN_HOM) {
-        v[j][ridx] = rhs[j][ridx] + dt/C[j][ridx] * (-b[j][ridx]*Hm[j][ridx] + b[j][ridx-1]*Hm[j][ridx]);
+        b[j][ridx+1] = b[j][ridx];
       } else {
         print1("\n[ExplicitUpdate]Error setting right bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
       }
+
+      /*--- Actual update ---*/
+      for (i = lidx; i <= ridx; i++)
+        v[j][i] = rhs[j][i] + dt/C[j][i] * (b[j][i+1]*Hp[j][i] - b[j][i]*(Hp[j][i]+Hm[j][i]) + b[j][i-1]*Hm[j][i]);
     }
   } else if (dir == JDIR) {
     /********************
@@ -463,28 +522,30 @@ void ExplicitUpdate (double **v, double **b, double **source,
           rhs[j][i] = b[j][i];
       }
 
-      // Actual update
-      for (j = lidx+1; j < ridx; j++)
-        v[j][i] = rhs[j][i] + dt/C[j][i] * (b[j+1][i]*Hp[j][i] - b[j][i]*(Hp[j][i]+Hm[j][i]) + b[j-1][i]*Hm[j][i]);
+      /*--- I set the boundary values (ghost cells) ---*/
       // Cells near left boundary
       if (lbound[l].kind == DIRICHLET){
-        b_ghost = 2*lbound[l].values[0] - b[lidx][i];
-        v[lidx][i] = rhs[lidx][i] + dt/C[lidx][i] * (b[lidx+1][i]*Hp[lidx][i] - b[lidx][i]*(Hp[lidx][i]+Hm[lidx][i]) + b_ghost*Hm[lidx][i]);
+        b[lidx-1][i] = 2*lbound[l].values[0] - b[lidx][i];
       } else if (lbound[l].kind == NEUMANN_HOM) {
-        v[lidx][i] = rhs[lidx][i] + dt/C[lidx][i] * (b[lidx+1][i]*Hp[lidx][i] - b[lidx][i]*Hp[lidx][i]);
+        b[lidx-1][i] = b[lidx][i];
       } else {
         print1("\n[ExplicitUpdate]Error setting left bc (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
       // Cells near right boundary
       if (rbound[l].kind == DIRICHLET){
-        b_ghost = 2*rbound[l].values[0] - b[ridx][i];
-        v[ridx][i] = rhs[ridx][i] + dt/C[ridx][i] * (b_ghost*Hp[ridx][i] - b[ridx][i]*(Hp[ridx][i]+Hm[ridx][i]) + b[ridx-1][i]*Hm[ridx][i]);
+        b[ridx+1][i] = 2*rbound[l].values[0] - b[ridx][i];
       } else if (rbound[l].kind == NEUMANN_HOM) {
-        v[ridx][i] = rhs[ridx][i] + dt/C[ridx][i] * (-b[ridx][i]*Hm[ridx][i] + b[ridx-1][i]*Hm[ridx][i]);
+        b[ridx+1][i] = b[ridx][i];
       } else {
         print1("\n[ExplicitUpdate]Error setting right bc (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
+      }
+
+      /*--- Actual update ---*/
+      for (j = lidx; j <= ridx; j++){
+        v[j][i] = rhs[j][i] + dt/C[j][i] * (b[j+1][i]*Hp[j][i] - b[j][i]*(Hp[j][i]+Hm[j][i]) + b[j-1][i]*Hm[j][i]);
+        // print1("v[%d][%d]=%e\n", j,i,v[j][i]);
       }
     }
   } else {
@@ -743,8 +804,7 @@ void PeacemanRachford(double **v_new, double **v_old,
     #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // I average Br
-        LINES_LOOP(lines[IDIR], l, j, i) {
-          // Br_avg[j][i] = 0.5*(v_new[j][i] + v_old[j][i]);
+        LINES_LOOP_EXTENDED(lines[IDIR], l, j, i) {
           Br_avg[j][i] = sqrt((v_new[j][i]*v_new[j][i] + v_new[j][i]*v_old[j][i] + v_old[j][i]*v_old[j][i])/3);
         }
         // I compute the fluxes of poynting vector

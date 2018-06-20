@@ -4,19 +4,24 @@
  * [Ema] Print matrix (useful for calling inside gdb) 
  ****************************************************************************************/
 void printmat(double **matrix, int dim2, int dim1)
-{
+{   
+    char coltop[11];
     int i, j;
-    for (i = 0; i < dim1; ++i)
-      printf("%11s", "---");
+    for (i = 0; i < dim1; ++i){
+      sprintf(coltop, "--%d--", i );
+      printf("%11s", coltop);
+    }
     printf("\n");
     for (j = 0; j < dim2; ++j) {
-      printf("|");
+      printf("%2d|", j);
         for (i = 0; i < dim1; ++i)
             printf("%11.5g", matrix[j][i]);
         printf("|\n");
     }
-    for (i = 0; i < dim1; ++i)
-      printf("%11s", "---");
+    for (i = 0; i < dim1; ++i){
+      sprintf(coltop, "--%d--", i );
+      printf("%11s", coltop);
+    }
     printf("\n");
 
     // for (i = 0; i < dim1; ++i) {

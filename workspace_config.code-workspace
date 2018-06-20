@@ -22,7 +22,9 @@
       "initializer_list": "c",
       "globals.h": "c",
       "cmath": "c",
-      "stdlib.h": "c"
+      "stdlib.h": "c",
+      "time.h": "c",
+      "type_traits": "cpp"
     }
   }
 }

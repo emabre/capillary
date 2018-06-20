@@ -14,6 +14,10 @@
   #error Joule effect and mag. energy requires ADI for resistivity
 #endif
 
+#if (POW_INSIDE_ADI != YES)
+  #error Did you check carefully that you can do this? (e.g.: is the averaging of the bcs/ghost cells.. ok?)
+#endif
+
 /*********************
  * Some useful macros
  * *******************/

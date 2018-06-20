@@ -131,6 +131,8 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   /* F :Power flux flowing from cell (i,j) to (i+1,j), when dir==IDIR;
         or from cell (i,j) to (i,j+1), when dir == JDIR.
   */
+//  modifica questa funzinoe così: non usare più le Bcs(d altra parte non ha senso! questo è un termine sorgente, non un equazione da risolvere) per calcolare i valori al bordo,
+//  usa i valori salvati *Br
   static double **F;
   double *dr, *dz;
   int i,j,l;
@@ -139,7 +141,6 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   int static first_call = 1;
   double *dV, *inv_dz, *r_1, *r;
   double *rL, *rR;
-  double Br_ghost;
   Bcs *rbound, *lbound;
 
   /*[Opt] Maybe I could do that it allocates static arrays with size NMAX_POINT (=max(NX1_TOT,NX2_TOT)) ?*/
@@ -172,39 +173,21 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       j = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
-      for (i=lidx; i<ridx; i++) // I stop before ridx, as for the last interface(as for the first) I must use the BCs
+      for (i=lidx; i<=ridx; i++){ // I start from lidx because I must treat carefully the lidx interface (at i=lidx-1), since there could be the domain axis
       // [Err] Decomment next line (original)
         F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1]*r_1[i+1] + Br[j][i]*r_1[i]);
         // [Err] Delete next line (test)
-        // F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1] + Br[j][i])/rR[i];        
-      /*Define boundary fluxes*/
-      if (lbound[l].kind == DIRICHLET){
-        if (fabs(rL[lidx]) < 1e-20  && fabs(lbound[l].values[0]) < 1e-20) { // this should guess that I am on axis
-          F[j][lidx-1] = 0.0;
-        } else {
-          // [Err] Decomment next line          
-          Br_ghost = 2*lbound[l].values[0] - Br[j][lidx];
-          //(this method was also working, and maybe it's more accurate, I do not use it only because not consiste with what is done in ImplicitUpdate and Explicit Update)
-          // Br_ghost = r[lidx-1] * (2*lbound[l].values[0]/rL[lidx] - Br[j][lidx]*r_1[lidx]);
-          F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br_ghost)*dr[lidx] * (lbound[l].values[0]/rL[lidx]);
-        }
-      } else if (lbound[l].kind == NEUMANN_HOM) {
-        F[j][lidx-1] = 0.0;
+        // F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1] + Br[j][i])/rR[i];
       }
-      if (rbound[l].kind == DIRICHLET){
-        // [Err] Decomment next line
-        Br_ghost = 2*rbound[l].values[0] - Br[j][ridx];
-        //(this method was also working, and maybe it's more accurate, I do not use it only because not consiste with what is done in ImplicitUpdate and Explicit Update)
-        // Br_ghost = r[ridx+1] * (2*rbound[l].values[0]/rR[ridx] - Br[j][ridx]*r_1[ridx]);
-        F[j][ridx] = -Hp_B[j][ridx] * (Br_ghost - Br[j][ridx])*dr[ridx] * (rbound[l].values[0]/rR[ridx]);
-      } else if (rbound[l].kind == NEUMANN_HOM) {
-        F[j][ridx] = 0.0;
+      /* I try to guess if the lower boundary in dir IDIR is the domain axis, if so I compute F consistently (with the usual formula
+      I would get a division by zero) */
+      if (lbound[l].kind == DIRICHLET && fabs(rL[lidx]) < 1e-20  && fabs(lbound[l].values[0]) < 1e-20) {
+        F[j][lidx-1] = 0.0;
+      } else {
+        F[j][lidx-1] = -Hp_B[j][lidx-1] * (Br[j][lidx] - Br[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
       }
       // Build dU
       for (i=lidx; i<=ridx; i++)
-       //[Err] delete questa linea
-        // dUres[j][i] = (rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
-       //[Err] deccoment next line
         dUres[j][i] = -(rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
     }
 
@@ -217,30 +200,12 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
       
-      for (j=lidx; j<ridx; j++)
+      for (j=lidx-1; j<=ridx; j++){
         //[Err] ho aggiunto *r_1[i] nella formula ( e questa modifica sembra ok!)
         F[j][i] = -Hp_B[j][i] * (Br[j+1][i] - Br[j][i])*dz[j]*r_1[i]*r_1[i] * 0.5*(Br[j+1][i] + Br[j][i]);
-
-      /*Define boundary fluxes*/
-      if (lbound[l].kind == DIRICHLET){
-        Br_ghost = 2*lbound[l].values[0] - Br[lidx][i];
-        //[Err] ho aggiunto *r_1[i] nella formula
-        F[lidx-1][i] = -Hm_B[lidx][i] * (Br[lidx][i] - Br_ghost)*dz[lidx] * 0.5*r_1[i]*r_1[i]*(Br[lidx][i] + Br_ghost);
-      } else if (lbound[l].kind == NEUMANN_HOM) {
-        F[lidx-1][i] = 0.0;
-      }
-      if (rbound[l].kind == DIRICHLET){
-        Br_ghost = 2*rbound[l].values[0] - Br[ridx][i];
-        //[Err] ho aggiunto *r_1[i] nella formula
-        F[ridx][i] = -Hp_B[ridx][i] * (Br_ghost - Br[ridx][i])*dz[ridx] * 0.5*r_1[i]*r_1[i]*(Br_ghost + Br[ridx][i]);
-      } else if (rbound[l].kind == NEUMANN_HOM) {
-        F[ridx][i] = 0.0;
       }
       // Build dU
       for (j=lidx; j<=ridx; j++)
-              //[Err] delete questa linea
-        // dUres[j][i] = (F[j][i] - F[j-1][i])*dt*inv_dz[j];
-        //[Err] deccoment next line
         dUres[j][i] = -(F[j][i] - F[j-1][i])*dt*inv_dz[j];
     }
   }
