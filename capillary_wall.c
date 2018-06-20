@@ -37,9 +37,9 @@ i=0                 o-------------------------------->(axis)
     */
 
   /* I find the indexes of the cells closest to the capillary bounds*/
-  i_cap_inter_end = IBEG + FindIdxClosest(&(grid[IDIR].xr_glob[IBEG]), IEND-IBEG, rcap);
-  j_cap_inter_end = JBEG + FindIdxClosest(&(grid[JDIR].xr_glob[JBEG]), JEND-JBEG, zcap);
-  j_elec_start = JBEG + FindIdxClosest(&(grid[JDIR].xl_glob[JBEG]), JEND-JBEG, zcap-dzcap);
+  i_cap_inter_end = IBEG + FindIdxClosest(&(grid[IDIR].xr_glob[IBEG]), IEND-IBEG+1, rcap);
+  j_cap_inter_end = JBEG + FindIdxClosest(&(grid[JDIR].xr_glob[JBEG]), JEND-JBEG+1, zcap);
+  j_elec_start = JBEG + FindIdxClosest(&(grid[JDIR].xl_glob[JBEG]), JEND-JBEG+1, zcap-dzcap);
 
   if (j_elec_start > j_cap_inter_end) {
     print1("\n[SetRemarkableIdxs]Electrode appears to start after end of capillary! Quitting.");
