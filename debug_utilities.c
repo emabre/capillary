@@ -9,18 +9,18 @@ void printmat(double **matrix, int dim2, int dim1)
     int i, j;
     for (i = 0; i < dim1; ++i){
       sprintf(coltop, "--%d--", i );
-      printf("%11s", coltop);
+      printf("%21s", coltop);
     }
     printf("\n");
     for (j = 0; j < dim2; ++j) {
       printf("%2d|", j);
         for (i = 0; i < dim1; ++i)
-            printf("%11.5g", matrix[j][i]);
+            printf("%21.15g", matrix[j][i]);
         printf("|\n");
     }
     for (i = 0; i < dim1; ++i){
       sprintf(coltop, "--%d--", i );
-      printf("%11s", coltop);
+      printf("%21s", coltop);
     }
     printf("\n");
 

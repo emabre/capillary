@@ -57,7 +57,7 @@
 
 /* ---------------------------------------------------- */
 /*  Ema's additional macros                            */
-// #define FREEZE_FLUID
+#define FREEZE_FLUID
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */
 // #define FRACTIONAL_THETA           0.3
@@ -66,7 +66,7 @@
 #define FIRST_JDIR_THEN_IDIR       NO
 // #define  TEST_ADI
 #define JOULE_EFFECT_AND_MAG_ENG   (YES &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
-// If YES: power flux is computed inside adi schemes (if NO, outside)
+//Keep it YES for now. If YES: power flux is computed inside adi schemes (if NO, outside)
 #define POW_INSIDE_ADI             YES
 /* Macros to impose T (B) on walls also for advection (unphisical!)
    (if NO, conduction and B diffusion can be modeled only via ADI scheme) */
