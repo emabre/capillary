@@ -42,6 +42,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #if FIRST_JDIR_THEN_IDIR == RANDOM
     if (first_call)
       srand(time(NULL));   // should only be called once
+  #elif FIRST_JDIR_THEN_IDIR == AVERAGE
+    #if (defined(FRACTIONAL_THETA) || defined(SPLIT_IMPLICIT))
+      #error Average order is not yet implemented for FractionalTheta and SplitImplicit
+    #endif
+    static double **Br_new_other_order; //Additional Br result when the other order of direction is used
+    static double **dUres_other_order; //Additional dUres result when the other order of direction is used
   #endif
 
   // Find the remarkable indexes (if they had not been found before)
@@ -74,6 +80,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         Br_new[j][i] = 0.0;
         // dUres[j][i] = 0.0;
       }
+      #if FIRST_JDIR_THEN_IDIR == AVERAGE
+        Br_new_other_order = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+        dUres_other_order = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      #endif
     #endif
 
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
@@ -188,7 +198,17 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #elif defined(FRACTIONAL_THETA)
         FractionalTheta(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA);
       #else
-        PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
+        #if FIRST_JDIR_THEN_IDIR == AVERAGE
+          PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, FIRST_IDIR, dt_reduced, t_start_sub);
+          PeacemanRachford(Br_new_other_order, Br_old, dUres_other_order, NULL, d, grid, lines, BDIFF, FIRST_JDIR, dt_reduced, t_start_sub);
+          // Now I average the two results
+          LINES_LOOP(lines[IDIR], l, j, i) {
+            Br_new[j][i] = 0.5 * (Br_new[j][i] + Br_new_other_order[j][i]);
+            dUres[j][i] = 0.5 * (dUres[j][i] + dUres_other_order[j][i]);
+          }
+        #else
+          PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
+        #endif
       #endif
 
       /* ---- Update cons variables ---- */
@@ -670,7 +690,9 @@ void PeacemanRachford(double **v_new, double **v_old,
                       const Data *d, Grid *grid,
                       Lines *lines, int diff, int order,
                       double dt, double t0) {
-    
+    #ifndef FRACT
+      #define FRACT 0.5
+    #endif
     static double **v_aux; // auxiliary solution vector
     static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
     static int first_call = 1;
@@ -744,13 +766,13 @@ void PeacemanRachford(double **v_new, double **v_old,
      (a.1) Explicit update sweeping DIR1
     **********************************/
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], FRACT*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
         //       instead of doing it a line later 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], 0.5*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], FRACT*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
       }
@@ -759,13 +781,13 @@ void PeacemanRachford(double **v_new, double **v_old,
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt*0.5, dir2);
+    ApplyBCs(lines, d, grid, t0 + dt*(1-FRACT), dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], (1-FRACT)*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], (1-FRACT)*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -775,13 +797,13 @@ void PeacemanRachford(double **v_new, double **v_old,
      (b.1) Explicit update sweeping DIR2
     **********************************/
     ExplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
-                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
+                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], FRACT*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
            (but in this way it is more readable)*/
         // [Err] Decomment next line       
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], FRACT*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }    
@@ -792,11 +814,11 @@ void PeacemanRachford(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-FRACT)*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], 0.5*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], (1-FRACT)*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }

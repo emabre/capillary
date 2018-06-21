@@ -38,13 +38,19 @@
 #define FIRST_IDIR 0
 #define FIRST_JDIR 1
 #define RANDOM 2
+#define AVERAGE 3
 #define RANDOM_ORDER (rand()%2)
+
 #if FIRST_JDIR_THEN_IDIR == NO
   #define ORDER FIRST_IDIR
 #elif FIRST_JDIR_THEN_IDIR == YES
   #define ORDER FIRST_JDIR
 #elif FIRST_JDIR_THEN_IDIR == RANDOM
   #define ORDER RANDOM_ORDER
+#elif FIRST_JDIR_THEN_IDIR == AVERAGE
+  #ifdef ORDER
+    #undef ORDER
+  #endif
 #else
   #error wrong choice for FIRST_JDIR_THEN_IDIR
 #endif

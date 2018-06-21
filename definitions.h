@@ -57,11 +57,15 @@
 
 /* ---------------------------------------------------- */
 /*  Ema's additional macros                            */
-#define FREEZE_FLUID
+// #define FREEZE_FLUID
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */
 // #define FRACTIONAL_THETA           0.3
 // #define SPLIT_IMPLICIT
+/* For a pseudo P-R algoritm: if FRACT==0.5 you have the usual P-R
+  otherwise you unbalance the scheme towards the implcit or explicit part
+  (keep it in ]0,1[). If you do not define it it will be set to 0.5*/
+#define FRACT                      0.2
 // to set the order of the ADI scheme, allowed values: YES, NO, RANDOM
 #define FIRST_JDIR_THEN_IDIR       NO
 // #define  TEST_ADI
