@@ -11,119 +11,7 @@
 void setT(const Data *d, double T, int i, int j, int k);
 
 // [Err] Decomment the fucntion
-// /* ********************************************************************* */
-// void Init (double *us, double x1, double x2, double x3)
-// /*
-//  *
-//  *********************************************************************** */
-// {
-//   double mu;/*Temperature in K and mean particle weight*/
-//   double curr, Bwall; //Bwall is in code units
-//   double unit_Mfield;
-//   double csi = x1/rcap;
-//   double alpha = g_inputParam[ALPHA_J]; //ratio between delta current density wall-axis and current density on axis
-//   double T0_K = g_inputParam[T0];
-//   double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
-//   double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
-
-//     // [Err]
-//   // double L = 0.02/UNIT_LENGTH;
-
-//   // Just a check that the geometrical settings makes sense:
-//   if (DZCAP > ZCAP){
-//     print1("\nElectrode is longer than whole capillary!");
-//     QUIT_PLUTO(1);
-//   }
-
-//   unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
-
-//   curr = current_from_time(0.0);
-//   // print1("Current from tab: %g", curr);
-//   // Mag field at the capillary wall, in code units
-//   Bwall = (BIOTSAV_GAUSS_A_CM(curr, RCAP))/unit_Mfield;
-
-//   #if GEOMETRY != CYLINDRICAL
-//    #error geometry not valid
-//   #endif
-//   #if PHYSICS != MHD
-//    #error physics not valid
-//   #endif
-
-//   //Remember: in cyl coords x1 is r, x2 is z
-
-//   /* -----------------------------------------------------
-//       Zones not covered in the next lines (except for zone "Everywhere")
-//     ----------------------------------------------------- */
-//   // us[RHO] = 0.001*dens0;
-//     // [Err]
-//   us[RHO] = dens0;
-//   us[iVZ] = 0.0;
-//   /* -----------------------------------------------------
-//       Inside capillary, excluded near-electrode zone
-//      ----------------------------------------------------- */
-//   if (x2 < zcap-dzcap && x1 <= rcap) {
-//     // us[iBPHI] = Bwall*x1/rcap;
-//     us[iBPHI] = Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi));
-//     us[RHO] = dens0;
-//     us[iVZ] = vz0;
-//   }
-//   /* -----------------------------------------------------
-//       Inside capillary, in near-electrode zone
-//      ----------------------------------------------------- */
-//   if (zcap-dzcap <= x2 && x2 < zcap && x1 < rcap) {
-//     /* the B field linearly decreses in z direction
-//     (this is provisory, better electrode have to be implemented) */
-//     // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
-//     us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
-//     //[Err]
-//     // if (x2>zcap-dzcap+L) {
-//     //   us[iBPHI] = 0.0;
-//     // } else {
-//     // us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/L );
-//     // }
-//     // [Err] end previous test
-//     us[RHO] = dens0;
-//     us[iVZ] = vz0;
-//   }
-//   /* ------------------------------------------------------
-//       Above non-electrode wall (internal boundary, outside capillary)
-//      ------------------------------------------------------ */
-//   if (x2 < zcap-dzcap && x1>rcap) {
-//     us[iBPHI] = Bwall;
-//   }
-//   /* ------------------------------------------------------
-//       Above electrode wall (internal boundary, outside capillary)
-//      ------------------------------------------------------ */
-//   if ( zcap-dzcap <= x2 && x2 < zcap && x1 >= rcap) {
-//     us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
-//   }
-//   /* ------------------------------------------------------
-//       Outside capillary (not in internal boundary)
-//      ------------------------------------------------------ */
-//   if (x2 > zcap) {
-//     // No field outside capillary
-//     us[iBPHI] = 0.0;
-//   }
-//   /* -----------------------------------------------------
-//       Everywhere
-//      ----------------------------------------------------- */
-//   us[iBZ] = us[iBR] = 0.0;
-//   us[iVPHI] = us[iVR] = 0.0;
-//   #if EOS==IDEAL
-//       mu = MeanMolecularWeight(us);
-//   #elif EOS==PVTE_LAW
-//       GetMu(T0_K, us[RHO], &mu); // GetMu takes T in Kelvin, no need to adim. T
-//   #endif
-//   us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
-
-//   //[Err] Delete next if cycle
-//   // if (x2<zcap && x1<=rcap){
-//   //   GetMu(T0_K, us[RHO], &mu);
-//   //   us[PRS] = us[RHO]*(T0_K*x1/rcap + T0_K*0.8) / (KELVIN*mu);
-//   // }
-// }
-
-//[Err] Test, remove this function
+/* ********************************************************************* */
 void Init (double *us, double x1, double x2, double x3)
 /*
  *
@@ -186,7 +74,7 @@ void Init (double *us, double x1, double x2, double x3)
     /* the B field linearly decreses in z direction
     (this is provisory, better electrode have to be implemented) */
     // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
-    us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi)));
+    us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     //[Err]
     // if (x2>zcap-dzcap+L) {
     //   us[iBPHI] = 0.0;
@@ -207,7 +95,7 @@ void Init (double *us, double x1, double x2, double x3)
       Above electrode wall (internal boundary, outside capillary)
      ------------------------------------------------------ */
   if ( zcap-dzcap <= x2 && x2 < zcap && x1 >= rcap) {
-    us[iBPHI] = Bwall;
+    us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
   }
   /* ------------------------------------------------------
       Outside capillary (not in internal boundary)
@@ -234,6 +122,118 @@ void Init (double *us, double x1, double x2, double x3)
   //   us[PRS] = us[RHO]*(T0_K*x1/rcap + T0_K*0.8) / (KELVIN*mu);
   // }
 }
+
+//[Err] Test, remove this function
+// void Init (double *us, double x1, double x2, double x3)
+// /*
+//  *
+//  *********************************************************************** */
+// {
+//   double mu;/*Temperature in K and mean particle weight*/
+//   double curr, Bwall; //Bwall is in code units
+//   double unit_Mfield;
+//   double csi = x1/rcap;
+//   double alpha = g_inputParam[ALPHA_J]; //ratio between delta current density wall-axis and current density on axis
+//   double T0_K = g_inputParam[T0];
+//   double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
+//   double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
+
+//     // [Err]
+//   // double L = 0.02/UNIT_LENGTH;
+
+//   // Just a check that the geometrical settings makes sense:
+//   if (DZCAP > ZCAP){
+//     print1("\nElectrode is longer than whole capillary!");
+//     QUIT_PLUTO(1);
+//   }
+
+//   unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+
+//   curr = current_from_time(0.0);
+//   // print1("Current from tab: %g", curr);
+//   // Mag field at the capillary wall, in code units
+//   Bwall = (BIOTSAV_GAUSS_A_CM(curr, RCAP))/unit_Mfield;
+
+//   #if GEOMETRY != CYLINDRICAL
+//    #error geometry not valid
+//   #endif
+//   #if PHYSICS != MHD
+//    #error physics not valid
+//   #endif
+
+//   //Remember: in cyl coords x1 is r, x2 is z
+
+//   /* -----------------------------------------------------
+//       Zones not covered in the next lines (except for zone "Everywhere")
+//     ----------------------------------------------------- */
+//   // us[RHO] = 0.001*dens0;
+//     // [Err]
+//   us[RHO] = dens0;
+//   us[iVZ] = 0.0;
+//   /* -----------------------------------------------------
+//       Inside capillary, excluded near-electrode zone
+//      ----------------------------------------------------- */
+//   if (x2 < zcap-dzcap && x1 <= rcap) {
+//     // us[iBPHI] = Bwall*x1/rcap;
+//     us[iBPHI] = Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi));
+//     us[RHO] = dens0;
+//     us[iVZ] = vz0;
+//   }
+//   /* -----------------------------------------------------
+//       Inside capillary, in near-electrode zone
+//      ----------------------------------------------------- */
+//   if (zcap-dzcap <= x2 && x2 < zcap && x1 < rcap) {
+//     /* the B field linearly decreses in z direction
+//     (this is provisory, better electrode have to be implemented) */
+//     // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+//     us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi)));
+//     //[Err]
+//     // if (x2>zcap-dzcap+L) {
+//     //   us[iBPHI] = 0.0;
+//     // } else {
+//     // us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/L );
+//     // }
+//     // [Err] end previous test
+//     us[RHO] = dens0;
+//     us[iVZ] = vz0;
+//   }
+//   /* ------------------------------------------------------
+//       Above non-electrode wall (internal boundary, outside capillary)
+//      ------------------------------------------------------ */
+//   if (x2 < zcap-dzcap && x1>rcap) {
+//     us[iBPHI] = Bwall;
+//   }
+//   /* ------------------------------------------------------
+//       Above electrode wall (internal boundary, outside capillary)
+//      ------------------------------------------------------ */
+//   if ( zcap-dzcap <= x2 && x2 < zcap && x1 >= rcap) {
+//     us[iBPHI] = Bwall;
+//   }
+//   /* ------------------------------------------------------
+//       Outside capillary (not in internal boundary)
+//      ------------------------------------------------------ */
+//   if (x2 > zcap) {
+//     // No field outside capillary
+//     us[iBPHI] = 0.0;
+//   }
+//   /* -----------------------------------------------------
+//       Everywhere
+//      ----------------------------------------------------- */
+//   us[iBZ] = us[iBR] = 0.0;
+//   us[iVPHI] = us[iVR] = 0.0;
+//   #if EOS==IDEAL
+//       mu = MeanMolecularWeight(us);
+//   #elif EOS==PVTE_LAW
+//       GetMu(T0_K, us[RHO], &mu); // GetMu takes T in Kelvin, no need to adim. T
+//   #endif
+//   us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
+
+//   //[Err] Delete next if cycle
+//   // if (x2<zcap && x1<=rcap){
+//   //   GetMu(T0_K, us[RHO], &mu);
+//   //   us[PRS] = us[RHO]*(T0_K*x1/rcap + T0_K*0.8) / (KELVIN*mu);
+//   // }
+// }
 
 /* ********************************************************************* */
 void Analysis (const Data *d, Grid *grid)
