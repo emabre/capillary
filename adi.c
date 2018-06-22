@@ -112,8 +112,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   //[Err] Remove next line
   Boundary(d, ALL_DIR, grid);
   PrimToConsLines (Vc, Uc, lines);
-  //[Err] Remove next line
-  Boundary(d, ALL_DIR, grid);
 
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
     DOM_LOOP(k,j,i) {

@@ -25,9 +25,11 @@ void Init (double *us, double x1, double x2, double x3)
   double T0_K = g_inputParam[T0];
   double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
   double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
+  double rho_red_vac = 0.01; // Fraction of rho inside capillary, used to emumate vacuum
+  double decay_z, decay_r; // Decay lenths in r and z, for setting density
 
-    // [Err]
-  // double L = 0.02/UNIT_LENGTH;
+  decay_r = 0.1/UNIT_LENGTH;
+  decay_z = 0.5/UNIT_LENGTH;
 
   // Just a check that the geometrical settings makes sense:
   if (DZCAP > ZCAP){
@@ -54,15 +56,12 @@ void Init (double *us, double x1, double x2, double x3)
   /* -----------------------------------------------------
       Zones not covered in the next lines (except for zone "Everywhere")
     ----------------------------------------------------- */
-  // us[RHO] = 0.001*dens0;
-    // [Err]
-  us[RHO] = 0.01*dens0;
+  us[RHO] = rho_red_vac*dens0;
   us[iVZ] = 0.0;
   /* -----------------------------------------------------
       Inside capillary, excluded near-electrode zone
      ----------------------------------------------------- */
   if (x2 < zcap-dzcap && x1 <= rcap) {
-    // us[iBPHI] = Bwall*x1/rcap;
     us[iBPHI] = Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi));
     us[RHO] = dens0;
     us[iVZ] = vz0;
@@ -73,15 +72,7 @@ void Init (double *us, double x1, double x2, double x3)
   if (zcap-dzcap <= x2 && x2 < zcap && x1 < rcap) {
     /* the B field linearly decreses in z direction
     (this is provisory, better electrode have to be implemented) */
-    // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
-    //[Err]
-    // if (x2>zcap-dzcap+L) {
-    //   us[iBPHI] = 0.0;
-    // } else {
-    // us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/L );
-    // }
-    // [Err] end previous test
     us[RHO] = dens0;
     us[iVZ] = vz0;
   }
@@ -98,11 +89,29 @@ void Init (double *us, double x1, double x2, double x3)
     us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
   }
   /* ------------------------------------------------------
-      Outside capillary (not in internal boundary)
+      Outside capillary, aligned with capillary (not in internal boundary)
      ------------------------------------------------------ */
-  if (x2 > zcap) {
+  if (x2 > zcap && x1 <= rcap) {
     // No field outside capillary
     us[iBPHI] = 0.0;
+    if (x2 < zcap+decay_z) {
+      us[RHO] = (1-rho_red_vac)*dens0;
+      us[RHO] *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
+      us[RHO] += rho_red_vac*dens0;
+    }
+  }
+  /* ------------------------------------------------------
+      Outside capillary, above capillary  (not in internal boundary)
+     ------------------------------------------------------ */
+  if (x2 > zcap && x1 > rcap) {
+    // No field outside capillary
+    us[iBPHI] = 0.0;
+    if (x1 < rcap+decay_r && x2 < zcap+decay_z) {
+      us[RHO] = (1-rho_red_vac)*dens0;
+      us[RHO] *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
+      us[RHO] *= cos(0.5*CONST_PI*(x1-rcap)/decay_r)*cos(0.5*CONST_PI*(x1-rcap)/decay_r);
+      us[RHO] += rho_red_vac*dens0;
+    }
   }
   /* -----------------------------------------------------
       Everywhere
@@ -115,15 +124,9 @@ void Init (double *us, double x1, double x2, double x3)
       GetMu(T0_K, us[RHO], &mu); // GetMu takes T in Kelvin, no need to adim. T
   #endif
   us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
-
-  //[Err] Delete next if cycle
-  // if (x2<zcap && x1<=rcap){
-  //   GetMu(T0_K, us[RHO], &mu);
-  //   us[PRS] = us[RHO]*(T0_K*x1/rcap + T0_K*0.8) / (KELVIN*mu);
-  // }
 }
 
-//[Err] Test, remove this function
+//[Err] Test, for 1D case.
 // void Init (double *us, double x1, double x2, double x3)
 // /*
 //  *

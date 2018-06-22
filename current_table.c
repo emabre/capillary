@@ -3,12 +3,10 @@
 
 /*Electrical current table, in Ampere, seconds*/
 double i_curr_tab[N_CURR_TAB] = { 0.0001e+00,
-                                  0.0001e+00,
                                   200.00e+00,
                                   200.00e+00};
 double t_curr_tab[N_CURR_TAB] = { -1.000000e-20,
                                   200.0e-9,
-                                  400.0e-9,
                                   2000.000000e-09};
 //
 /*------------------------------------------------------

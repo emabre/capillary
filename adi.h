@@ -163,7 +163,7 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
     void ResEnergyIncrease(double **dUres, double** Ip_B, double** Im_B, double **Br,
                             Grid *grid, Lines *lines, double dt, int dir);
   #endif
-  void ComplainAnisotropic(double *v, double  *eta);
+  void ComplainAnisotropic(double *v, double  *eta, double r, double z, double theta);
 #endif
 
 /* Stuff to do prim->cons and cons->prim conversions*/
