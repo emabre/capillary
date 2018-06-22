@@ -70,7 +70,7 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
         advance directly d->Vc instead of allocating vectors for T and Br */
       Resistive_eta( v, rR[i], z[j], theta[k], NULL, eta);
       if (eta[0] != eta[1] || eta[1] != eta[2]) {
-        print1("Anisotropic resistivity is not implemented in ADI!");
+        ComplainAnisotropic(v, eta);
         QUIT_PLUTO(1);
       }
       Ip[j][i] = eta[0]*inv_dr[i]*inv_dri[i]/rR[i];
@@ -84,7 +84,7 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i-1]);
       Resistive_eta( v, rL[i], z[j], theta[k], NULL, eta);
       if (eta[0] != eta[1] || eta[1] != eta[2]) {
-        print1("Anisotropic resistivity is not implemented in ADI!");
+        ComplainAnisotropic(v, eta);
         QUIT_PLUTO(1);
       }
       if (rL[i]!=0.0)
@@ -97,7 +97,7 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
       Resistive_eta( v, r[i], zR[j], theta[k], NULL, eta);
       if (eta[0] != eta[1] || eta[1] != eta[2]) {
-        print1("Anisotropic resistivity is not implemented in ADI!");
+        ComplainAnisotropic(v, eta);
         QUIT_PLUTO(1);
       }
       Jp[j][i] = eta[0]*inv_dz[j]*inv_dzi[j];
@@ -106,6 +106,10 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
       Resistive_eta( v, r[i], zL[j], theta[k], NULL, eta);
+      if (eta[0] != eta[1] || eta[1] != eta[2]) {
+        ComplainAnisotropic(v, eta);
+        QUIT_PLUTO(1);
+      }
       Jm[j][i] = eta[0]*inv_dz[j]*inv_dzi[j-1];
 
       /* :::: CI :::: */
@@ -303,6 +307,21 @@ void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t, int di
   }
 }
 
+/* *************************************************************
+Function to complain that the computed eta is non isotropic
+* **************************************************************/
+void ComplainAnisotropic(double *v, double  *eta) {
+  print1("Anisotropic resistivity is not implemented in ADI!");
+  print1("\neta = {%g,%g,%g}", eta[1], eta[2], eta[3]);
+  print1("\nv[RHO]=%g", v[RHO]);
+  print1("\nv[iVR]=%g", v[iVR]);
+  print1("\nv[iVZ]=%g",v[iVZ]);
+  print1("\nv[iVPHI]=%g", v[iVPHI]);
+  print1("\nv[PRS]=%g", v[PRS]);
+  print1("\nv[iBR]=%g", v[iBR]);
+  print1("\nv[iBZ]=%g", v[iBZ]);
+  print1("\nv[iBPHI]=%g", v[iBPHI]); 
+}
 // [Err] This function is a test, remove it later
 // /****************************************************************************
 // * Function to build the bcs of lines for a 1D-like problem

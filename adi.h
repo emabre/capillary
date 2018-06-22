@@ -133,6 +133,12 @@ void SplitImplicit(double **v_new, double **v_old,
                   Lines *lines, int diff, int order,
                   double dt, double t0);
 
+void PeacemanRachfordMod(double **v_new, double **v_old,
+                      double **dUres, double **dEdT,
+                      const Data *d, Grid *grid,
+                      Lines *lines, int diff, int order,
+                      double dt, double t0);
+
 void ExplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt, int dir);
@@ -157,6 +163,7 @@ void tdm_solver(double *x, double const *diagonal, double const *upper,
     void ResEnergyIncrease(double **dUres, double** Ip_B, double** Im_B, double **Br,
                             Grid *grid, Lines *lines, double dt, int dir);
   #endif
+  void ComplainAnisotropic(double *v, double  *eta);
 #endif
 
 /* Stuff to do prim->cons and cons->prim conversions*/

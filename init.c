@@ -56,7 +56,7 @@ void Init (double *us, double x1, double x2, double x3)
     ----------------------------------------------------- */
   // us[RHO] = 0.001*dens0;
     // [Err]
-  us[RHO] = dens0;
+  us[RHO] = 0.01*dens0;
   us[iVZ] = 0.0;
   /* -----------------------------------------------------
       Inside capillary, excluded near-electrode zone
