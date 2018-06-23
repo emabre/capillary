@@ -77,7 +77,7 @@
 #define IMPOSE_TWALL               NO
 #define IMPOSE_BWALL               NO
 /* Number of subcycles performed by ADI scheme*/
-#define NSUBS_ADI                  1
+#define NSUBS_ADI                  5
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
 // #define ELECTR_NEUM
 /* To set to 0 the mag field in a region outside capillary*/
