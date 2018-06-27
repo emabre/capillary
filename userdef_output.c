@@ -6,6 +6,7 @@
 
 #define WRITE_T_MU_NE_IONIZ YES
 #define WRITE_ETA0 YES
+#define WRITE_MULTIPLE_GHOSTS_CORR NO
 
 #ifndef WRITE_J1D
   #define WRITE_J1D NO
@@ -25,10 +26,6 @@
 #if WRITE_J == YES
   void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz);
   void ComputeJrforOutput(const Data *d, Grid *grid, double ***Jr);
-#endif
-
-#if WRITE_J_OLD == YES
-  void ComputeJforOutput_old(const Data *d, Grid *grid, double ***Ji, double ***Jj);
 #endif
 
 #if WRITE_J2D == YES
@@ -72,13 +69,16 @@ tion RuntimeGet(), e.g. ..."*/
   #endif
 
   #if WRITE_T_MU_NE_IONIZ==YES
-    double ***T, ***ioniz, ***mu, ***ne;
+    double ***T, ***ioniz, ***ne;
     double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
     int nv;
   #endif
 
-  #if MULTIPLE_GHOSTS==YES
-    double mu_aux; /*Auxiliary variable*/
+  #if MULTIPLE_GHOSTS==YES || WRITE_T_MU_NE_IONIZ==YES
+    double mu;
+  #endif
+
+  #if MULTIPLE_GHOSTS==YES && WRITE_MULTIPLE_GHOSTS_CORR == YES
     //Data d_corrected_r, d_corrected_z;
     Data *d_corrected_r, *d_corrected_z;
     double ***vr_c_r, ***vr_c_z;
@@ -92,7 +92,7 @@ tion RuntimeGet(), e.g. ..."*/
 /******************************************************/
 /*I allocate space for all the variables of the output*/
 /******************************************************/
-  #if MULTIPLE_GHOSTS==YES
+  #if MULTIPLE_GHOSTS==YES && WRITE_MULTIPLE_GHOSTS_CORR == YES
     // I export the corrected vr, vz, rho
     vr_c_r = GetUserVar("vr_c_r");
     vr_c_z = GetUserVar("vr_c_z");
@@ -108,7 +108,6 @@ tion RuntimeGet(), e.g. ..."*/
   // export Internal boundary flags
   interBound = GetUserVar("interBound");
   #if WRITE_T_MU_NE_IONIZ == YES
-    mu = GetUserVar("mu");
     T = GetUserVar("T");
     #if EOS==PVTE_LAW
       ioniz = GetUserVar("ioniz");
@@ -142,22 +141,22 @@ tion RuntimeGet(), e.g. ..."*/
   #if WRITE_T_MU_NE_IONIZ==YES
     DOM_LOOP(k,j,i){
       #if EOS==IDEAL
-        mu[k][j][i] = MeanMolecularWeight(d->Vc);
-        T[k][j][i] = d->Vc[PRS][k][j][i]/d->Vc[RHO][k][j][i]*KELVIN*mu[k][j][i];
+        mu = MeanMolecularWeight(d->Vc);
+        T[k][j][i] = d->Vc[PRS][k][j][i]/d->Vc[RHO][k][j][i]*KELVIN*mu;
       #elif EOS==PVTE_LAW
         for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
         if (GetPV_Temperature(v, &(T[k][j][i]) )!=0) {
           print1("ComputeUserVar:[Ema] Error computing temperature!");
         }
         // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
-        GetMu(T[k][j][i], v[RHO], &(mu[k][j][i]));
-        ioniz[k][j][i] = 1/mu[k][j][i] - 1;
+        GetMu(T[k][j][i], v[RHO], &mu);
+        ioniz[k][j][i] = 1/mu - 1;
         ne[k][j][i] = ioniz[k][j][i] * (v[RHO]*UNIT_DENSITY) / CONST_mp;
       #endif
     }
   #endif
 
-  #if MULTIPLE_GHOSTS==YES
+  #if MULTIPLE_GHOSTS==YES && WRITE_MULTIPLE_GHOSTS_CORR == YES
     // alloc_Data(&d_corrected_r);
     // alloc_Data(&d_corrected_z);
     d_corrected_r = alloc_Data();
@@ -192,29 +191,29 @@ tion RuntimeGet(), e.g. ..."*/
     #if WRITE_T_MU_NE_IONIZ==YES
       DOM_LOOP(k,j,i){
         #if EOS==IDEAL
-          mu_aux = MeanMolecularWeight(d_corrected_r.Vc);
-          T_c_r[k][j][i] = d_corrected_r.Vc[PRS][k][j][i]/d_corrected_r.Vc[RHO][k][j][i]*KELVIN*mu_aux;
+          mu = MeanMolecularWeight(d_corrected_r.Vc);
+          T_c_r[k][j][i] = d_corrected_r.Vc[PRS][k][j][i]/d_corrected_r.Vc[RHO][k][j][i]*KELVIN*mu;
         #elif EOS==PVTE_LAW
           // for (nv=NVAR; nv--;) v[nv] = d_corrected_r.Vc[nv][k][j][i];
           for (nv=NVAR; nv--;) v[nv] = d_corrected_r->Vc[nv][k][j][i];
           if (GetPV_Temperature(v, &(T_c_r[k][j][i]) )!=0) {
             print1("ComputeUserVar:[Ema] Error computing temperature!");
           }
-          GetMu(T_c_r[k][j][i], v[RHO], &(mu_aux));
+          GetMu(T_c_r[k][j][i], v[RHO], &mu);
         #endif
       }
 
       DOM_LOOP(k,j,i){
         #if EOS==IDEAL
-          mu_aux = MeanMolecularWeight(d_corrected_z.Vc);
-          T_c_z[k][j][i] = d_corrected_z.Vc[PRS][k][j][i]/d_corrected_z.Vc[RHO][k][j][i]*KELVIN*mu_aux;
+          mu = MeanMolecularWeight(d_corrected_z.Vc);
+          T_c_z[k][j][i] = d_corrected_z.Vc[PRS][k][j][i]/d_corrected_z.Vc[RHO][k][j][i]*KELVIN*mu;
         #elif EOS==PVTE_LAW
           // for (nv=NVAR; nv--;) v[nv] = d_corrected_z.Vc[nv][k][j][i];
           for (nv=NVAR; nv--;) v[nv] = d_corrected_z->Vc[nv][k][j][i];
           if (GetPV_Temperature(v, &(T_c_z[k][j][i]) )!=0) {
             print1("ComputeUserVar:[Ema] Error computing temperature!");
           }
-          GetMu(T_c_z[k][j][i], v[RHO], &(mu_aux));
+          GetMu(T_c_z[k][j][i], v[RHO], &(mu));
         #endif
       }
     #endif
@@ -230,10 +229,6 @@ tion RuntimeGet(), e.g. ..."*/
     ComputeJ2DforOutput(d, grid, Jr, Jz, Jphi);
   #endif
 
-  #if WRITE_J_OLD == YES
-    ComputeJforOutput(d, grid, Jr, Jz);
-  #endif
-
   #if WRITE_ETA0
     eta0 = GetUserVar("eta0");
     DOM_LOOP(k,j,i) {
@@ -242,10 +237,12 @@ tion RuntimeGet(), e.g. ..."*/
     }
   #endif
 
+  #if MULTIPLE_GHOSTS==YES && WRITE_MULTIPLE_GHOSTS_CORR == YES
   // free_Data(&d_corrected_r);
   // free_Data(&d_corrected_z);
   free_Data(d_corrected_r);
   free_Data(d_corrected_z);
+  #endif
 }
 /* ************************************************************* */
 void ChangeDumpVar ()
@@ -254,7 +251,9 @@ void ChangeDumpVar ()
  *
  *************************************************************** */
 {
-  Image *image;
+  SetDumpVar("bx1", VTK_OUTPUT, NO);
+  SetDumpVar("bx2", VTK_OUTPUT, NO);
+  SetDumpVar("vx3", VTK_OUTPUT, NO);
 }
 
 #if WRITE_J2D
@@ -614,89 +613,4 @@ void ChangeDumpVar ()
       if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY))
         Jr[k][j][i] = 0.0;
   }
-#endif
-
-#if WRITE_J_OLD ==  YES
-#if DIMENSIONS != 2
-  #error ComputeJforOutput works only in 2D
-#endif
-void ComputeJforOutput_old(const Data *d, Grid *grid, double ***Ji, double ***Jj) {
-  int i,j,k;
-  // int dir;
-  // double ****J_isweep, ****J_jsweep, ****J_isweep_avg, ****J_jsweep_avg;
-  double J_isweep[3][NX3_TOT][NX2_TOT][NX1_TOT];
-  double J_jsweep[3][NX3_TOT][NX2_TOT][NX1_TOT];
-  double J_isweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
-  double J_jsweep_avg[3][NX3_TOT][NX2_TOT][NX1_TOT];
-  Data* d_temp;
-  RBox box;
-
-  // alloc_Data(&d_temp);
-  d_temp = alloc_Data();
-
-  // J_isweep = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
-  // J_jsweep = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
-  // J_isweep_avg = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
-  // J_jsweep_avg = ARRAY_4D(3,NX3_TOT, NX2_TOT, NX1_TOT, double);
-
- // I do a TOT_LOOP as J is defined in the same way as Vc (in therms of memory),
- // see capillary_wall.c/void alloc_Data(Data *data).
- // Copy d->B[][][] inside d_temp->B..
-  TOT_LOOP(k, j, i) {
-    // d_temp.J[IDIR][k][j][i] = d->J[IDIR][k][j][i];
-    // d_temp.J[JDIR][k][j][i] = d->J[JDIR][k][j][i];
-    // d_temp.J[KDIR][k][j][i] = d->J[KDIR][k][j][i];
-    d_temp->J[IDIR][k][j][i] = d->J[IDIR][k][j][i];
-    d_temp->J[JDIR][k][j][i] = d->J[JDIR][k][j][i];
-    d_temp->J[KDIR][k][j][i] = d->J[KDIR][k][j][i];
-  }
-
-  // call twice GetCurrent
-  // GetCurrent (&d_temp, IDIR, grid);
-  GetCurrent (d_temp, IDIR, grid);
-  TOT_LOOP(k, j, i) {
-    J_isweep[IDIR][k][j][i] = d->J[IDIR][k][j][i];
-    J_isweep[JDIR][k][j][i] = d->J[JDIR][k][j][i];
-    J_isweep[KDIR][k][j][i] = d->J[KDIR][k][j][i];
-  }
-  // GetCurrent (&d_temp, JDIR, grid);
-  GetCurrent (d_temp, JDIR, grid);
-  TOT_LOOP(k, j, i) {
-    J_jsweep[IDIR][k][j][i] = d->J[IDIR][k][j][i];
-    J_jsweep[JDIR][k][j][i] = d->J[JDIR][k][j][i];
-    J_jsweep[KDIR][k][j][i] = d->J[KDIR][k][j][i];
-  }
-
-  // Average d_temp->J inside J
-  // Average along i direction
-  box.ib =       0; box.ie = NX1_TOT-1-IOFFSET;
-  box.jb = JOFFSET; box.je = NX2_TOT-1-JOFFSET;
-  box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
-  BOX_LOOP(&box,k,j,i){
-    J_isweep_avg[IDIR][k][j][i+1] = 0.5 * (J_isweep[IDIR][k][j][i] + J_isweep[IDIR][k][j][i+1]);
-    J_isweep_avg[JDIR][k][j][i+1] = 0.5 * (J_isweep[JDIR][k][j][i] + J_isweep[JDIR][k][j][i+1]);
-  }
-  // Average along j direction
-  box.ib = IOFFSET; box.ie = NX1_TOT-1-IOFFSET;
-  box.jb =       0; box.je = NX2_TOT-1-JOFFSET;
-  box.kb = KOFFSET; box.ke = NX3_TOT-1-KOFFSET;
-  BOX_LOOP(&box,k,j,i){
-    J_jsweep_avg[IDIR][k][j+1][i] = 0.5 * (J_jsweep[IDIR][k][j][i] + J_jsweep[IDIR][k][j+1][i]);
-    J_jsweep_avg[JDIR][k][j+1][i] = 0.5 * (J_jsweep[JDIR][k][j][i] + J_jsweep[JDIR][k][j+1][i]);
-  }
-
-  // Average of the two averages
-  DOM_LOOP(k, j, i) {
-    Ji[k][j][i] =  0.5 * (J_jsweep_avg[IDIR][k][j][i] + J_isweep_avg[IDIR][k][j][i]);
-    Jj[k][j][i] =  0.5 * (J_jsweep_avg[JDIR][k][j][i] + J_isweep_avg[JDIR][k][j][i]);
-  }
-
-  // Deallocate all data allocated in this function
-  // free_Data(&d_temp);
-  free_Data(d_temp);
-  // FreeArray4D ((void *) J_isweep);
-  // FreeArray4D ((void *) J_jsweep);
-  // FreeArray4D ((void *) J_isweep_avg);
-  // FreeArray4D ((void *) J_jsweep_avg);
-}
 #endif

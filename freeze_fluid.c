@@ -19,7 +19,7 @@ void ZeroHypFlux (const State_1D *state, int beg, int end,
  *********************************************************************** */
   int    nv, i;
   double scrh;
-  double *vL, *vR, *uL, *uR, *SR, *SL;
+  double *SR, *SL;
   static double **VL, **VR, **UL, **UR;
   static double *a2L, *a2R;
   double **bgf;
@@ -81,35 +81,6 @@ void ZeroHypFlux (const State_1D *state, int beg, int end,
         state->flux[i][nv] = 0.0;
       }
     state->press[i] = 0.0;
-/* Following lines to be deleted...
-    if (SL[i] > 0.0){
-    
-      for (nv = 0; nv < NFLX; nv++) {
-        state->flux[i][nv] = fL[i][nv];
-      }
-      state->press[i] = pL[i];
-      
-    }else if (SR[i] < 0.0){
-    
-      for (nv = 0; nv < NFLX; nv++) {
-        state->flux[i][nv] = fR[i][nv];
-      }
-      state->press[i] = pR[i];
-      
-    }else{
-    
-      uL = UL[i]; uR = UR[i];
-
-      scrh = 1.0 / (SR[i] - SL[i]);
-    
-      for (nv = 0; nv < NFLX; nv++) {
-        state->flux[i][nv] = SL[i]*SR[i]*(uR[nv] - uL[nv]) +
-                             SR[i]*fL[i][nv] - SL[i]*fR[i][nv];
-        state->flux[i][nv] *= scrh;
-      }
-      state->press[i] = (SR[i]*pL[i] - SL[i]*pR[i])*scrh;
-    }
-*/
   }
 
 }
