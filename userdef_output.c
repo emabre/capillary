@@ -5,8 +5,9 @@
 #include "prototypes.h"
 
 #define WRITE_T_MU_NE_IONIZ YES
-#define WRITE_ETA0 YES
+#define WRITE_ETA YES
 #define WRITE_MULTIPLE_GHOSTS_CORR NO
+#define WRITE_K YES
 
 #ifndef WRITE_J1D
   #define WRITE_J1D NO
@@ -47,10 +48,14 @@ void ComputeUserVar (const Data *d, Grid *grid)
 {
   int i, j, k;
   double ***interBound;
-  #if WRITE_ETA0
-    double ***eta0;
-    const double eta_adim = 4*CONST_PI/(CONST_c*CONST_c)*UNIT_VELOCITY*UNIT_LENGTH;/*unit of eta for adimensionalization*/
-    double eta[3];
+  #if WRITE_ETA
+    const double eta0 = 4*CONST_PI/(CONST_c*CONST_c)*UNIT_VELOCITY*UNIT_LENGTH;/*unit of eta for adimensionalization*/
+    double ***etax1;
+  #endif
+
+  #if WRITE_K
+    double ***knor;
+    double kpar, phi;
   #endif
 
   /*[Rob] I could exploit the (I think) globally available runtime structure to get the number and name of variables
@@ -105,8 +110,10 @@ tion RuntimeGet(), e.g. ..."*/
       T_c_r= GetUserVar("T_c_r");
     #endif
   #endif
+
   // export Internal boundary flags
   interBound = GetUserVar("interBound");
+
   #if WRITE_T_MU_NE_IONIZ == YES
     T = GetUserVar("T");
     #if EOS==PVTE_LAW
@@ -114,6 +121,7 @@ tion RuntimeGet(), e.g. ..."*/
       ne = GetUserVar("ne");
     #endif
   #endif
+
   #if WRITE_J1D == YES || WRITE_J == YES
     Jz = GetUserVar("Jz");
   #endif
@@ -124,6 +132,14 @@ tion RuntimeGet(), e.g. ..."*/
   #endif
   #if WRITE_J == YES
     Jr = GetUserVar("Jr");
+  #endif
+
+  #if WRITE_ETA
+    etax1 = GetUserVar("etax1");
+  #endif
+
+  #if WRITE_K
+    knor = GetUserVar("knor");
   #endif
 
 /******************************************************/
@@ -229,11 +245,19 @@ tion RuntimeGet(), e.g. ..."*/
     ComputeJ2DforOutput(d, grid, Jr, Jz, Jphi);
   #endif
 
-  #if WRITE_ETA0
-    eta0 = GetUserVar("eta0");
+  #if WRITE_ETA
     DOM_LOOP(k,j,i) {
-      Resistive_eta( v, grid[IDIR].x_glob[i], grid[JDIR].x_glob[j], grid[KDIR].x_glob[k], NULL, eta);
-      eta0[k][j][i] = eta[0]*eta_adim;
+      for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
+      Resistive_eta( v, grid[IDIR].x_glob[i], grid[JDIR].x_glob[j], grid[KDIR].x_glob[k], NULL, &(etax1[k][j][i]));
+      etax1[k][j][i] *= eta0;
+    }
+  #endif
+
+  #if WRITE_K
+    DOM_LOOP(k,j,i) {
+      for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
+      TC_kappa( v, grid[IDIR].x_glob[i], grid[JDIR].x_glob[j], grid[KDIR].x_glob[k], &kpar, &(knor[k][j][i]), &phi);
+      knor[k][j][i] /= CONST_mp/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
     }
   #endif
 
