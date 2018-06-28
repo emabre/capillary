@@ -61,6 +61,7 @@
 #define  UNIT_KAPPA  (UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB/CONST_mp)
 
 /*  Ema's additional macros                            */
+// #define PROFILE_GPROF
 // #define FREEZE_FLUID
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */
@@ -86,6 +87,7 @@
 // #define ELECTR_NEUM
 /* To set to 0 the mag field in a region outside capillary*/
 // #define FLATTEN_B_OUTCAP
+// #define PRESUBS_RES
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */

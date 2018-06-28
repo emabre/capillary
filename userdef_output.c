@@ -7,7 +7,7 @@
 #define WRITE_T_MU_NE_IONIZ YES
 #define WRITE_ETA YES
 #define WRITE_MULTIPLE_GHOSTS_CORR NO
-#define WRITE_K YES
+#define WRITE_KAPPA YES
 
 #ifndef WRITE_J1D
   #define WRITE_J1D NO
@@ -52,7 +52,7 @@ void ComputeUserVar (const Data *d, Grid *grid)
     double ***etax1;
   #endif
 
-  #if WRITE_K
+  #if WRITE_KAPPA
     double ***knor;
     double kpar, phi;
   #endif
@@ -137,7 +137,7 @@ tion RuntimeGet(), e.g. ..."*/
     etax1 = GetUserVar("etax1");
   #endif
 
-  #if WRITE_K
+  #if WRITE_KAPPA
     knor = GetUserVar("knor");
   #endif
 
@@ -247,16 +247,24 @@ tion RuntimeGet(), e.g. ..."*/
   #if WRITE_ETA
     DOM_LOOP(k,j,i) {
       for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
-      Resistive_eta( v, grid[IDIR].x_glob[i], grid[JDIR].x_glob[j], grid[KDIR].x_glob[k], NULL, &(etax1[k][j][i]));
-      etax1[k][j][i] *= UNIT_ETA;
+      #if RESISTIVITY != NO
+        Resistive_eta( v, grid[IDIR].x_glob[i], grid[JDIR].x_glob[j], grid[KDIR].x_glob[k], NULL, &(etax1[k][j][i]));
+        etax1[k][j][i] *= UNIT_ETA;
+      #else
+        etax1[k][j][i] = 0.0;
+      #endif
     }
   #endif
 
-  #if WRITE_K
+  #if WRITE_KAPPA
     DOM_LOOP(k,j,i) {
       for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
-      TC_kappa( v, grid[IDIR].x_glob[i], grid[JDIR].x_glob[j], grid[KDIR].x_glob[k], &kpar, &(knor[k][j][i]), &phi);
-      knor[k][j][i] *= UNIT_KAPPA;
+      #if THERMAL_CONDUCTION != NO
+        TC_kappa( v, grid[IDIR].x_glob[i], grid[JDIR].x_glob[j], grid[KDIR].x_glob[k], &kpar, &(knor[k][j][i]), &phi);
+        knor[k][j][i] *= UNIT_KAPPA;
+      #else 
+        knor[k][j][i] = 0.0;
+      #endif
     }
   #endif
 

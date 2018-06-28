@@ -24,7 +24,12 @@
       "cmath": "c",
       "stdlib.h": "c",
       "time.h": "c",
-      "type_traits": "cpp"
+      "type_traits": "cpp",
+      "bitset": "c",
+      "vector": "c",
+      "complex": "c",
+      "deque": "c",
+      "unordered_map": "c"
     }
   }
 }

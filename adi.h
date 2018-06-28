@@ -21,6 +21,12 @@
   #error Did you check carefully that you can do this? (e.g.: is the averaging of the bcs/ghost cells.. ok?)
 #endif
 
+#ifdef PRESUBS_RES
+  #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+    #error PRESUBS_RES is not yet fully compatible with ADI thermal conduction
+  #endif
+#endif
+
 /*********************
  * Some useful macros
  * *******************/
@@ -137,7 +143,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
                       double **dUres, double **dEdT,
                       const Data *d, Grid *grid,
                       Lines *lines, int diff, int order,
-                      double dt, double t0);
+                      double dt, double t0, double fract);
 
 void ExplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,

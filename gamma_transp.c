@@ -172,6 +172,7 @@ double elRes_norm_DUED(double z, double rho, double kT) {
   double TkeV, Z_ion, Zmin, sqrt_TkeV;
   double ne = ELEC_DENS(rho,z);
   double elRes_norm_en, elRes_norm_ei;
+  double cl_ei_el;
   /*Electrical resitivity due to collisions with neutrals according to DUED*/
   TkeV = erg2keV(kT);
   sqrt_TkeV = sqrt(TkeV);
@@ -183,7 +184,11 @@ double elRes_norm_DUED(double z, double rho, double kT) {
 
   /* Resistivity(Spitzer) in direction parallel to magnetic field,
      (ONLY VALID FOR HYDROGEN), corrected incuding collisions e-e*/
-  elRes_norm_ei = 1.840e-19 * Z_ion * cl_ei_el_DUED(ne, kT, z)/(TkeV*sqrt_TkeV) * Z_ion*Zmin/(z+1e-20);
+  if ( (cl_ei_el = cl_ei_el_DUED(ne, kT, z)) <= 0){
+    print1("\n[elRes_norm_DUED] Coulomb log <= 0! Quitting\n");
+    QUIT_PLUTO(1);
+  }
+  elRes_norm_ei = 1.840e-19 * Z_ion * cl_ei_el /(TkeV*sqrt_TkeV) * Z_ion*Zmin/(z+1e-20);
   // print1("%e", sqrt_TkeV);
   // QUIT_PLUTO(1);
   return elRes_norm_ei + elRes_norm_en;

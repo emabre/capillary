@@ -39,6 +39,15 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   double ****Uc, ****Vc;
   double *r, *r_1;
 
+  #ifdef PRESUBS_RES
+    double dt_test = 0.1*2.7964e-8;
+    int Npresubs = PRESUBS_RES;
+    double t_start_presub;
+  #else
+    int Npresubs = 0;
+    double dt_test = 0.0;
+  #endif
+
   #if FIRST_JDIR_THEN_IDIR == RANDOM
     if (first_call)
       srand(time(NULL));   // should only be called once
@@ -100,9 +109,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     first_call=0;
   }
 
-  t_start_sub = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
-  dt_reduced = dt/adi_steps;
-
   /* -------------------------------------------------------------------------
       Compute the conservative vector in order to start the cycle.
       This step will be useless if the data structure
@@ -119,13 +125,33 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     }
   #endif
 
-  //[Err] remove next #if lines
-  // #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
-  //   BoundaryADI_Res(lines, d, grid, t_start_sub);
-  // #endif
-  // #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-  //   BoundaryADI_TC(lines, d, grid, t_start_sub);
-  // #endif
+  #ifdef PRESUBS_RES
+    t_start_presub = g_time;
+    for (s=0; s<Npresubs; s++) {
+      PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_test, t_start_presub, 0.5);
+      /* ---- Update cons variables ---- */
+      KDOM_LOOP(k)
+        LINES_LOOP(lines[IDIR], l, j, i) {
+          Uc[k][j][i][BX3] = Br_new[j][i]*r_1[i];
+
+          #if (JOULE_EFFECT_AND_MAG_ENG)
+            // [Err] Decomment next line
+            Uc[k][j][i][ENG] += dUres[j][i];
+          #endif
+        }
+      /* ---- Swap pointers to be ready for next cycle ---*/
+      SwapDoublePointers (&Br_new, &Br_old);
+      /* -------------------------------------------------------------------------
+        Compute back the primitive vector from the updated conservative vector.
+        ------------------------------------------------------------------------- */
+      ConsToPrimLines (Uc, Vc, d->flag, lines);
+      Boundary(d, ALL_DIR, grid);
+      t_start_presub += dt_test;
+    }
+  #endif
+
+  t_start_sub = g_time+dt_test*Npresubs; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
+  dt_reduced = (dt-dt_test*Npresubs)/adi_steps;
 
   for (s=0; s<adi_steps; s++) {
     // [Err] Test, decomment later
@@ -204,7 +230,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
             dUres[j][i] = 0.5 * (dUres[j][i] + dUres_other_order[j][i]);
           }
         #else
-          PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
+          PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT);
         #endif
       #endif
 
@@ -232,6 +258,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     //[Err] Remove next line
     Boundary(d, ALL_DIR, grid);
   }
+  #ifdef PROFILE_GPROF
+    print1("\nI exit to provide gprof data\n");
+    // chdir("/home/konrad/simulazioni/sims_pluto/disch_outcap");
+    exit(2);
+  #endif
 }
 
 /****************************************************************************
@@ -856,10 +887,8 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
                       double **dUres, double **dEdT,
                       const Data *d, Grid *grid,
                       Lines *lines, int diff, int order,
-                      double dt, double t0) {
-    #ifndef FRACT
-      #define FRACT 0.5
-    #endif
+                      double dt, double t0, double fract) {
+
     static double **v_aux; // auxiliary solution vector
     static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
     static int first_call = 1;
@@ -933,13 +962,13 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
      (a.1) Explicit update sweeping DIR1
     **********************************/
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], FRACT*dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], fract*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
         //       instead of doing it a line later 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], FRACT*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], fract*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
       }
@@ -948,13 +977,13 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt*(1-FRACT), dir2);
+    ApplyBCs(lines, d, grid, t0 + dt*(1-fract), dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], (1-FRACT)*dt, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], (1-fract)*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], (1-FRACT)*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], (1-fract)*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -964,13 +993,13 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
      (b.1) Explicit update sweeping DIR2
     **********************************/
     ExplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
-                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], FRACT*dt, dir2);
+                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], fract*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
            (but in this way it is more readable)*/
         // [Err] Decomment next line       
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], FRACT*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], fract*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }    
@@ -981,11 +1010,11 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-FRACT)*dt, dir1);
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-fract)*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], (1-FRACT)*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], (1-fract)*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
