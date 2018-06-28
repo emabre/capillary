@@ -7,7 +7,7 @@
 // from current in Ampere and radius (g_domEnd[0]*UNIT_LENGTH) in cm
 #define BIOTSAV_GAUSS_A_CM(curr_A, rad_cm) (0.2*(curr_A)/(rad_cm))
 
-#define N_CURR_TAB 3
+#define N_CURR_TAB 9
 
 double i_curr_tab[N_CURR_TAB];  /*should I also say extern?*/
 double t_curr_tab[N_CURR_TAB]; /*should I also say extern?*/
