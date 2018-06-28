@@ -7,7 +7,6 @@
 
 void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double *eta)
 {
-  const double eta0 = 4*CONST_PI/(CONST_c*CONST_c)*UNIT_VELOCITY*UNIT_LENGTH;/*unit of eta for adimensionalization*/
   double mu=0.0, z=0.0, T=0.0;
   double res=0.0;
   // double unit_Mfield;
@@ -68,9 +67,9 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
   /***************************************************/
   /* [Ema] adimensionalization (it should be correct, I didn't change it)*/
   /**************************************************/
-  eta[IDIR] =  res / eta0;
-  eta[JDIR] =  res / eta0;
-  eta[KDIR] =  res / eta0;
+  eta[IDIR] =  res / UNIT_ETA;
+  eta[JDIR] =  res / UNIT_ETA;
+  eta[KDIR] =  res / UNIT_ETA;
   /**************************************************/
 
 }

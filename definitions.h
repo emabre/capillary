@@ -56,6 +56,10 @@
 #define  SHOW_TIME_STEPS           YES
 
 /* ---------------------------------------------------- */
+/* Additional constants */
+#define  UNIT_ETA    (4*CONST_PI/(CONST_c*CONST_c)*UNIT_VELOCITY*UNIT_LENGTH)
+#define  UNIT_KAPPA  (UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB/CONST_mp)
+
 /*  Ema's additional macros                            */
 // #define FREEZE_FLUID
 /* Either give value in ]0,0.5[

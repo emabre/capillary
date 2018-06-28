@@ -49,7 +49,6 @@ void ComputeUserVar (const Data *d, Grid *grid)
   int i, j, k;
   double ***interBound;
   #if WRITE_ETA
-    const double eta0 = 4*CONST_PI/(CONST_c*CONST_c)*UNIT_VELOCITY*UNIT_LENGTH;/*unit of eta for adimensionalization*/
     double ***etax1;
   #endif
 
@@ -249,7 +248,7 @@ tion RuntimeGet(), e.g. ..."*/
     DOM_LOOP(k,j,i) {
       for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
       Resistive_eta( v, grid[IDIR].x_glob[i], grid[JDIR].x_glob[j], grid[KDIR].x_glob[k], NULL, &(etax1[k][j][i]));
-      etax1[k][j][i] *= eta0;
+      etax1[k][j][i] *= UNIT_ETA;
     }
   #endif
 
@@ -257,7 +256,7 @@ tion RuntimeGet(), e.g. ..."*/
     DOM_LOOP(k,j,i) {
       for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
       TC_kappa( v, grid[IDIR].x_glob[i], grid[JDIR].x_glob[j], grid[KDIR].x_glob[k], &kpar, &(knor[k][j][i]), &phi);
-      knor[k][j][i] /= CONST_mp/(UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB);
+      knor[k][j][i] *= UNIT_KAPPA;
     }
   #endif
 
