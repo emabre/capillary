@@ -40,6 +40,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   double *r, *r_1;
 
   #ifdef PRESUBS_RES
+    #if  THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+      #error Thermal conduction is not compatible with PRESUBS_RES
+    #endif
     double dt_test = 0.1*2.7964e-8;
     int Npresubs = PRESUBS_RES;
     double t_start_presub;
