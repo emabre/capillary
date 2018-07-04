@@ -2,26 +2,13 @@
 #include "current_table.h"
 
 /*Electrical current table, in Ampere, seconds*/
-// This is the 95A peak current discharge (same as jets_new/base1/jet/ but converted current units to Ampere)
-double i_curr_tab[N_CURR_TAB] = { 0.000000e00,
-                                  4.0,
-                                  24.0,
-                                  95.0,
-                                  85.0,
-                                  45.0,
-                                  10.0,
-                                  2.7,
-                                  0.0};
-
-double t_curr_tab[N_CURR_TAB] = {-1.000000e-20,
-                                  1.500000e-07,
-                                  2.200000e-07,
-                                  3.300000e-07,
-                                  4.500000e-07,
-                                  6.500000e-07,
-                                  1.000000e-06,
-                                  1.500000e-06,
-                                  2.000000e-06};
+// Current as in commit 5e85a9c57...
+double i_curr_tab[N_CURR_TAB] = { 0.0001e+00,
+                                  200.00e+00,
+                                  200.00e+00};
+double t_curr_tab[N_CURR_TAB] = { -1.000000e-20,
+                                  200.0e-9,
+                                  2000.000000e-09};
 //
 /*------------------------------------------------------
   Function to compute current at the present time step
