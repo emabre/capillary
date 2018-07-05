@@ -6,7 +6,7 @@
 #define  COOLING                 NO
 #define  RECONSTRUCTION          PARABOLIC
 #define  TIME_STEPPING           RK3
-#define  DIMENSIONAL_SPLITTING   NO
+#define  DIMENSIONAL_SPLITTING   YES
 #define  NTRACER                 0
 #define  USER_DEF_PARAMETERS     9
 
@@ -99,4 +99,4 @@
 
 /* ---------------------------------------------------- */
 /*     ADDITTIONAL OUTPUT                               */
-#define WRITE_J                  YES
+#define WRITE_J
