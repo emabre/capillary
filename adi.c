@@ -12,6 +12,9 @@ and thermal conduction) terms with the Alternating Direction Implicit algorithm*
 #include <time.h>
 #include <stdlib.h>
 
+// I initialize the diffusion time, since it is nedded before the diffusion starts;
+double t_diff = 0;
+
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static int first_call=1;
   int i,j,k, l;
@@ -266,6 +269,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     // chdir("/home/konrad/simulazioni/sims_pluto/disch_outcap");
     exit(2);
   #endif
+
+  // Update the time where the diffusion process has arrived
+  t_diff = t_start_sub;
 }
 
 /****************************************************************************

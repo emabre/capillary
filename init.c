@@ -6,6 +6,9 @@
 #include "gamma_transp.h"
 #include "capillary_wall.h"
 #include "current_table.h"
+#include "adi.h"
+
+#define AS_DIFF 3
 
 /*Auxiliary function to set the temperature*/
 void setT(const Data *d, double T, int i, int j, int k);
@@ -263,6 +266,9 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     double qz,qr,diagonal,sinth,costh;
   #endif
   static int first_call=1;
+  #if (IMPOSE_TWALL==AS_DIFF || IMPOSE_BWALL==AS_DIFF)
+    double t_diff_sec = t_diff*(UNIT_LENGTH/UNIT_VELOCITY); // time at which the diffusion has arrived! (seconds)
+  #endif
   #if IMPOSE_TWALL
     double mu;
     double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin
@@ -277,8 +283,13 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
 
   #if IMPOSE_BWALL
     unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
-    curr = current_from_time(t_sec);
     // print1("\nCurrent from tab: %g", curr);
+  #endif
+  #if IMPOSE_BWALL==YES
+    curr = current_from_time(t_sec);
+    Bwall = BIOTSAV_GAUSS_A_CM(curr, RCAP)/unit_Mfield;
+  #elif IMPOSE_BWALL==AS_DIFF
+    curr = current_from_time(t_diff_sec);
     Bwall = BIOTSAV_GAUSS_A_CM(curr, RCAP)/unit_Mfield;
   #endif
 

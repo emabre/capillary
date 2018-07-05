@@ -94,6 +94,9 @@
   #define NADI  1
 #endif
 
+// Time where the diffusion process has arrived (code units)
+double extern t_diff;
+
 /* Remember that for the diffusion of B, the BC must refer to the product B*r
 as that is the quantity which is advanced by the scheme*/
 typedef struct BCS{

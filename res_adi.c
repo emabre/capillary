@@ -298,6 +298,7 @@ void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t, int di
           lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
         #else
           lines[JDIR].lbound[BDIFF][l].kind = DIRICHLET;
+          lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
         #endif
       }
       /* :::: Outer domain boundary :::: */

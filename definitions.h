@@ -80,7 +80,7 @@
 /* Macros to impose T (B) on walls also for advection (unphisical!)
    (if NO, conduction and B diffusion can be modeled only via ADI scheme) */
 #define IMPOSE_TWALL               NO
-#define IMPOSE_BWALL               NO
+#define IMPOSE_BWALL               AS_DIFF
 /* Number of subcycles performed by ADI scheme*/
 #define NSUBS_ADI                  5
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
@@ -99,4 +99,4 @@
 
 /* ---------------------------------------------------- */
 /*     ADDITTIONAL OUTPUT                               */
-#define WRITE_J
+#define WRITE_J                     YES
