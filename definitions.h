@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      NO
+#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -79,12 +79,12 @@
 #define POW_INSIDE_ADI             YES
 /* Macros to impose T (B) on walls also for advection (unphisical!)
    (if NO, conduction and B diffusion can be modeled only via ADI scheme) */
-#define IMPOSE_TWALL               NO
+#define IMPOSE_TWALL               YES
 #define IMPOSE_BWALL               AS_DIFF
 /* Number of subcycles performed by ADI scheme*/
-#define NSUBS_ADI                  5
+#define NSUBS_ADI                  20
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
-// #define ELECTR_NEUM
+#define ELECTR_NEUM
 /* To set to 0 the mag field in a region outside capillary*/
 // #define FLATTEN_B_OUTCAP
 // #define PRESUBS_RES

@@ -21,14 +21,14 @@ void Init (double *us, double x1, double x2, double x3)
  *********************************************************************** */
 {
   double mu;/*Temperature in K and mean particle weight*/
-  double curr, Bwall; //Bwall is in code units
+  double curr, Bwall, B_ghostwall; //Bwall, B_ghostwall in code units
   double unit_Mfield;
   double csi = x1/rcap;
   double alpha = g_inputParam[ALPHA_J]; //ratio between delta current density wall-axis and current density on axis
   double T0_K = g_inputParam[T0];
   double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
   double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
-  double rho_red_vac = 1; // Fraction of rho inside capillary, used to emumate vacuum
+  double rho_red_vac = 0.01; // Fraction of rho inside capillary, used to emumate vacuum
   double decay_z, decay_r; // Decay lenths in r and z, for setting density
 
   decay_r = 0.1/UNIT_LENGTH;
@@ -46,6 +46,8 @@ void Init (double *us, double x1, double x2, double x3)
   // print1("Current from tab: %g", curr);
   // Mag field at the capillary wall, in code units
   Bwall = (BIOTSAV_GAUSS_A_CM(curr, RCAP))/unit_Mfield;
+
+  B_ghostwall = Bwall; // Here I have no access to the grid structures, so I cannot refine B_ghostwall, as I would do in UserDefBoundary
 
   #if GEOMETRY != CYLINDRICAL
    #error geometry not valid
@@ -65,7 +67,7 @@ void Init (double *us, double x1, double x2, double x3)
       Inside capillary, excluded near-electrode zone
      ----------------------------------------------------- */
   if (x2 < zcap-dzcap && x1 <= rcap) {
-    us[iBPHI] = Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi));
+    us[iBPHI] = B_ghostwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi));
     us[RHO] = dens0;
     us[iVZ] = vz0;
   }
@@ -75,7 +77,7 @@ void Init (double *us, double x1, double x2, double x3)
   if (zcap-dzcap <= x2 && x2 < zcap && x1 < rcap) {
     /* the B field linearly decreses in z direction
     (this is provisory, better electrode have to be implemented) */
-    us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
+    us[iBPHI] = (B_ghostwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
     us[RHO] = dens0;
     us[iVZ] = vz0;
   }
@@ -83,13 +85,13 @@ void Init (double *us, double x1, double x2, double x3)
       Above non-electrode wall (internal boundary, outside capillary)
      ------------------------------------------------------ */
   if (x2 < zcap-dzcap && x1>rcap) {
-    us[iBPHI] = Bwall;
+    us[iBPHI] = B_ghostwall;
   }
   /* ------------------------------------------------------
       Above electrode wall (internal boundary, outside capillary)
      ------------------------------------------------------ */
   if ( zcap-dzcap <= x2 && x2 < zcap && x1 >= rcap) {
-    us[iBPHI] = Bwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
+    us[iBPHI] = B_ghostwall * ( 1 - (x2 - (zcap-dzcap)) / dzcap );
   }
   /* ------------------------------------------------------
       Outside capillary, aligned with capillary (not in internal boundary)
@@ -266,7 +268,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     double qz,qr,diagonal,sinth,costh;
   #endif
   static int first_call=1;
-  #if (IMPOSE_TWALL==AS_DIFF || IMPOSE_BWALL==AS_DIFF)
+  #if (IMPOSE_BWALL==AS_DIFF)
     double t_diff_sec = t_diff*(UNIT_LENGTH/UNIT_VELOCITY); // time at which the diffusion has arrived! (seconds)
   #endif
   #if IMPOSE_TWALL
@@ -275,7 +277,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   #endif
   #if IMPOSE_BWALL
     double unit_Mfield;
-    double curr, Bwall; //Bwall is in code units,
+    double curr, Bwall, B_ghostwall; //Bwall, B_ghostwall in code units,
   #endif
 
   /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
@@ -398,18 +400,22 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       // Magnetic field on capillary wall (exclued electrode)
       for (j=0; j<j_elec_start; j++) {
         #if IMPOSE_BWALL
-          d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall;
+          B_ghostwall = (2*Bwall*rcap_real - d->Vc[iBPHI][k][j][i_cap_inter_end]*grid[IDIR].x_glob[i_cap_inter_end])/grid[IDIR].x_glob[i_cap_inter_end+1];
+          d->Vc[iBPHI][k][j][i_cap_inter_end+1] = B_ghostwall;
         #else
           d->Vc[iBPHI][k][j][i_cap_inter_end+1] = d->Vc[iBPHI][k][j][i_cap_inter_end];
         #endif
       }
       // Magnetic field on electrode
       for (j=j_elec_start; j<=j_cap_inter_end; j++) {
-        #if IMPOSE_BWALL
-          /* d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall* \
+        #ifdef ELECTR_NEUM // This #if must be before "#elif IMPOSE_BWALL", otherwise that second condition will be met no matter whether ELECTR_NEUM is defined
+          d->Vc[iBPHI][k][j][i_cap_inter_end+1] = d->Vc[iBPHI][k][j][i_cap_inter_end];
+        #elif IMPOSE_BWALL
+          B_ghostwall = (2*Bwall*rcap_real - d->Vc[iBPHI][k][j][i_cap_inter_end]*grid[IDIR].x_glob[i_cap_inter_end])/grid[IDIR].x_glob[i_cap_inter_end+1];
+          /* d->Vc[iBPHI][k][j][i_cap_inter_end+1] = B_ghostwall* \
                 (1-(grid[1].x_glob[j]-grid[1].x_glob[j_elec_start])/ \
                 (grid[1].x_glob[j_cap_inter_end]-grid[1].x_glob[j_elec_start])); */
-          d->Vc[iBPHI][k][j][i_cap_inter_end+1] = Bwall* \
+          d->Vc[iBPHI][k][j][i_cap_inter_end+1] = B_ghostwall* \
                   (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap );
         #else
           d->Vc[iBPHI][k][j][i_cap_inter_end+1] = d->Vc[iBPHI][k][j][i_cap_inter_end];
