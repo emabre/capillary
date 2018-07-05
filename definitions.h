@@ -61,7 +61,7 @@
 #define  UNIT_KAPPA  (UNIT_DENSITY*UNIT_VELOCITY*UNIT_LENGTH*CONST_kB/CONST_mp)
 
 /*  Ema's additional macros                            */
-// #define PROFILE_GPROF
+// #define PROFILE_GPROF_STOPSTEP      8
 // #define FREEZE_FLUID
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */

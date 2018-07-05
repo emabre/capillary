@@ -32,3 +32,12 @@ Thus I edited the file prototypes.h in the original Source folder, since copying
 
 **Check**
 + Tempertature computation in case of super-time-stepping is correct?
+
+## For profiling the code:
+- Insert the lines:
+`` CFLAGS += -pg ``
+`` LDFLAGS += -pg ``
+- in the local_make file, and inside definitions.h define a macro:
+`` #define PROFILE_GPROF   pluto_time_step_where_you_want_to_stop ``
+- then compile and run pluto as usual;
+- then call ``gprof pluto > filename_where_to_store_gprof_output`` 

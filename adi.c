@@ -264,12 +264,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     //[Err] Remove next line
     Boundary(d, ALL_DIR, grid);
   }
-  #ifdef PROFILE_GPROF
-    print1("\nI exit to provide gprof data\n");
-    // chdir("/home/konrad/simulazioni/sims_pluto/disch_outcap");
-    exit(2);
-  #endif
-
   // Update the time where the diffusion process has arrived
   t_diff = t_start_sub;
 }
