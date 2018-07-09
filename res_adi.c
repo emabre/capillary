@@ -250,7 +250,7 @@ void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t, int di
       } else if (j >= j_elec_start && j <= j_cap_inter_end) {
         /* :::: Electrode :::: */
         // [Err] Delete next two lines
-        #ifdef ELECTR_NEUM
+        #ifdef ELECTR_B_NEUM
           // [Err] Decomment next lines
           lines[IDIR].rbound[BDIFF][l].kind = NEUMANN_HOM;
           lines[IDIR].rbound[BDIFF][l].values[0] = 0.0;
@@ -293,7 +293,7 @@ void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t, int di
         lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
       } else {
         /* :::: Outer capillary wall :::: */
-        #ifdef ELECTR_NEUM
+        #ifdef ELECTR_B_NEUM
           lines[JDIR].lbound[BDIFF][l].kind = NEUMANN_HOM;        
           lines[JDIR].lbound[BDIFF][l].values[0] = 0.0;
         #else

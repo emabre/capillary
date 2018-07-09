@@ -4,8 +4,8 @@
 #define  GEOMETRY                CYLINDRICAL
 #define  BODY_FORCE              NO
 #define  COOLING                 NO
-#define  RECONSTRUCTION          PARABOLIC
-#define  TIME_STEPPING           RK3
+#define  RECONSTRUCTION          LINEAR
+#define  TIME_STEPPING           RK2
 #define  DIMENSIONAL_SPLITTING   YES
 #define  NTRACER                 0
 #define  USER_DEF_PARAMETERS     9
@@ -70,7 +70,7 @@
 /* For a pseudo P-R algoritm: if FRACT==0.5 you have the usual P-R
   otherwise you unbalance the scheme towards the implcit or explicit part
   (keep it in ]0,1[). If you do not define it it will be set to 0.5*/
-#define FRACT                      0.5
+#define FRACT                      0.01
 // to set the order of the ADI scheme, allowed values: YES, NO, RANDOM
 #define FIRST_JDIR_THEN_IDIR       NO
 // #define  TEST_ADI
@@ -79,15 +79,16 @@
 #define POW_INSIDE_ADI             YES
 /* Macros to impose T (B) on walls also for advection (unphisical!)
    (if NO, conduction and B diffusion can be modeled only via ADI scheme) */
-#define IMPOSE_TWALL               YES
-#define IMPOSE_BWALL               AS_DIFF
+#define IMPOSE_TWALL               NO
+#define IMPOSE_BWALL               NO
 /* Number of subcycles performed by ADI scheme*/
-#define NSUBS_ADI                  20
+#define NSUBS_ADI                  10
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
-#define ELECTR_NEUM
+// #define ELECTR_B_NEUM
 /* To set to 0 the mag field in a region outside capillary*/
 // #define FLATTEN_B_OUTCAP
 // #define PRESUBS_RES
+// #define ELECTR_T_NEUM
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
