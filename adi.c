@@ -157,7 +157,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #endif
 
   t_start_sub = g_time+dt_test*Npresubs; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
-  dt_reduced = (dt-dt_test*Npresubs)/adi_steps;
+  #ifndef COMMON_RATIO_NSUBS_ADI
+    dt_reduced = (dt-dt_test*Npresubs)/adi_steps;
+  #else
+    dt_reduced = (dt-dt_test*Npresubs) / ((1-pow(COMMON_RATIO_NSUBS_ADI,adi_steps))/(1-COMMON_RATIO_NSUBS_ADI));
+  #endif
 
   for (s=0; s<adi_steps; s++) {
     // [Err] Test, decomment later
@@ -263,6 +267,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     t_start_sub += dt_reduced;
     //[Err] Remove next line
     Boundary(d, ALL_DIR, grid);
+
+    #ifdef COMMON_RATIO_NSUBS_ADI
+    // I update the dt_reduced
+      dt_reduced *= COMMON_RATIO_NSUBS_ADI;
+    #endif
   }
   // Update the time where the diffusion process has arrived
   t_diff = t_start_sub;
