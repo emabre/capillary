@@ -2,7 +2,7 @@
 #include "gamma_transp.h"
 #include "current_table.h"
 
-#define KAPPAMAX 1e24
+#define KAPPAMAX 1e7
 
 void TC_kappa(double *v, double x1, double x2, double x3,
               double *kpar, double *knor, double *phi)
@@ -20,8 +20,8 @@ void TC_kappa(double *v, double x1, double x2, double x3,
   if (g_inputParam[KAPPA_GAUBOB] > 0.0) {
     
     // Fixed value from pluto.ini
-    *kpar = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
-    *knor = g_inputParam[KAPPA_GAUBOB]*CONST_kB;
+    *kpar = g_inputParam[KAPPA_GAUBOB];
+    *knor = g_inputParam[KAPPA_GAUBOB];
 
   } else {
     z = 1/mu - 1;
@@ -29,6 +29,12 @@ void TC_kappa(double *v, double x1, double x2, double x3,
     // unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
     // k = thermCond_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
     k = thermCond_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
+    // I increase the value of k to take into account the conductivity of a hydrogen gas at 2000K
+    // (according to Timrot value of H2 conductivity, cited in Mehl et al., "Ab initio transport...",2010 ),
+    // anyway, I am not sure this correction is ok, especially because I don't know what is the "low-density
+    // limit" where this value is applicable. Moreover, I think it might be that I should also add the
+    // conductivity of hydrogen ions (negligible at high T).
+    k = k + 8e4;
 
     #ifdef KAPPAMAX
       if (k > KAPPAMAX) {
