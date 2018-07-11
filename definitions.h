@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -71,7 +71,7 @@
 /* For a pseudo P-R algoritm: if FRACT==0.5 you have the usual P-R
   otherwise you unbalance the scheme towards the implcit or explicit part
   (keep it in ]0,1[). If you do not define it it will be set to 0.5*/
-#define FRACT                      0.01
+#define FRACT                      0.5
 // to set the order of the ADI scheme, allowed values: YES, NO, RANDOM
 #define FIRST_JDIR_THEN_IDIR       NO
 // #define  TEST_ADI

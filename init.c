@@ -404,6 +404,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
           d->Vc[iBPHI][k][j][i_cap_inter_end+1] = B_ghostwall;
         #else
           d->Vc[iBPHI][k][j][i_cap_inter_end+1] = d->Vc[iBPHI][k][j][i_cap_inter_end];
+          // d->Vc[iBPHI][k][j][i_cap_inter_end+2] = d->Vc[iBPHI][k][j][i_cap_inter_end-1];
         #endif
       }
       // Magnetic field on electrode
@@ -419,6 +420,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
                   (1 - (grid[JDIR].x_glob[j]-(zcap_real-dzcap_real))/dzcap );
         #else
           d->Vc[iBPHI][k][j][i_cap_inter_end+1] = d->Vc[iBPHI][k][j][i_cap_inter_end];
+          // d->Vc[iBPHI][k][j][i_cap_inter_end+2] = d->Vc[iBPHI][k][j][i_cap_inter_end-1];
         #endif
       }
     }

@@ -46,6 +46,10 @@
 #define RANDOM 2
 #define AVERAGE 3
 #define RANDOM_ORDER (rand()%2)
+// This permutes the order just after a step with odd number
+// #define PERMUTE_ORDER ( (g_stepNumber/2)%2 )
+// This permutes the order just after a step with even number
+#define PERMUTE_ORDER ( ((g_stepNumber+1)/2)%2 )
 
 #if FIRST_JDIR_THEN_IDIR == NO
   #define ORDER FIRST_IDIR
@@ -57,6 +61,8 @@
   #ifdef ORDER
     #undef ORDER
   #endif
+#elif FIRST_JDIR_THEN_IDIR == PERMUTE
+  #define ORDER PERMUTE_ORDER
 #else
   #error wrong choice for FIRST_JDIR_THEN_IDIR
 #endif
