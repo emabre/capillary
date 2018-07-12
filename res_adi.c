@@ -215,6 +215,98 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   }
 }
 
+/****************************************************************************
+Function to build the a matrix which contain the amount of increase of the
+energy due to joule effect and magnetic field energy (flux of poynting vector due to
+resistive magnetic diffusion), variant for DouglasRachford
+[Opt]: Note that in the actual implementation this function needs to take as
+input both the Hp_B and the Hm_B. But for the whole internal (i.e. boudary excluded)
+only one among Hp_B and Hm_B is necessary. The other one is used to fill F
+at one side (left or right) of the domain.
+*****************************************************************************/
+void ResEnergyIncrease_DouglasRachford(double **dUres, double** Hp_B, double** Hm_B,
+                                       double **Br, double **Br_hat,
+                                       Grid *grid, Lines *lines, double dt, int dir){
+  /* F :Power flux flowing from cell (i,j) to (i+1,j), when dir==IDIR;
+        or from cell (i,j) to (i,j+1), when dir == JDIR.
+  */
+//  modifica questa funzinoe così: non usare più le Bcs(d altra parte non ha senso! questo è un termine sorgente, non un equazione da risolvere) per calcolare i valori al bordo,
+//  usa i valori salvati *Br
+  static double **F;
+  double *dr, *dz;
+  int i,j,l;
+  int lidx, ridx;
+  int Nlines = lines->N;
+  int static first_call = 1;
+  double *dV, *inv_dz, *r_1, *r;
+  double *rL, *rR;
+  Bcs *rbound, *lbound;
+
+  /*[Opt] Maybe I could do that it allocates static arrays with size NMAX_POINT (=max(NX1_TOT,NX2_TOT)) ?*/
+  if (first_call) {
+    /* I define it 2d in case I need to export it later*/
+    F = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    /*This is useless, it's just for debugging purposes*/
+    ITOT_LOOP(i)
+      JTOT_LOOP(j)
+        F[j][i] = 0.0;
+    first_call = 0;
+  }
+  /*This is useless, it's just for debugging purposes*/
+  ITOT_LOOP(i)
+    JTOT_LOOP(j)
+      dUres[j][i] = 0.0;
+
+  lbound = lines->lbound[BDIFF];
+  rbound = lines->rbound[BDIFF];
+  dr = grid[IDIR].dx;
+  r_1 = grid[IDIR].r_1;
+
+  if (dir == IDIR) {
+    rR = grid[IDIR].xr;
+    rL = grid[IDIR].xl;
+    dV = grid[IDIR].dV;
+    r = grid[IDIR].x_glob;
+
+    for (l = 0; l<Nlines; l++) {
+      j = lines->dom_line_idx[l];
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
+      for (i=lidx; i<=ridx; i++){ // I start from lidx because I must treat carefully the lidx interface (at i=lidx-1), since there could be the domain axis
+        F[j][i] = -Hp_B[j][i] * (Br_hat[j][i+1] - Br_hat[j][i])*dr[i] * 0.5*(Br[j][i+1]*r_1[i+1] + Br[j][i]*r_1[i]);
+      }
+      /* I try to guess if the lower boundary in dir IDIR is the domain axis, if so I compute F consistently (with the usual formula
+      I would get a division by zero) */
+      if (lbound[l].kind == DIRICHLET && fabs(rL[lidx]) < 1e-20  && fabs(lbound[l].values[0]) < 1e-20) {
+        F[j][lidx-1] = 0.0;
+      } else {
+        F[j][lidx-1] = -Hp_B[j][lidx-1] * (Br_hat[j][lidx] - Br_hat[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
+      }
+      // Build dU
+      for (i=lidx; i<=ridx; i++)
+        dUres[j][i] = -(rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
+    }
+
+  } else if (dir == JDIR) {
+    dz = grid[JDIR].dx;
+    inv_dz = grid[JDIR].inv_dx;
+
+    for (l = 0; l<Nlines; l++) {
+      i = lines->dom_line_idx[l];
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
+      
+      for (j=lidx-1; j<=ridx; j++){
+        //[Err] ho aggiunto *r_1[i] nella formula ( e questa modifica sembra ok!)
+        F[j][i] = -Hp_B[j][i] * (Br_hat[j+1][i] - Br_hat[j][i])*dz[j]*r_1[i]*r_1[i] * 0.5*(Br[j+1][i] + Br[j][i]);
+      }
+      // Build dU
+      for (j=lidx; j<=ridx; j++)
+        dUres[j][i] = -(F[j][i] - F[j-1][i])*dt*inv_dz[j];
+    }
+  }
+}
+
 // [Err] Test: decomment this function
 /****************************************************************************
 * Function to build the bcs of lines
