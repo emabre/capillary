@@ -9,6 +9,7 @@ and thermal conduction) terms with the Alternating Direction Implicit algorithm*
 #include "pluto.h"
 #include "adi.h"
 #include "capillary_wall.h"
+#include "debug_utilities.h"
 #include <time.h>
 #include <stdlib.h>
 
@@ -164,6 +165,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   #endif
 
   for (s=0; s<adi_steps; s++) {
+    #ifdef DEBUG_EMA
+      printf("\nNstep:%d",g_stepNumber);
+      printf("\ns:%d\n", s);
+    #endif
     // [Err] Test, decomment later
     // Boundary(d, ALL_DIR, grid);
 
@@ -240,8 +245,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
             dUres[j][i] = 0.5 * (dUres[j][i] + dUres_other_order[j][i]);
           }
         #else
-          // PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT);
-          DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
+          PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT);
+          // DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
         #endif
       #endif
 
@@ -986,6 +991,14 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
           dUres[j][i] = dUres_aux[j][i];
       }
     #endif
+    #ifdef DEBUG_EMA
+      printf("\nv_old\n");
+      printmat(v_old, NX2_TOT, NX1_TOT);
+      printf("\nv_aux\n");
+      printmat(v_aux, NX2_TOT, NX1_TOT);
+      printf("\ndUres_aux\n");
+      printmat(dUres_aux, NX2_TOT, NX1_TOT);
+    #endif
 
     /**********************************
      (a.2) Implicit update sweeping DIR2
@@ -1000,6 +1013,12 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
+    #endif
+    #ifdef DEBUG_EMA
+      printf("\nv_new\n");
+      printmat(v_new, NX2_TOT, NX1_TOT);
+      printf("\ndUres_aux\n");
+      printmat(dUres_aux, NX2_TOT, NX1_TOT);
     #endif
 
     /**********************************
@@ -1016,6 +1035,12 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }    
+    #endif
+    #ifdef DEBUG_EMA
+      printf("\nv_aux\n");
+      printmat(v_aux, NX2_TOT, NX1_TOT);
+      printf("\ndUres_aux\n");
+      printmat(dUres_aux, NX2_TOT, NX1_TOT);
     #endif
 
     /**********************************
@@ -1047,6 +1072,12 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
           dUres[j][i] += dUres_aux1[j][i];
         }
       }
+    #endif
+    #ifdef DEBUG_EMA
+      printf("\nv_new\n");
+      printmat(v_new, NX2_TOT, NX1_TOT);
+      printf("\ndUres_aux\n");
+      printmat(dUres_aux, NX2_TOT, NX1_TOT);
     #endif
 }
 
