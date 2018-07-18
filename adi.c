@@ -545,7 +545,10 @@ void ExplicitUpdate (double **v, double **b, double **source,
       // Cells near left boundary
       if (lbound[l].kind == DIRICHLET){
         // I assign the ghost value (needed by ResEnergyIncrease and maybe others..)
+        // [Err] decomment next line
         b[j][lidx-1] = 2*lbound[l].values[0] - b[j][lidx];
+        //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
+        // b[j][lidx-1] = 1/3*b[j][lidx+1] + 8/3*lbound[l].values[0] - 2*b[j][lidx];
       } else if (lbound[l].kind == NEUMANN_HOM) {
         /* I assign the ghost value (needed by ResEnergyIncrease and maybe others..).*/
         b[j][lidx-1] = b[j][lidx];
@@ -555,7 +558,10 @@ void ExplicitUpdate (double **v, double **b, double **source,
       }
       // Cells near right boundary
       if (rbound[l].kind == DIRICHLET){
+        // [Err] decomment next line
         b[j][ridx+1] = 2*rbound[l].values[0] - b[j][ridx];
+        //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
+        // b[j][ridx+1] = 1/3*b[j][ridx-1] + 8/3*rbound[l].values[0] - 2*b[j][ridx];
       } else if (rbound[l].kind == NEUMANN_HOM) {
         b[j][ridx+1] = b[j][ridx];
       } else {
@@ -591,7 +597,10 @@ void ExplicitUpdate (double **v, double **b, double **source,
       /*--- I set the boundary values (ghost cells) ---*/
       // Cells near left boundary
       if (lbound[l].kind == DIRICHLET){
+        // [Err] decomment next line
         b[lidx-1][i] = 2*lbound[l].values[0] - b[lidx][i];
+        //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
+        // b[lidx-1][i] = 1/3*b[lidx+1][i] + 8/3*lbound[l].values[0] - 2*b[lidx][i];
       } else if (lbound[l].kind == NEUMANN_HOM) {
         b[lidx-1][i] = b[lidx][i];
       } else {
@@ -600,7 +609,10 @@ void ExplicitUpdate (double **v, double **b, double **source,
       }
       // Cells near right boundary
       if (rbound[l].kind == DIRICHLET){
+        // [Err] decomment next line
         b[ridx+1][i] = 2*rbound[l].values[0] - b[ridx][i];
+        //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
+        // b[ridx+1][i] = 1/3*b[ridx-1][i] + 8/3*rbound[l].values[0] - 2*b[ridx][i];
       } else if (rbound[l].kind == NEUMANN_HOM) {
         b[ridx+1][i] = b[ridx][i];
       } else {
@@ -992,6 +1004,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       }
     #endif
     #ifdef DEBUG_EMA
+      printf("\nafter expl dir1:\n"); 
       printf("\nv_old\n");
       printmat(v_old, NX2_TOT, NX1_TOT);
       printf("\nv_aux\n");
@@ -1015,6 +1028,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       }
     #endif
     #ifdef DEBUG_EMA
+      printf("\nafter impl dir2:\n");
       printf("\nv_new\n");
       printmat(v_new, NX2_TOT, NX1_TOT);
       printf("\ndUres_aux\n");
@@ -1037,6 +1051,9 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       }    
     #endif
     #ifdef DEBUG_EMA
+      printf("\nafter expl dir2:\n");
+      printf("\nv_new\n");
+      printmat(v_new, NX2_TOT, NX1_TOT);
       printf("\nv_aux\n");
       printmat(v_aux, NX2_TOT, NX1_TOT);
       printf("\ndUres_aux\n");
@@ -1074,6 +1091,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       }
     #endif
     #ifdef DEBUG_EMA
+      printf("\nafter impl dir1:\n");
       printf("\nv_new\n");
       printmat(v_new, NX2_TOT, NX1_TOT);
       printf("\ndUres_aux\n");
