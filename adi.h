@@ -41,10 +41,13 @@
   for ((line_idx)=lines.dom_line_idx[(l)=0]; (l)<lines.N; (line_idx)=lines.dom_line_idx[++(l)]) \
   for ((line_sweeper)=lines.lidx[(l)]; (line_sweeper)<=lines.ridx[(l)]; (line_sweeper)++)
 
-#define FIRST_IDIR 0
-#define FIRST_JDIR 1
+// Macros which are valid choices for setting FIRST_JDIR_THEN_IDIR (in addition, YES and NO are valid too)
 #define RANDOM 2
 #define AVERAGE 3
+#define PERMUTE 4
+// Macros defining the value of the ORDER macro, thus defining the precedence of the directions in ADI
+#define FIRST_IDIR 0
+#define FIRST_JDIR 1
 #define RANDOM_ORDER (rand()%2)
 // This permutes the order just after a step with odd number
 // #define PERMUTE_ORDER ( (g_stepNumber/2)%2 )

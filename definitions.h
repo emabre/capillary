@@ -72,7 +72,7 @@
   otherwise you unbalance the scheme towards the implcit or explicit part
   (keep it in ]0,1[). If you do not define it it will be set to 0.5*/
 #define FRACT                      0.5
-// to set the order of the ADI scheme, allowed values: YES, NO, RANDOM, PERMUTE_ORDER
+// to set the order of the ADI scheme, allowed values: YES, NO, RANDOM, PERMUTE.
 #define FIRST_JDIR_THEN_IDIR       NO
 // #define  TEST_ADI
 #define JOULE_EFFECT_AND_MAG_ENG   (YES &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
