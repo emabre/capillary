@@ -1088,7 +1088,7 @@ void FractionalTheta(double **v_new, double **v_old,
 }
 
 /* ***********************************************************
- * SplitImplicit method. (at the moment only for testing purposes!)
+ * SplitImplicit method.
  * 
  * input: diff = BDIFF or TDIFF
  *        int order = FIRST_IDIR or FIRST_JDIR: tells whether the order of the directions
@@ -1100,11 +1100,11 @@ void FractionalTheta(double **v_new, double **v_old,
  *                  even though I never need both of them at the same time)
  * ***********************************************************/
 void SplitImplicit(double **v_new, double **v_old,
-                   double **dUres, double **dEdT,
-                   const Data *d, Grid *grid,
-                   Lines *lines, int diff, int order,
-                   double dt, double t0) {
-    
+                      double **dUres, double **dEdT,
+                      const Data *d, Grid *grid,
+                      Lines *lines, int diff, int order,
+                      double dt, double t0) {
+
     static double **v_aux; // auxiliary solution vector
     static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
     static int first_call = 1;
@@ -1123,6 +1123,7 @@ void SplitImplicit(double **v_new, double **v_old,
       #if (JOULE_EFFECT_AND_MAG_ENG)
         dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       #endif
+
       Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       Jp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -1166,27 +1167,32 @@ void SplitImplicit(double **v_new, double **v_old,
 
     ApplyBCs(lines, d, grid, t0+dt, dir1);
     MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
-    
+
     /**********************************
      (a) Implicit update sweeping DIR1
     **********************************/
     ImplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt, dir1);
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
-        //       instead of doing it a line later 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_aux, grid, &lines[dir1], dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
       }
+    #endif
+    #ifdef DEBUG_EMA
+      printf("\nafter impl dir1:\n");
+      printf("\nv_new\n");
+      printmat(v_new, NX2_TOT, NX1_TOT);
+      printf("\ndUres_aux\n");
+      printmat(dUres_aux, NX2_TOT, NX1_TOT);
     #endif
 
     /**********************************
      (b) Implicit update sweeping DIR2
     **********************************/
-    ApplyBCs(lines, d, grid, t0+dt, dir2);
+    ApplyBCs(lines, d, grid, t0 + dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff], dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
@@ -1196,6 +1202,13 @@ void SplitImplicit(double **v_new, double **v_old,
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
+    #endif
+    #ifdef DEBUG_EMA
+      printf("\nafter impl dir1:\n");
+      printf("\nv_new\n");
+      printmat(v_new, NX2_TOT, NX1_TOT);
+      printf("\ndUres_aux\n");
+      printmat(dUres_aux, NX2_TOT, NX1_TOT);
     #endif
 }
 

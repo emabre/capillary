@@ -166,7 +166,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
   for (s=0; s<adi_steps; s++) {
     #ifdef DEBUG_EMA
-      printf("\nNstep:%d",g_stepNumber);
+      printf("\nNstep:%ld",g_stepNumber);
       printf("\ns:%d\n", s);
     #endif
     // [Err] Test, decomment later
