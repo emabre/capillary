@@ -17,11 +17,10 @@ void ConsToPrimLines (Data_Arr U, Data_Arr V, unsigned char ***flag, Lines *line
   int   l, Nlines;
   int   ibeg, iend;
   int   current_dir;
-  static double **v, **u;
+  static double **v;
 
   if (v == NULL){
     v = ARRAY_2D(NMAX_POINT, NVAR, double);
-    u = ARRAY_2D(NMAX_POINT, NVAR, double);
   }
 
 /* ----------------------------------------------
@@ -37,8 +36,9 @@ void ConsToPrimLines (Data_Arr U, Data_Arr V, unsigned char ***flag, Lines *line
    ------------------------------------------------ */
   Nlines = lines[IDIR].N;
   KDOM_LOOP (k) {
+    g_k = k;
     for (l = 0; l < Nlines; l++) {
-      j = lines[IDIR].dom_line_idx[l];
+      g_j = j = lines[IDIR].dom_line_idx[l];
       ibeg = lines[IDIR].lidx[l];
       iend = lines[IDIR].ridx[l];
 

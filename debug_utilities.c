@@ -16,7 +16,7 @@ void printmat(double **matrix, int dim2, int dim1)
       printf("%2d|", j);
         for (i = 0; i < dim1; ++i)
             printf("%21.15g", matrix[j][i]);
-        printf("|\n");
+        printf(";\n");
     }
     for (i = 0; i < dim1; ++i){
       sprintf(coltop, "--%d--", i );
@@ -39,38 +39,42 @@ void printmat(double **matrix, int dim2, int dim1)
 
 /***************************************************************************************
  * [Ema] Print matrix from 4D vector choosing dimensions to print (useful for calling inside gdb)
- * which[X] : Integer which tells whether the dimension X has to be printed (which[X] = -1)
- *          or kept fixed (which[X] = value to keep)
+ * whichX (X=0,1,2,3) : Integer which tells whether the dimension X has to be printed (whichX = -1)
+ *          or kept fixed (whichX = value to keep)
  ****************************************************************************************/
-void printmat4d(double ****matrix, int dim2, int dim1, int which[4]) {
+void printmat4d(double ****matrix, int dim2, int dim1, int which0, int which1, int which2, int which3 ) {
+    char coltop[11];
     int i, j;
-
-    for (i = 0; i < dim1; ++i)
-      printf("%11s", "---");
+    
+    for (i = 0; i < dim1; ++i){
+      sprintf(coltop, "--%d--", i );
+      printf("%21s", coltop);
+    }
       
     printf("\n");
     for (j = 0; j < dim2; ++j) {
-      printf("|");
+      printf("%2d|", j);
       for (i = 0; i < dim1; ++i) {
-        if        (which[0]==-1 && which[1]==-1) {
-          printf("%11.5g", matrix[j][i][which[2]][which[3]]);
-        } else if (which[0]==-1 && which[2]==-1) {
-          printf("%11.5g", matrix[j][which[1]][i][which[3]]);
-        } else if (which[0]==-1 && which[3]==-1) {
-          printf("%11.5g", matrix[j][which[1]][which[2]][i]);
-        } else if (which[1]==-1 && which[2]==-1) {
-          printf("%11.5g", matrix[which[0]][j][i][which[3]]);
-        } else if (which[1]==-1 && which[3]==-1) {
-          printf("%11.5g", matrix[which[0]][j][which[2]][i]);
-        } else if (which[2]==-1 && which[3]==-1) {
-          printf("%11.5g", matrix[which[0]][which[1]][j][i]);
+        if        (which0==-1 && which1==-1) {
+          printf("%21.15g", matrix[j][i][which2][which3]);
+        } else if (which0==-1 && which2==-1) {
+          printf("%21.15g", matrix[j][which1][i][which3]);
+        } else if (which0==-1 && which3==-1) {
+          printf("%21.15g", matrix[j][which1][which2][i]);
+        } else if (which1==-1 && which2==-1) {
+          printf("%21.15g", matrix[which0][j][i][which3]);
+        } else if (which1==-1 && which3==-1) {
+          printf("%21.15g", matrix[which0][j][which2][i]);
+        } else if (which2==-1 && which3==-1) {
+          printf("%21.15g", matrix[which0][which1][j][i]);
         }
       }
-      printf("|\n");
+      printf(";\n");
     }
 
-    for (i = 0; i < dim1; ++i)
-      printf("%11s", "---");
-
+    for (i = 0; i < dim1; ++i){
+      sprintf(coltop, "--%d--", i );
+      printf("%21s", coltop);
+    }
     printf("\n");
 }
