@@ -28,7 +28,11 @@ void Init (double *us, double x1, double x2, double x3)
   double T0_K = g_inputParam[T0];
   double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
   double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
-  double rho_red_vac = 0.01; // Fraction of rho inside capillary, used to emumate vacuum
+  #ifdef DEBUG_EMA
+    double rho_red_vac = 1;
+  #else
+    double rho_red_vac = 0.01; // Fraction of rho inside capillary, used to emumate vacuum
+  #endif
   double decay_z, decay_r; // Decay lenths in r and z, for setting density
 
   decay_r = 0.1/UNIT_LENGTH;

@@ -7,12 +7,13 @@
 // from current in Ampere and radius (g_domEnd[0]*UNIT_LENGTH) in cm
 #define BIOTSAV_GAUSS_A_CM(curr_A, rad_cm) (0.2*(curr_A)/(rad_cm))
 
-#define N_CURR_TAB 3
+#define N_CURR_TAB 10
 
 double i_curr_tab[N_CURR_TAB];  /*should I also say extern?*/
 double t_curr_tab[N_CURR_TAB]; /*should I also say extern?*/
 
 double current_from_time(double t);
 double interp_lin_table(double xpoint, double *x, double *y, const int N);
+int read_table_file(double *x, double *y, int *N, int Nmax, char *filename);
 
 #endif

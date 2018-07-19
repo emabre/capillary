@@ -29,7 +29,10 @@
       "vector": "c",
       "complex": "c",
       "deque": "c",
-      "unordered_map": "c"
+      "unordered_map": "c",
+      "debug_utilities.h": "c",
+      "functional": "c",
+      "adi.h": "c"
     }
   }
 }
