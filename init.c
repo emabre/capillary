@@ -413,9 +413,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       }
       // Magnetic field on electrode
       for (j=j_elec_start; j<=j_cap_inter_end; j++) {
-        #ifdef ELECTR_B_NEUM // This #if must be before "#elif IMPOSE_BWALL", otherwise that second condition will be met no matter whether ELECTR_B_NEUM is defined
-          d->Vc[iBPHI][k][j][i_cap_inter_end+1] = d->Vc[iBPHI][k][j][i_cap_inter_end];
-        #elif IMPOSE_BWALL
+        #if (IMPOSE_BWALL && !defined(ELECTR_B_NEUM))
           B_ghostwall = (2*Bwall*rcap_real - d->Vc[iBPHI][k][j][i_cap_inter_end]*grid[IDIR].x_glob[i_cap_inter_end])/grid[IDIR].x_glob[i_cap_inter_end+1];
           /* d->Vc[iBPHI][k][j][i_cap_inter_end+1] = B_ghostwall* \
                 (1-(grid[1].x_glob[j]-grid[1].x_glob[j_elec_start])/ \
