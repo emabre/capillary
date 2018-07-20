@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -67,11 +67,11 @@
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */
 // #define FRACTIONAL_THETA           0.3
-#define SPLIT_IMPLICIT
+// #define SPLIT_IMPLICIT
 /* For a pseudo P-R algoritm: if FRACT==0.5 you have the usual P-R
   otherwise you unbalance the scheme towards the implcit or explicit part
   (keep it in ]0,1[). If you do not define it it will be set to 0.5*/
-// #define FRACT                      0.000001
+#define FRACT                      0.5
 // to set the order of the ADI scheme, allowed values: YES, NO, RANDOM, PERMUTE.
 #define FIRST_JDIR_THEN_IDIR       NO
 // #define  TEST_ADI
@@ -83,7 +83,7 @@
 #define IMPOSE_TWALL               NO
 #define IMPOSE_BWALL               NO
 /* Number of subcycles performed by ADI scheme*/
-#define NSUBS_ADI                  5
+#define NSUBS_ADI                  1
 // #define COMMON_RATIO_NSUBS_ADI    1.5
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
 #define ELECTR_B_NEUM
@@ -95,9 +95,9 @@
 
 /* ---------------------------------------------------- */
 /*    CAPILLARY GEOMETRY SETTINGS                      */
-#define RCAP                       0.05
-#define DZCAP                      0.1 /*the electrodes are wide DZCAP cm*/
-#define ZCAP                       1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
+#define RCAP                       0.07
+#define DZCAP                      0.2 /*the electrodes are wide DZCAP cm*/
+#define ZCAP                       0.8 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
@@ -106,4 +106,4 @@
 
 /*------------------------------------------------------*/
 /*     FOR DEBUG    */
-// #define DEBUG_EMA
+#define DEBUG_EMA
