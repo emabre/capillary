@@ -3,6 +3,15 @@
 
 #define MULTIPLE_GHOSTS YES
 
+/* Macros to refer to the indexes of RBox rbox_center_capWall[]
+   depending on the capillary wall(boundary) region you need
+   IF YOU ADD A NEW ONE: increase the size of RBox rbox_center_capWall[]
+   inside capillary_wall.c*/
+#define CAP_WALL_INTERNAL         0
+#define CAP_WALL_EXTERNAL         1
+#define CAP_WALL_CORNER_INTERNAL  2
+#define CAP_WALL_CORNER_EXTERNAL  3
+
 /* Variables defined for keeping information on the geometry of the capillary:
 */
 double extern const zcap, dzcap, rcap;
@@ -55,5 +64,9 @@ int FindIdxClosest(double *vec, int Nvec, double v);
 Data* alloc_Data();
 void copy_Data_Vc(Data *d_target, const Data *d_source);
 void free_Data(Data *data);
+
+// RBox *GetRBoxCap(int side, int vpos);
+void SetRBox_capWall(int Nghost);
+void ReflectiveBoundCap (double ***q, int s, int side, int vpos);
 
 #endif

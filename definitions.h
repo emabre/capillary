@@ -91,6 +91,7 @@
 // #define FLATTEN_B_OUTCAP
 // #define PRESUBS_RES
 // #define ELECTR_T_NEUM
+#define ACCURATE_BCS               YES
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */

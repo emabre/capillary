@@ -383,6 +383,9 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         }
       }
     }
+
+    SetRBox_capWall(GetNghost());
+
     // /* Flatten the variables to conveniente values in points
     //    in internal boundary (except for "ghosts") */
     // /* WARNING!! IN CASE OF PRESSURE/TEMPERATURE TABLE INTERPOLATION ERROR, IT MIGHT
@@ -422,11 +425,10 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       }
 
       // Setting v and rho
-      FlipSign (X1_END, REFLECTIVE, vsign); // forse va inizializzato vsign??
+      FlipSign (X1_END, REFLECTIVE, vsign);
       ReflectiveBound (d->Vc[RHO], vsign[RHO], X1_END, CENTER);
       ReflectiveBound (d->Vc[iVZ], vsign[iVZ], X1_END, CENTER);
       ReflectiveBound (d->Vc[iVR], vsign[iVR], X1_END, CENTER);
-      ReflectiveBound (d->Vc[iVPHI], vsign[iVPHI], X1_END, CENTER);
 
       BOX_LOOP(box,k,j,i){
       #if IMPOSE_TWALL
@@ -446,6 +448,52 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     Internal Boundary
     ***********************************
     ***********************************/
+
+  #if ACCURATE_BCS == YES
+
+    #if (IMPOSE_BWALL || IMPOSE_TWALL || !defined(ELECTR_B_NEUM))
+      #error IMPOSE_BWALL, IMPOSE_TWALL, not(ELECTR_B_NEUM), are not implemented in the accurate bcs
+    #endif
+
+    /***********************
+    Capillary wall r=cost (CAP_WALL_INTERNAL)
+    ************************/
+    FlipSign (X1_END, REFLECTIVE, vsign);
+    ReflectiveBoundCap (d->Vc[RHO], vsign[RHO], CAP_WALL_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc[iVZ], vsign[iVZ], CAP_WALL_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc[iVR], vsign[iVR], CAP_WALL_INTERNAL, CENTER);
+    // [Err] Nutro qualche dubbio su questo.. dovrei riflettere B*r forse
+    ReflectiveBoundCap (d->Vc[iBPHI], vsign[iBPHI], CAP_WALL_INTERNAL, CENTER);
+
+    /***********************
+    Capillary wall z=cost (CAP_WALL_EXTERNAL)
+    ************************/
+    FlipSign (X2_BEG, REFLECTIVE, vsign);
+    ReflectiveBoundCap (d->Vc[RHO], vsign[RHO], CAP_WALL_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc[iVZ], vsign[iVZ], CAP_WALL_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc[iVR], vsign[iVR], CAP_WALL_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc[iBPHI], vsign[iBPHI], CAP_WALL_EXTERNAL, CENTER);
+
+    /*****************************
+    Corner of wall: bc correction for IDIR
+    ******************************/
+    FlipSign (X1_END, REFLECTIVE, vsign);
+    ReflectiveBoundCap (d->Vc[RHO], vsign[RHO], CAP_WALL_CORNER_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc[iVZ], vsign[iVZ], CAP_WALL_CORNER_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc[iVR], vsign[iVR], CAP_WALL_CORNER_INTERNAL, CENTER);
+    // [Err] Nutro qualche dubbio su questo.. dovrei riflettere B*r forse
+    ReflectiveBoundCap (d->Vc[iBPHI], vsign[iBPHI], CAP_WALL_CORNER_INTERNAL, CENTER);
+
+    /*****************************
+    Corner of wall: bc correction for JDIR
+    ******************************/
+    FlipSign (X2_BEG, REFLECTIVE, vsign);
+    ReflectiveBoundCap (d->Vc[RHO], vsign[RHO], CAP_WALL_CORNER_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc[iVZ], vsign[iVZ], CAP_WALL_CORNER_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc[iVR], vsign[iVR], CAP_WALL_CORNER_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc[iBPHI], vsign[iBPHI], CAP_WALL_CORNER_EXTERNAL, CENTER);
+
+  #else
 
     /***********************
     Capillary wall r=cost
@@ -524,51 +572,6 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     #if MULTIPLE_GHOSTS != YES
       print1("\nBe careful! without multiple ghosts the bc for temperature(pressure) and mag.field is not quite ok, you should implement it more carefully");
       KTOT_LOOP(k) {
-        /****ALGORITHM 1 *****/
-        // // I should not change the grid size near the capillary end!
-        // diagonal = sqrt( pow(grid[0].dx_glob[i_cap_inter_end+1],2) + pow(grid[1].dx_glob[j_cap_inter_end],2) );
-        // // I compute cos(theta) and sin(theta)
-        // sinth = grid[0].dx_glob[i_cap_inter_end+1] / diagonal;
-        // costh = grid[1].dx_glob[j_cap_inter_end] / diagonal;
-        // //qr = 0.5*(rhoA*vrA + rhoB*vrB)
-        // qr = d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end]*d->Vc[iVR][k][j_cap_inter_end][i_cap_inter_end];
-        // qr += d->Vc[RHO][k][j_cap_inter_end+1][i_cap_inter_end+1]*d->Vc[iVR][k][j_cap_inter_end+1][i_cap_inter_end+1];
-        // qr = 0.5*qr;
-        // //qz =  0.5*(rhoA*vzA + rhoB*vzB)
-        // qz = d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end]*d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end];
-        // qz += d->Vc[RHO][k][j_cap_inter_end+1][i_cap_inter_end+1]*d->Vc[iVZ][k][j_cap_inter_end+1][i_cap_inter_end+1];
-        // qz = 0.5*qz;
-        // // now I set the actual values
-        // d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end+1] = 0.5*(d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end]+d->Vc[RHO][k][j_cap_inter_end+1][i_cap_inter_end+1]);
-        // d->Vc[iVR][k][j_cap_inter_end][i_cap_inter_end+1] = (qr*sinth+qz*costh)*sinth - 0.5*qr;
-        // d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end+1] = (qr*sinth+qz*costh)*costh - 0.5*qz;
-
-        /****ALGORITHM 2 *****/
-        // /***********************/
-        // /*I try to set 0 speed on corner ghost cell (experimental)*/
-        // /***********************/
-        // d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end+1] = 0.5*(d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end]+d->Vc[RHO][k][j_cap_inter_end+1][i_cap_inter_end+1]);
-        // d->Vc[iVR][k][j_cap_inter_end][i_cap_inter_end+1] = 0.0;
-        // d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end+1] = 0.0;
-        // /******************/
-        // /*Also enforcing zero orthgonal velocity to wall in corner point (experimental!)*/
-        // /******************/
-        // d->Vc[iVR][k][j_cap_inter_end][i_cap_inter_end] = 0.0;
-        // d->Vc[iVZ][k][j_cap_inter_end+1][i_cap_inter_end+1] = 0.0;
-
-        /****ALGORITHM 3 *****/
-        /***********************/
-        /* Corner ghost cell reflects the cell just below*/
-        /***********************/
-        // d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end+1] = d->Vc[RHO][k][j_cap_inter_end][i_cap_inter_end];
-        // d->Vc[iVR][k][j_cap_inter_end][i_cap_inter_end+1] = -(d->Vc[iVR][k][j_cap_inter_end][i_cap_inter_end]);
-        // d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end+1] = d->Vc[iVZ][k][j_cap_inter_end][i_cap_inter_end];
-        // /***********************/
-        // /* While the cell on the right is enforced to have zero velocity along z */
-        // /***********************/
-        // d->Vc[iVZ][k][j_cap_inter_end+1][i_cap_inter_end+1] = 0.0;
-
-        /****ALGORITHM 4 *****/
         /***********************/
         /* Ghost cell has 0 speed (and rho is the average of the 2 neighbouring inside
         the domain) and the neighbouring cells reverse their orthogonal speeds*/
@@ -582,7 +585,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       }
     #elif MULTIPLE_GHOSTS == YES
 
-      /****ALGORITHM 5 *****/
+      /*********************/
       /* Define multiple ghosts on the corner wall cell! */
       /*********************/
       // To the normal corner cell I give the correct reflective boundary for
@@ -693,6 +696,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       // No correction for the k direction
       d_correction[2].Npoints = 0;
     #endif
+  #endif
 
     #ifdef FLATTEN_B_OUTCAP
       j_start_flatten = (j_cap_inter_end+NX2_TOT)/2;    

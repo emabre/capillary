@@ -5,6 +5,10 @@
 //debug macro
 // #define DBG_FIND_CLOSEST
 
+// Box useful for setting bcs internal to the domain
+static RBox rbox_center_capWall[2];
+static RBox rbox_center_capCorn[1];
+
 double const zcap = ZCAP/UNIT_LENGTH;
 double const dzcap = DZCAP/UNIT_LENGTH;
 double const rcap = RCAP/UNIT_LENGTH;
@@ -175,4 +179,123 @@ void free_Data(Data *data) {
   FreeArray3D ((void *) data->flag);
 
   free((Data *) data);
+}
+
+void SetRBox_capWall(int Nghost) {
+  int s;
+  /* ---------------------------------------------------
+    0. set CAP_WALL_INTERNAL grid index ranges
+   --------------------------------------------------- */
+  
+  s = CAP_WALL_INTERNAL;
+
+  rbox_center_capWall[s].vpos = CENTER;
+
+  rbox_center_capWall[s].ib = i_cap_inter_end + 1;
+  rbox_center_capWall[s].ie = i_cap_inter_end + 1 + Nghost - 1;
+  
+  rbox_center_capWall[s].jb = 0;
+  rbox_center_capWall[s].je = j_cap_inter_end - Nghost;
+  
+  rbox_center_capWall[s].kb = 0;
+  rbox_center_capWall[s].ke = NX3_TOT-1;
+
+  /* ---------------------------------------------------
+    2. set CAP_WALL_EXTERNAL grid index ranges
+   --------------------------------------------------- */
+
+  s = CAP_WALL_EXTERNAL;
+
+  rbox_center_capWall[s].vpos = CENTER;
+
+  rbox_center_capWall[s].ib = i_cap_inter_end + 1 + Nghost - 1;
+  rbox_center_capWall[s].ie = NX1_TOT-1;
+
+  rbox_center_capWall[s].jb = j_cap_inter_end - Nghost + 1;
+  rbox_center_capWall[s].je = j_cap_inter_end;
+
+  rbox_center_capWall[s].kb = 0;
+  rbox_center_capWall[s].ke = NX3_TOT-1;
+
+  /* ---------------------------------------------------
+    3. set grid index ranges for capillary
+       corner correction (rbox_center_capCorn),
+   --------------------------------------------------- */
+  s = 0;
+  
+  rbox_center_capCorn[s].vpos = CENTER;
+
+  rbox_center_capCorn[s].ib = i_cap_inter_end + 1;
+  rbox_center_capCorn[s].ie = i_cap_inter_end + 1 + Nghost - 1;
+
+  rbox_center_capCorn[s].jb = j_cap_inter_end - Nghost + 1;
+  rbox_center_capCorn[s].je = j_cap_inter_end;
+
+  rbox_center_capCorn[s].kb = 0;
+  rbox_center_capCorn[s].ke = NX3_TOT-1;
+}
+
+/* ********************************************************************* */
+RBox *GetRBoxCap(int side, int vpos)
+/*!
+ *  Returns a pointer to a local static RBox 
+ *
+ *  \param[in]  side  the region of the computational domain where 
+ *                    the box is required.
+ *                    Possible values :
+ *                    CAP_WALL_INTERNAL       
+ *                    CAP_WALL_EXTERNAL       
+ *                    CAP_WALL_CORNER_INTERNAL
+ *                    CAP_WALL_CORNER_EXTERNAL
+ * 
+ *  \param[in]  vpos  the variable position inside the cell:
+ *                    CENTER is the only avaiable for now.
+ *
+ *********************************************************************** */
+{
+  if (vpos != CENTER) {
+    print1("\n[GetRBoxCap] Only vpos == CENTER is implemented!");
+  }
+  if      (side == CAP_WALL_INTERNAL) 
+    return &(rbox_center_capWall[CAP_WALL_INTERNAL]);
+  else if (side == CAP_WALL_EXTERNAL)
+    return &(rbox_center_capWall[CAP_WALL_EXTERNAL]);
+  else if (side == CAP_WALL_CORNER_INTERNAL)
+    return &(rbox_center_capCorn[0]);
+  else if (side == CAP_WALL_CORNER_EXTERNAL)
+    return &(rbox_center_capCorn[0]);
+  else
+    return NULL;
+}
+
+void ReflectiveBoundCap (double ***q, int s, int side, int vpos)
+/*!
+ * Make symmetric (s = 1) or anti-symmetric (s=-1) profiles.
+ * The sign is set by the FlipSign() function. 
+ *
+ * \param [in,out] q   a 3D flow quantity
+ * \param [in] s   an integer taking only the values +1 (symmetric 
+ *                 profile) or -1 (antisymmetric profile)
+ *   
+ *********************************************************************** */
+{
+  int   i, j, k;
+  RBox *box = GetRBoxCap(side, vpos);
+
+  if (side == CAP_WALL_INTERNAL) {
+    /* [Ema] Values are simply reflected across the boundary
+          (depending on "s", with sign changed or not!),
+          even if the ghost cells are more than one,
+          e.g.: with 2 ghosts cells per side:
+                q[k][j][IEND+1] = q[k][j][IEND]
+                q[k][j][IEND+2] = q[k][j][IEND-1]
+          remember: IEND is the last cell index inside the real domain.
+    */
+    BOX_LOOP(box,k,j,i) q[k][j][i] = s*q[k][j][2*i_cap_inter_end-i+1];
+
+  }else if (side == CAP_WALL_EXTERNAL){  
+    BOX_LOOP(box,k,j,i) q[k][j][i] = s*q[k][2*(j_cap_inter_end+1)-j-1][i];
+  } else if ( side == CAP_WALL_CORNER_EXTERNAL || side == CAP_WALL_CORNER_INTERNAL) {
+    #error qui devi cambiare delle cose (o usare addirittura un altra funz. perchè devi agire su d_correction.Vc)
+  }
 }
