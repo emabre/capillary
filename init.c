@@ -258,6 +258,8 @@ void Analysis (const Data *d, Grid *grid)
   // double v[NVAR];
   double ****Vc, ****Uc;
   double dV;
+  double unit_en = UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY;
+  double unit_vol = UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
   double *rR, *rL, *dz;
   RBox *box = GetRBox(DOM, CENTER);
 
@@ -280,8 +282,8 @@ void Analysis (const Data *d, Grid *grid)
     #endif
     etot += dV*Uc[k][j][i][ENG];
   }
-
-  è tutto ok, ma dovresti solo convertire etot (e prima dV) in unità dimensionali (meglio gau)
+  // I convert etot to physical units  
+  etot *= etot*unit_vol*unit_en;
 
   // for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
   // rhoe = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
