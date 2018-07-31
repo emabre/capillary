@@ -1,5 +1,5 @@
-#include "debug_utilities.h"
 #include "pluto.h"
+#include "debug_utilities.h"
 /***************************************************************************************
  * [Ema] Print matrix (useful for calling inside gdb) 
  ****************************************************************************************/
@@ -77,4 +77,30 @@ void printmat4d(double ****matrix, int dim2, int dim1, int which0, int which1, i
       printf("%21s", coltop);
     }
     printf("\n");
+}
+
+
+/************************************************************************************
+ * printbox: to print the details of a RBox struct
+ * **********************************************************************************/
+void printbox(RBox box, char *info) {
+
+  printf("\n---------------------------------------");
+  printf("\nBox info: %s", info);
+
+  printf("\nib: %d", box.ib);
+  printf("\tie: %d", box.ie);
+  printf("\njb: %d", box.jb);
+  printf("\tje: %d", box.je);
+  printf("\nkb: %d", box.kb);
+  printf("\tke: %d", box.ke);
+  printf("\nvpos: %d ", box.vpos);
+  printf("(CENTER=%d, ", CENTER);
+  printf("X1FACE=%d, ", X1FACE);
+  printf("X2FACE=%d, ", X2FACE);
+  printf("X3FACE=%d)", X3FACE);
+  printf("\n---------------------------------------");
+
+  /* I don't print di,dj,dk as they are
+     automatically set by the ::BOX_LOOP macro. */
 }

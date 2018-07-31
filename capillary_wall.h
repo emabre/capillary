@@ -67,6 +67,6 @@ void free_Data(Data *data);
 
 // RBox *GetRBoxCap(int side, int vpos);
 void SetRBox_capWall(int Nghost);
-void ReflectiveBoundCap (double ***q, int s, int side, int vpos);
+void ReflectiveBoundCap (double ****q, int nv, int s, int side, int vpos);
 
 #endif

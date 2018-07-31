@@ -1,6 +1,7 @@
 #include <math.h>
 #include "pluto.h"
 #include "capillary_wall.h"
+#include "debug_utilities.h"
 
 //debug macro
 // #define DBG_FIND_CLOSEST
@@ -194,7 +195,7 @@ void SetRBox_capWall(int Nghost) {
   rbox_center_capWall[s].ib = i_cap_inter_end + 1;
   rbox_center_capWall[s].ie = i_cap_inter_end + 1 + Nghost - 1;
   
-  rbox_center_capWall[s].jb = 0;
+  rbox_center_capWall[s].jb = Nghost;
   rbox_center_capWall[s].je = j_cap_inter_end - Nghost;
   
   rbox_center_capWall[s].kb = 0;
@@ -208,8 +209,8 @@ void SetRBox_capWall(int Nghost) {
 
   rbox_center_capWall[s].vpos = CENTER;
 
-  rbox_center_capWall[s].ib = i_cap_inter_end + 1 + Nghost - 1;
-  rbox_center_capWall[s].ie = NX1_TOT-1;
+  rbox_center_capWall[s].ib = i_cap_inter_end + 1 + Nghost;
+  rbox_center_capWall[s].ie = NX1_TOT - 1 - Nghost;
 
   rbox_center_capWall[s].jb = j_cap_inter_end - Nghost + 1;
   rbox_center_capWall[s].je = j_cap_inter_end;
@@ -233,6 +234,12 @@ void SetRBox_capWall(int Nghost) {
 
   rbox_center_capCorn[s].kb = 0;
   rbox_center_capCorn[s].ke = NX3_TOT-1;
+
+  #ifdef DEBUG_ACCURATE_BCS
+    printbox(rbox_center_capWall[CAP_WALL_INTERNAL], "rbox_center_capWall[CAP_WALL_INTERNAL]");
+    printbox(rbox_center_capWall[CAP_WALL_EXTERNAL], "rbox_center_capWall[CAP_WALL_EXTERNAL]");
+    printbox(rbox_center_capCorn[0], "rbox_center_capCorn[0]");
+  #endif
 }
 
 /* ********************************************************************* */
@@ -268,34 +275,89 @@ RBox *GetRBoxCap(int side, int vpos)
     return NULL;
 }
 
-void ReflectiveBoundCap (double ***q, int s, int side, int vpos)
+void ReflectiveBoundCap (double ****q, int nv, int s, int side, int vpos)
 /*!
+ * [Created by Ema]
  * Make symmetric (s = 1) or anti-symmetric (s=-1) profiles.
  * The sign is set by the FlipSign() function. 
  *
  * \param [in,out] q   a 3D flow quantity
+ * \param [in]    nv    kind of variable to apply the bc, e.g.: RHO, iBPHI, PRS...
  * \param [in] s   an integer taking only the values +1 (symmetric 
  *                 profile) or -1 (antisymmetric profile)
  *   
  *********************************************************************** */
 {
-  int   i, j, k;
+  int   i, j, k, pp;
+  int static not_allocated_d_correction = 1;
   RBox *box = GetRBoxCap(side, vpos);
+
+  if (not_allocated_d_correction && (side == CAP_WALL_CORNER_INTERNAL || side == CAP_WALL_CORNER_EXTERNAL)) {
+    // I allocate memory for d_correction
+    // [Rob] I could define a function to do this in two lines
+    // First I count how many points are needed
+    pp = 0;
+    BOX_LOOP(box, k, j, i) pp++;
+
+    d_correction[IDIR].Npoints = pp;
+    d_correction[IDIR].i = ARRAY_1D(d_correction[IDIR].Npoints, int);
+    d_correction[IDIR].j = ARRAY_1D(d_correction[IDIR].Npoints, int);
+    d_correction[IDIR].k = ARRAY_1D(d_correction[IDIR].Npoints, int);
+    d_correction[IDIR].Vc = ARRAY_2D( NVAR, d_correction[IDIR].Npoints, double);
+
+    d_correction[JDIR].Npoints = pp;
+    d_correction[JDIR].i = ARRAY_1D(d_correction[JDIR].Npoints, int);
+    d_correction[JDIR].j = ARRAY_1D(d_correction[JDIR].Npoints, int);
+    d_correction[JDIR].k = ARRAY_1D(d_correction[JDIR].Npoints, int);
+    d_correction[JDIR].Vc = ARRAY_2D( NVAR, d_correction[JDIR].Npoints, double);
+
+    not_allocated_d_correction = 0;
+  }
 
   if (side == CAP_WALL_INTERNAL) {
     /* [Ema] Values are simply reflected across the boundary
           (depending on "s", with sign changed or not!),
           even if the ghost cells are more than one,
           e.g.: with 2 ghosts cells per side:
-                q[k][j][IEND+1] = q[k][j][IEND]
-                q[k][j][IEND+2] = q[k][j][IEND-1]
+                q[nv][k][j][IEND+1] = q[nv][k][j][IEND]
+                q[nv][k][j][IEND+2] = q[nv][k][j][IEND-1]
           remember: IEND is the last cell index inside the real domain.
     */
-    BOX_LOOP(box,k,j,i) q[k][j][i] = s*q[k][j][2*i_cap_inter_end-i+1];
+    BOX_LOOP(box,k,j,i) q[nv][k][j][i] = s*q[nv][k][j][2*i_cap_inter_end-i+1];
 
-  }else if (side == CAP_WALL_EXTERNAL){  
-    BOX_LOOP(box,k,j,i) q[k][j][i] = s*q[k][2*(j_cap_inter_end+1)-j-1][i];
-  } else if ( side == CAP_WALL_CORNER_EXTERNAL || side == CAP_WALL_CORNER_INTERNAL) {
-    #error qui devi cambiare delle cose (o usare addirittura un altra funz. perchè devi agire su d_correction.Vc)
+  } else if (side == CAP_WALL_EXTERNAL){  
+    BOX_LOOP(box,k,j,i) q[nv][k][j][i] = s*q[nv][k][2*(j_cap_inter_end+1)-j-1][i];
+
+  } else if (side == CAP_WALL_CORNER_INTERNAL) {
+    pp = 0;
+    BOX_LOOP(box,k,j,i) {
+      d_correction[IDIR].Vc[nv][pp] = s*q[nv][k][j][2*i_cap_inter_end-i+1];
+      d_correction[IDIR].i[pp] = i;
+      d_correction[IDIR].j[pp] = j;
+      d_correction[IDIR].k[pp] = k;
+      pp++;
+    }
+    if (pp != d_correction[IDIR].Npoints) {
+      print1("[ReflectiveBoundCap] Not all the correction cells(IDIR) have been filled!");
+      QUIT_PLUTO(1);
+    }
+
+  } else if ( side == CAP_WALL_CORNER_EXTERNAL) {
+    pp = 0;
+    BOX_LOOP(box,k,j,i) {
+      d_correction[JDIR].Vc[nv][pp] = s*q[nv][k][2*(j_cap_inter_end+1)-j-1][i];
+      d_correction[JDIR].i[pp] = i;
+      d_correction[JDIR].j[pp] = j;
+      d_correction[JDIR].k[pp] = k;
+      pp++;
+    }
+    if (pp != d_correction[JDIR].Npoints) {
+      print1("[ReflectiveBoundCap] Not all the correction cells(JDIR) have been filled!");
+      QUIT_PLUTO(1);
+    }
+
+  } else {
+    print1("\n[ReflectiveBoundCap] Wrong choice for 'side'");
+    QUIT_PLUTO(1);
   }
 }

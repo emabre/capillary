@@ -16,8 +16,8 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
+#define  RESISTIVITY             NO
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -107,4 +107,5 @@
 
 /*------------------------------------------------------*/
 /*     FOR DEBUG    */
-// #define DEBUG_EMA
+#define DEBUG_EMA
+#define DEBUG_ACCURATE_BCS

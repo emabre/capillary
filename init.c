@@ -271,7 +271,7 @@ void Analysis (const Data *d, Grid *grid)
   Uc = d->Uc;
 
   PrimToCons3D(Vc, Uc, box);
-  
+
   DOM_LOOP (k,j,i) {
     #if GEOMETRY == CYLINDRICAL
     /* Note that I could use instead some element (like dV) of the grid itself,
@@ -282,7 +282,7 @@ void Analysis (const Data *d, Grid *grid)
     #endif
     etot += dV*Uc[k][j][i][ENG];
   }
-  // I convert etot to physical units  
+  // I convert etot to physical units
   etot *= etot*unit_vol*unit_en;
 
   // for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
@@ -459,39 +459,42 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     Capillary wall r=cost (CAP_WALL_INTERNAL)
     ************************/
     FlipSign (X1_END, REFLECTIVE, vsign);
-    ReflectiveBoundCap (d->Vc[RHO], vsign[RHO], CAP_WALL_INTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc[iVZ], vsign[iVZ], CAP_WALL_INTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc[iVR], vsign[iVR], CAP_WALL_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, RHO, vsign[RHO], CAP_WALL_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iVZ, vsign[iVZ], CAP_WALL_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iVR, vsign[iVR], CAP_WALL_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, PRS, vsign[iBPHI], CAP_WALL_INTERNAL, CENTER);
     // [Err] Nutro qualche dubbio su questo.. dovrei riflettere B*r forse
-    ReflectiveBoundCap (d->Vc[iBPHI], vsign[iBPHI], CAP_WALL_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iBPHI, vsign[iBPHI], CAP_WALL_INTERNAL, CENTER);
 
     /***********************
     Capillary wall z=cost (CAP_WALL_EXTERNAL)
     ************************/
     FlipSign (X2_BEG, REFLECTIVE, vsign);
-    ReflectiveBoundCap (d->Vc[RHO], vsign[RHO], CAP_WALL_EXTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc[iVZ], vsign[iVZ], CAP_WALL_EXTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc[iVR], vsign[iVR], CAP_WALL_EXTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc[iBPHI], vsign[iBPHI], CAP_WALL_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, RHO, vsign[RHO], CAP_WALL_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iVZ, vsign[iVZ], CAP_WALL_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iVR, vsign[iVR], CAP_WALL_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, PRS, vsign[iVR], CAP_WALL_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iBPHI, vsign[iBPHI], CAP_WALL_EXTERNAL, CENTER);
 
     /*****************************
-    Corner of wall: bc correction for IDIR
+    Corner of wall
     ******************************/
+    // BC  correction for IDIR
     FlipSign (X1_END, REFLECTIVE, vsign);
-    ReflectiveBoundCap (d->Vc[RHO], vsign[RHO], CAP_WALL_CORNER_INTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc[iVZ], vsign[iVZ], CAP_WALL_CORNER_INTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc[iVR], vsign[iVR], CAP_WALL_CORNER_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, RHO, vsign[RHO], CAP_WALL_CORNER_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iVZ, vsign[iVZ], CAP_WALL_CORNER_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iVR, vsign[iVR], CAP_WALL_CORNER_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, PRS, vsign[iVR], CAP_WALL_CORNER_INTERNAL, CENTER);
     // [Err] Nutro qualche dubbio su questo.. dovrei riflettere B*r forse
-    ReflectiveBoundCap (d->Vc[iBPHI], vsign[iBPHI], CAP_WALL_CORNER_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iBPHI, vsign[iBPHI], CAP_WALL_CORNER_INTERNAL, CENTER);
 
-    /*****************************
-    Corner of wall: bc correction for JDIR
-    ******************************/
+    // BC correction for JDIR
     FlipSign (X2_BEG, REFLECTIVE, vsign);
-    ReflectiveBoundCap (d->Vc[RHO], vsign[RHO], CAP_WALL_CORNER_EXTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc[iVZ], vsign[iVZ], CAP_WALL_CORNER_EXTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc[iVR], vsign[iVR], CAP_WALL_CORNER_EXTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc[iBPHI], vsign[iBPHI], CAP_WALL_CORNER_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, RHO, vsign[RHO], CAP_WALL_CORNER_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iVZ, vsign[iVZ], CAP_WALL_CORNER_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iVR, vsign[iVR], CAP_WALL_CORNER_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, PRS, vsign[iVR], CAP_WALL_CORNER_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, iBPHI, vsign[iBPHI], CAP_WALL_CORNER_EXTERNAL, CENTER);
 
   #else
 
@@ -609,7 +612,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
         #endif
       }
 
-      // I repeat the usual configuration for the correction in r direction
+      // I allocate memory for the correction structure
       d_correction[0].Npoints = 1*1*NX3_TOT;
       d_correction[0].i = ARRAY_1D(d_correction[0].Npoints, int);
       d_correction[0].j = ARRAY_1D(d_correction[0].Npoints, int);
@@ -633,7 +636,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
           d_correction[0].Vc[iBPHI][k] = d->Vc[iBPHI][k][j_cap_inter_end][i_cap_inter_end];
           d_correction[0].Vc[iBR][k] = d->Vc[iBR][k][j_cap_inter_end][i_cap_inter_end];
         #endif
-        
+
         #if IMPOSE_TWALL
           #if EOS==IDEAL
               #error double internal ghost not implemented for ideas eos
@@ -699,7 +702,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
   #endif
 
     #ifdef FLATTEN_B_OUTCAP
-      j_start_flatten = (j_cap_inter_end+NX2_TOT)/2;    
+      j_start_flatten = (j_cap_inter_end+NX2_TOT)/2;
       KDOM_LOOP(k) {
         for (j=j_start_flatten; j<=JEND; j++)
           for (i=IBEG; i<=IEND; i++)

@@ -678,8 +678,10 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       printmat(v_old, NX2_TOT, NX1_TOT);
       printf("\nv_aux\n");
       printmat(v_aux, NX2_TOT, NX1_TOT);
-      printf("\ndUres_aux\n");
-      printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
+        printf("\ndUres_aux\n");
+        printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #endif
     #endif
 
     /**********************************
@@ -700,8 +702,10 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       printf("\nafter impl dir2:\n");
       printf("\nv_new\n");
       printmat(v_new, NX2_TOT, NX1_TOT);
-      printf("\ndUres_aux\n");
-      printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
+        printf("\ndUres_aux\n");
+        printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #endif
     #endif
 
     /**********************************
@@ -725,8 +729,10 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       printmat(v_new, NX2_TOT, NX1_TOT);
       printf("\nv_aux\n");
       printmat(v_aux, NX2_TOT, NX1_TOT);
-      printf("\ndUres_aux\n");
-      printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
+        printf("\ndUres_aux\n");
+        printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #endif
     #endif
 
     /**********************************
@@ -763,8 +769,10 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       printf("\nafter impl dir1:\n");
       printf("\nv_new\n");
       printmat(v_new, NX2_TOT, NX1_TOT);
-      printf("\ndUres_aux\n");
-      printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
+        printf("\ndUres_aux\n");
+        printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #endif
     #endif
 }
 
@@ -1185,8 +1193,10 @@ void SplitImplicit(double **v_new, double **v_old,
       printf("\nafter impl dir1:\n");
       printf("\nv_new\n");
       printmat(v_new, NX2_TOT, NX1_TOT);
-      printf("\ndUres_aux\n");
-      printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
+        printf("\ndUres_aux\n");
+        printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #endif
     #endif
 
     /**********************************
@@ -1207,8 +1217,10 @@ void SplitImplicit(double **v_new, double **v_old,
       printf("\nafter impl dir1:\n");
       printf("\nv_new\n");
       printmat(v_new, NX2_TOT, NX1_TOT);
-      printf("\ndUres_aux\n");
-      printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
+        printf("\ndUres_aux\n");
+        printmat(dUres_aux, NX2_TOT, NX1_TOT);
+      #endif
     #endif
 }
 
