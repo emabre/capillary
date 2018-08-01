@@ -134,6 +134,14 @@ void Init (double *us, double x1, double x2, double x3)
       GetMu(T0_K, us[RHO], &mu); // GetMu takes T in Kelvin, no need to adim. T
   #endif
   us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
+
+  /* >>>>>>>>>>> Initialization of  d_correction <<<<<<<<<<< */
+  /* This required for the userdef_output. Otherwise if somebody (e.g. userdef_output.c)
+     tries to evaluate d_correction[].Vc it reads uninitialized values.*/
+
+
+
+  /* >>>>>>>>>>> End initialization d_correction <<<<<<<<<<< */
 }
 
 //[Err] Test, for 1D case.

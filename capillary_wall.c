@@ -25,6 +25,8 @@ double en_Bvloss = 0;
 
 Corr d_correction[3] = { {},{},{} };
 
+int not_allocated_d_correction = 1;
+
 /******************************************************************/
 /* Sets the remarkable indexes of the grid for the capillary*/
 /******************************************************************/
@@ -289,7 +291,6 @@ void ReflectiveBoundCap (double ****q, int nv, int s, int side, int vpos)
  *********************************************************************** */
 {
   int   i, j, k, pp;
-  int static not_allocated_d_correction = 1;
   RBox *box = GetRBoxCap(side, vpos);
 
   if (not_allocated_d_correction && (side == CAP_WALL_CORNER_INTERNAL || side == CAP_WALL_CORNER_EXTERNAL)) {
@@ -385,7 +386,6 @@ void ZeroBoundCap (double ****q, int nv, int s, int side, int vpos)
  *********************************************************************** */
 {
   int   i, j, k, pp;
-  int static not_allocated_d_correction = 1;
   RBox *box = GetRBoxCap(side, vpos);
 
   if (not_allocated_d_correction && (side == CAP_WALL_CORNER_INTERNAL || side == CAP_WALL_CORNER_EXTERNAL)) {

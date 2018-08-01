@@ -190,8 +190,8 @@ tion RuntimeGet(), e.g. ..."*/
     // ApplyMultipleGhosts(&d_corrected_z, 1);
     copy_Data_Vc(d_corrected_z, d);
     copy_Data_Vc(d_corrected_r, d);
-    ApplyMultipleGhosts(d_corrected_r, 0);
-    ApplyMultipleGhosts(d_corrected_z, 1);
+    ApplyMultipleGhosts(d_corrected_r, IDIR);
+    ApplyMultipleGhosts(d_corrected_z, JDIR);
 
     DOM_LOOP(k,j,i){
       // vr_c_r[k][j][i] = d_corrected_r.Vc[iVR][k][j][i]*UNIT_VELOCITY;
