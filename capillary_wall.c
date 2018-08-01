@@ -361,3 +361,91 @@ void ReflectiveBoundCap (double ****q, int nv, int s, int side, int vpos)
     QUIT_PLUTO(1);
   }
 }
+
+/***********************************************************
+ * Do all the necessary stuff for variables which are not evolved
+ * in time (at the moment of writing: simply set to 0 the corrections d_correction)
+ * *********************************************************/
+void SetNotEvolvedVar (int nv) {
+  ZeroBoundCap (NULL, nv, 0, CAP_WALL_CORNER_INTERNAL, CENTER);
+  ZeroBoundCap (NULL, nv, 0, CAP_WALL_CORNER_EXTERNAL, CENTER);
+}
+
+/*************************************************************
+ * Set to 0 the correction for a certain variable in a certain direction
+ * ***********************************************************/
+void ZeroBoundCap (double ****q, int nv, int s, int side, int vpos)
+/*!
+ * [Created by Ema]
+ * Set a boundary(ghost cells defined by some box or the corrections d_correction.Vc[][] ...) to value 0.
+ *
+ * \param [in,out] q   a 3D flow quantity
+ * \param [in]    nv    kind of variable to apply the bc, e.g.: RHO, iBPHI, PRS...
+ *   
+ *********************************************************************** */
+{
+  int   i, j, k, pp;
+  int static not_allocated_d_correction = 1;
+  RBox *box = GetRBoxCap(side, vpos);
+
+  if (not_allocated_d_correction && (side == CAP_WALL_CORNER_INTERNAL || side == CAP_WALL_CORNER_EXTERNAL)) {
+    // I allocate memory for d_correction
+    // [Rob] I could define a function to do this in two lines
+    // First I count how many points are needed
+    pp = 0;
+    BOX_LOOP(box, k, j, i) pp++;
+
+    d_correction[IDIR].Npoints = pp;
+    d_correction[IDIR].i = ARRAY_1D(d_correction[IDIR].Npoints, int);
+    d_correction[IDIR].j = ARRAY_1D(d_correction[IDIR].Npoints, int);
+    d_correction[IDIR].k = ARRAY_1D(d_correction[IDIR].Npoints, int);
+    d_correction[IDIR].Vc = ARRAY_2D( NVAR, d_correction[IDIR].Npoints, double);
+
+    d_correction[JDIR].Npoints = pp;
+    d_correction[JDIR].i = ARRAY_1D(d_correction[JDIR].Npoints, int);
+    d_correction[JDIR].j = ARRAY_1D(d_correction[JDIR].Npoints, int);
+    d_correction[JDIR].k = ARRAY_1D(d_correction[JDIR].Npoints, int);
+    d_correction[JDIR].Vc = ARRAY_2D( NVAR, d_correction[JDIR].Npoints, double);
+
+    not_allocated_d_correction = 0;
+  }
+
+  if (side == CAP_WALL_INTERNAL) {
+    BOX_LOOP(box,k,j,i) q[nv][k][j][i] = 0;
+
+  } else if (side == CAP_WALL_EXTERNAL){  
+    BOX_LOOP(box,k,j,i) q[nv][k][j][i] = 0;
+
+  } else if (side == CAP_WALL_CORNER_INTERNAL) {
+    pp = 0;
+    BOX_LOOP(box,k,j,i) {
+      d_correction[IDIR].Vc[nv][pp] = 0;
+      d_correction[IDIR].i[pp] = i;
+      d_correction[IDIR].j[pp] = j;
+      d_correction[IDIR].k[pp] = k;
+      pp++;
+    }
+    if (pp != d_correction[IDIR].Npoints) {
+      print1("[ReflectiveBoundCap] Not all the correction cells(IDIR) have been filled!");
+      QUIT_PLUTO(1);
+    }
+
+  } else if ( side == CAP_WALL_CORNER_EXTERNAL) {
+    pp = 0;
+    BOX_LOOP(box,k,j,i) {
+      d_correction[JDIR].Vc[nv][pp] = 0;
+      d_correction[JDIR].i[pp] = i;
+      d_correction[JDIR].j[pp] = j;
+      d_correction[JDIR].k[pp] = k;
+      pp++;
+    }
+    if (pp != d_correction[JDIR].Npoints) {
+      print1("[ReflectiveBoundCap] Not all the correction cells(JDIR) have been filled!");
+      QUIT_PLUTO(1);
+    }
+
+  } else {
+    print1("\n[ReflectiveBoundCap] Wrong choice for 'side'");
+    QUIT_PLUTO(1);
+  }
+}

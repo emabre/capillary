@@ -1,5 +1,7 @@
 #include "pluto.h"
+#include "capillary_wall.h"
 #include "debug_utilities.h"
+
 /***************************************************************************************
  * [Ema] Print matrix (useful for calling inside gdb) 
  ****************************************************************************************/
@@ -103,4 +105,29 @@ void printbox(RBox box, char *info) {
 
   /* I don't print di,dj,dk as they are
      automatically set by the ::BOX_LOOP macro. */
+}
+
+/************************************************************************************
+ * print_d_corr: to print the details of a RBox struct.
+ * whichX (X=0,1,2) : Integer which tells whether the dimension X has to be printed (whichX = -1)
+ *          or kept fixed (whichX = value to keep)
+ * **********************************************************************************/
+void printcorr(Corr corr, char *info) {
+  int nv;
+  int pp;
+
+  printf("\n--------------------------------------");
+  printf("\nCorr info: %s", info);
+
+  printf("\nNpoints: %d", corr.Npoints);
+
+  for (pp=0; pp<corr.Npoints; pp++) {
+    printf("\npoint %d; k=%d, j=%d, i=%d",pp, corr.k[pp], corr.j[pp], corr.i[pp]);
+    printf("\n Corr Vc vars: (nv, Vc[nv])\n");
+    for (nv=0; nv<NVAR; nv++) {
+      printf("(%d, %g); ", nv, corr.Vc[nv][pp]);
+    }
+  }
+
+  printf("\n--------------------------------------");
 }

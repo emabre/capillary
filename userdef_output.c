@@ -3,10 +3,11 @@
 #include "capillary_wall.h"
 #include "current_table.h"
 #include "prototypes.h"
+#include "debug_utilities.h"
 
 #define WRITE_T_MU_NE_IONIZ YES
 #define WRITE_ETA YES
-#define WRITE_MULTIPLE_GHOSTS_CORR NO
+#define WRITE_MULTIPLE_GHOSTS_CORR YES
 #define WRITE_KAPPA YES
 
 #ifndef WRITE_J1D
@@ -88,6 +89,8 @@ tion RuntimeGet(), e.g. ..."*/
     double ***vr_c_r, ***vr_c_z;
     double ***vz_c_r, ***vz_c_z;
     double ***rho_c_r, ***rho_c_z;
+    double ***Bx3_c_r, ***Bx3_c_z;
+    double unit_Mfield;
     #ifdef WRITE_T_MU_NE_IONIZ
       double ***T_c_r, ***T_c_z;
     #endif
@@ -104,6 +107,9 @@ tion RuntimeGet(), e.g. ..."*/
     vz_c_z = GetUserVar("vz_c_z");
     rho_c_z = GetUserVar("rho_c_z");
     rho_c_r = GetUserVar("rho_c_r");
+    Bx3_c_r = GetUserVar("Bx3_c_r");
+    Bx3_c_z = GetUserVar("Bx3_c_z");
+    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
     #if WRITE_T_MU_NE_IONIZ == YES
       T_c_z= GetUserVar("T_c_z");
       T_c_r= GetUserVar("T_c_r");
@@ -200,6 +206,8 @@ tion RuntimeGet(), e.g. ..."*/
       vz_c_z[k][j][i] = d_corrected_z->Vc[iVZ][k][j][i]*UNIT_VELOCITY;
       rho_c_r[k][j][i] = d_corrected_r->Vc[RHO][k][j][i]*UNIT_DENSITY;
       rho_c_z[k][j][i] = d_corrected_z->Vc[RHO][k][j][i]*UNIT_DENSITY;
+      Bx3_c_r[k][j][i] = d_corrected_r->Vc[BX3][k][j][i]*unit_Mfield;
+      Bx3_c_z[k][j][i] = d_corrected_z->Vc[BX3][k][j][i]*unit_Mfield;
     }
 
     // I take the corrected T
@@ -214,6 +222,13 @@ tion RuntimeGet(), e.g. ..."*/
           if (GetPV_Temperature(v, &(T_c_r[k][j][i]) )!=0) {
             print1("ComputeUserVar:[Ema] Error computing temperature!");
           }
+
+          // // [Err] delete next line
+          // if (T_c_r[k][j][i]>1e10){
+          //   print1("\nT_c_r over tolerance (k=%d,j=%d,i=%d)", k,j,i);
+          //   printmat4d(d_corrected_z->Vc, NVAR, NX1_TOT, -1, k,j,-1);
+          // }
+
           GetMu(T_c_r[k][j][i], v[RHO], &mu);
         #endif
       }

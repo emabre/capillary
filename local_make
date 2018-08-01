@@ -7,3 +7,6 @@ HEADERS += pvte_law_heat_capacity.h
 # [Ema] Added by Ema for gprof
 # CFLAGS += -pg
 # LDFLAGS += -pg
+
+# [Ema] Added by Ema for getting preprocessor macro info for gdb (not tested)
+# CFLAGS += -g3

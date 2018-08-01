@@ -7,6 +7,7 @@
 #include "capillary_wall.h"
 #include "current_table.h"
 #include "adi.h"
+#include "debug_utilities.h"
 
 #define AS_DIFF 3
 
@@ -365,6 +366,10 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     Bwall = BIOTSAV_GAUSS_A_CM(curr, RCAP)/unit_Mfield;
   #endif
 
+  #ifdef DEBUG_ACCURATE_BCS
+    int nv;
+  #endif
+
   /**********************************
   Find the remarkable indexes (if they had not been found before)
   ***********************************/
@@ -462,7 +467,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     ReflectiveBoundCap (d->Vc, RHO, vsign[RHO], CAP_WALL_INTERNAL, CENTER);
     ReflectiveBoundCap (d->Vc, iVZ, vsign[iVZ], CAP_WALL_INTERNAL, CENTER);
     ReflectiveBoundCap (d->Vc, iVR, vsign[iVR], CAP_WALL_INTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc, PRS, vsign[iBPHI], CAP_WALL_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, PRS, vsign[PRS], CAP_WALL_INTERNAL, CENTER);
     // [Err] Nutro qualche dubbio su questo.. dovrei riflettere B*r forse
     ReflectiveBoundCap (d->Vc, iBPHI, vsign[iBPHI], CAP_WALL_INTERNAL, CENTER);
 
@@ -473,7 +478,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     ReflectiveBoundCap (d->Vc, RHO, vsign[RHO], CAP_WALL_EXTERNAL, CENTER);
     ReflectiveBoundCap (d->Vc, iVZ, vsign[iVZ], CAP_WALL_EXTERNAL, CENTER);
     ReflectiveBoundCap (d->Vc, iVR, vsign[iVR], CAP_WALL_EXTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc, PRS, vsign[iVR], CAP_WALL_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, PRS, vsign[PRS], CAP_WALL_EXTERNAL, CENTER);
     ReflectiveBoundCap (d->Vc, iBPHI, vsign[iBPHI], CAP_WALL_EXTERNAL, CENTER);
 
     /*****************************
@@ -484,7 +489,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     ReflectiveBoundCap (d->Vc, RHO, vsign[RHO], CAP_WALL_CORNER_INTERNAL, CENTER);
     ReflectiveBoundCap (d->Vc, iVZ, vsign[iVZ], CAP_WALL_CORNER_INTERNAL, CENTER);
     ReflectiveBoundCap (d->Vc, iVR, vsign[iVR], CAP_WALL_CORNER_INTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc, PRS, vsign[iVR], CAP_WALL_CORNER_INTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, PRS, vsign[PRS], CAP_WALL_CORNER_INTERNAL, CENTER);
     // [Err] Nutro qualche dubbio su questo.. dovrei riflettere B*r forse
     ReflectiveBoundCap (d->Vc, iBPHI, vsign[iBPHI], CAP_WALL_CORNER_INTERNAL, CENTER);
 
@@ -493,8 +498,22 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     ReflectiveBoundCap (d->Vc, RHO, vsign[RHO], CAP_WALL_CORNER_EXTERNAL, CENTER);
     ReflectiveBoundCap (d->Vc, iVZ, vsign[iVZ], CAP_WALL_CORNER_EXTERNAL, CENTER);
     ReflectiveBoundCap (d->Vc, iVR, vsign[iVR], CAP_WALL_CORNER_EXTERNAL, CENTER);
-    ReflectiveBoundCap (d->Vc, PRS, vsign[iVR], CAP_WALL_CORNER_EXTERNAL, CENTER);
+    ReflectiveBoundCap (d->Vc, PRS, vsign[PRS], CAP_WALL_CORNER_EXTERNAL, CENTER);
     ReflectiveBoundCap (d->Vc, iBPHI, vsign[iBPHI], CAP_WALL_CORNER_EXTERNAL, CENTER);
+
+    // Important! I must set to 0 all the corrections to the variables that I don't want to advance!
+    SetNotEvolvedVar(iVPHI);
+    SetNotEvolvedVar(iBR);
+    SetNotEvolvedVar(iBZ);
+
+    #ifdef DEBUG_ACCURATE_BCS
+      for (nv=0, nv<NVAR; nv++;) {
+        printf("\n var: %d", nv);
+        printmat4d(d->Vc, NX2_TOT, NX1_TOT, nv, 0, -1, -1);
+      }
+      printcorr(d_correction[IDIR], "d_correction[IDIR]");
+      printcorr(d_correction[JDIR], "d_correction[JDIR]");
+    #endif
 
   #else
 
