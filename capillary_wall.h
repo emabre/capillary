@@ -21,13 +21,11 @@ int extern capillary_not_set;
 int extern i_cap_inter_end, j_cap_inter_end, j_elec_start;
 
 /* Variables defined for computation of energy conservation:
-  en_res_loss : energy lost by resistivity (resistive part of poynting flux
+  en_adv_in : energy gained by resistivity (resistive part of poynting flux
                 through the boundary)
-  en_cond_loss : energy lost by conduction through boundary
-  en_Bvloss : energy lost due to term B(B*v) through boundary
-              in equation 6.4 of userguide
-  en_advloss: energy lost by advection of the total energy rhough boundary*/
-double extern en_cond_loss, en_res_loss, en_adv_loss, en_Bvloss;
+  en_cond_in : energy gained by conduction through boundary
+  en_adv_in: energy gained by advection of the total energy rhough boundary*/
+double extern en_cond_in, en_adv_in, en_adv_in;
 
 /* ********************************************************************* */
 /*! [Ema]The Corr structure contains the correction to the solution 3D array
