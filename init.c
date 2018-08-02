@@ -261,72 +261,75 @@ void Analysis (const Data *d, Grid *grid)
 /*
  *
  *********************************************************************** */
-{ double etot=0;
-  int i, j, k;
-  // int nv;
-  // double v[NVAR];
-  double ****Vc, ****Uc;
-  double dV;
-  double unit_en = UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY;
-  double unit_vol = UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
-  double *rR, *rL, *dz;
-  RBox *box = GetRBox(DOM, CENTER);
+{ 
+  #if EN_CONS_CHECK
+    double etot=0;
+    int i, j, k;
+    // int nv;
+    // double v[NVAR];
+    double ****Vc, ****Uc;
+    double dV;
+    double unit_en = UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY;
+    double unit_vol = UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
+    double *rR, *rL, *dz;
+    RBox *box = GetRBox(DOM, CENTER);
 
-  rR = grid[IDIR].xr_glob;
-  rL = grid[IDIR].xl_glob;
-  dz = grid[JDIR].dx_glob;
+    rR = grid[IDIR].xr_glob;
+    rL = grid[IDIR].xl_glob;
+    dz = grid[JDIR].dx_glob;
 
-  Vc = d->Vc;
-  Uc = d->Uc;
+    Vc = d->Vc;
+    Uc = d->Uc;
 
-  PrimToCons3D(Vc, Uc, box);
+    PrimToCons3D(Vc, Uc, box);
 
-  DOM_LOOP (k,j,i) {
-    #if GEOMETRY == CYLINDRICAL
-    /* Note that I could use instead some element (like dV) of the grid itself,
-       I don't do that to make this chunk of code compatible for both the 2015 and 2018 version of PLUTO */
-      dV = CONST_PI*(rR[i]*rR[i]- rL[i]*rL[i])*dz[j];
-    #else
-      #error Only cyl. geom. is implemented for energy conservation computation
-    #endif
-    etot += dV*Uc[k][j][i][ENG];
-  }
-  // I convert etot to physical units
-  etot *= etot*unit_vol*unit_en;
+    DOM_LOOP (k,j,i) {
+      #if GEOMETRY == CYLINDRICAL
+      /* Note that I could use instead some element (like dV) of the grid itself,
+        I don't do that to make this chunk of code compatible for both the 2015 and 2018 version of PLUTO */
+        dV = CONST_PI*(rR[i]*rR[i]- rL[i]*rL[i])*dz[j];
+      #else
+        #error Only cyl. geom. is implemented for energy conservation computation
+      #endif
+      etot += dV*Uc[k][j][i][ENG];
+    }
+    // I convert etot to physical units
+    etot *= etot*unit_vol*unit_en;
 
-  // for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
-  // rhoe = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
+    // for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
+    // rhoe = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
 
-  /* Write to file (remember: prank is the processor rank (0 in serial mode),
-     so this chunk of code should work also in parallel mode!).
-  */
-  if (prank == 0) {
-    char fname[512];
-    static double tpos = -1.0;
-    FILE *fp;
+    /* Write to file (remember: prank is the processor rank (0 in serial mode),
+      so this chunk of code should work also in parallel mode!).
+    */
+    if (prank == 0) {
+      char fname[512];
+      static double tpos = -1.0;
+      FILE *fp;
 
-    sprintf (fname, "%s/energy_cons.dat",RuntimeGet()->output_dir);
-    if (g_stepNumber == 0) { /* Open for writing only when we’re starting */
-      fp = fopen(fname,"w"); /* from beginning */
-      fprintf (fp,"# %7s %12s %12s\n", "t", "dt", "Etot");
-    } else {
-      /* Append if this is not step 0 */
-      if (tpos < 0.0) { /* Obtain time coordinate of to last written row */
-        char
-        sline[512];
-        fp = fopen(fname,"r");
-        while (fgets(sline, 512, fp)) {} /* read as many lines as you can, to reach the file end*/
-        sscanf(sline, "%lf\n",&tpos); /* read tpos (time of the last written row) from sline */
-        fclose(fp);
+      sprintf (fname, "%s/energy_cons.dat",RuntimeGet()->output_dir);
+      if (g_stepNumber == 0) { /* Open for writing only when we’re starting */
+        fp = fopen(fname,"w"); /* from beginning */
+        fprintf (fp,"# %7s %12s %12s\n", "t", "dt", "Etot");
+      } else {
+        /* Append if this is not step 0 */
+        if (tpos < 0.0) { /* Obtain time coordinate of to last written row */
+          char
+          sline[512];
+          fp = fopen(fname,"r");
+          while (fgets(sline, 512, fp)) {} /* read as many lines as you can, to reach the file end*/
+          sscanf(sline, "%lf\n",&tpos); /* read tpos (time of the last written row) from sline */
+          fclose(fp);
+        }
+        fp = fopen(fname,"a");
       }
-      fp = fopen(fname,"a");
+      if (g_time > tpos){
+      /* Write if current time if > tpos */
+      fprintf (fp, "%12.6e %12.6e %12.6e \n",g_time, g_dt, etot);
+      }
+      fclose(fp);
     }
-    if (g_time > tpos){
-    /* Write if current time if > tpos */
-    fprintf (fp, "%12.6e %12.6e %12.6e \n",g_time, g_dt, etot);
-    }
-    fclose(fp);
-  }
+  #endif
 }
 
 /* ********************************************************************* */

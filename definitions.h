@@ -16,7 +16,7 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             NO
+#define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
 #define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
@@ -63,7 +63,7 @@
 /*  Ema's additional macros                            */
 #define SPLIT_DIFF_ADV_ADV_DIFF
 // #define PROFILE_GPROF_STOPSTEP      8
-// #define FREEZE_FLUID
+#define FREEZE_FLUID
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */
 // #define FRACTIONAL_THETA           0.3
@@ -92,6 +92,7 @@
 // #define PRESUBS_RES
 // #define ELECTR_T_NEUM
 #define ACCURATE_BCS               YES
+#define EN_CONS_CHECK              YES
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
