@@ -264,13 +264,13 @@ void Analysis (const Data *d, Grid *grid)
 { 
   #if EN_CONS_CHECK
     double etot=0;
+    double en_adv_in_gau;
     int i, j, k;
     // int nv;
     // double v[NVAR];
     double ****Vc, ****Uc;
     double dV;
-    double unit_en = UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY;
-    double unit_vol = UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
+    double unit_en = UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY*UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
     double *rR, *rL, *dz;
     RBox *box = GetRBox(DOM, CENTER);
 
@@ -294,10 +294,12 @@ void Analysis (const Data *d, Grid *grid)
       etot += dV*Uc[k][j][i][ENG];
     }
     // I convert etot to physical units
-    etot *= etot*unit_vol*unit_en;
+    etot *= etot*unit_en;
 
     // for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
     // rhoe = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
+
+    en_adv_in_gau = en_adv_in*unit_en;
 
     /* Write to file (remember: prank is the processor rank (0 in serial mode),
       so this chunk of code should work also in parallel mode!).
@@ -310,7 +312,7 @@ void Analysis (const Data *d, Grid *grid)
       sprintf (fname, "%s/energy_cons.dat",RuntimeGet()->output_dir);
       if (g_stepNumber == 0) { /* Open for writing only when we’re starting */
         fp = fopen(fname,"w"); /* from beginning */
-        fprintf (fp,"# %7s %12s %12s\n", "t", "dt", "Etot");
+        fprintf (fp,"# %7s %12s %12s %12s\n", "t", "dt", "Etot", "E_adv_in");
       } else {
         /* Append if this is not step 0 */
         if (tpos < 0.0) { /* Obtain time coordinate of to last written row */
@@ -325,7 +327,7 @@ void Analysis (const Data *d, Grid *grid)
       }
       if (g_time > tpos){
       /* Write if current time if > tpos */
-      fprintf (fp, "%12.6e %12.6e %12.6e \n",g_time, g_dt, etot);
+      fprintf (fp, "%12.6e %12.6e %12.6e %12.6e \n",g_time, g_dt, etot, en_adv_in_gau);
       }
       fclose(fp);
     }

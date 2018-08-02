@@ -20,7 +20,6 @@ int i_cap_inter_end, j_cap_inter_end, j_elec_start;
 
 double en_cond_in = 0;
 double en_adv_in = 0;
-double en_adv_in = 0;
 double en_Bvloss = 0;
 
 Corr d_correction[3] = { {},{},{} };
