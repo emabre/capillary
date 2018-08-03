@@ -102,6 +102,8 @@
   /* I still put 1 bc in the type definition (for ease of programming)
   but the kind won't be allocated so it's practically no problem */
   #define NADI  1
+  #define BDIFF 200
+  #define TDIFF 300
 #endif
 
 // Time where the diffusion process has arrived (code units)
