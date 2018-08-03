@@ -167,9 +167,10 @@ void DouglasRachford( double **v_new, double **v_old,
 void ExplicitUpdate (double **v, double **rhs, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt, int dir);
-void ImplicitUpdate (double **v, double **rhs, double **source,
+void ImplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
-                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt, int dir);
+                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
+                     int compute_inflow, double *inflow, Grid *grid, int dir);
 void tdm_solver(double *x, double const *diagonal, double const *upper,
                 double const *lower, double const *right_hand_side, int const N);
 

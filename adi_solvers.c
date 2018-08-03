@@ -21,7 +21,7 @@ for instance for ResEnergyIncrease())
 void ImplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
-                     int dir) {
+                     int compute_inflow, double *inflow, Grid *grid, int dir) {
   /*[Opt] Maybe I could pass to this func. an integer which tells which bc has to be
   used inside the structure *lines, instead of passing separately the bcs (which are
   still also contained inside *lines)*/
@@ -36,6 +36,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
   /* I allocate these as big as if I had to cover the whole domain, so that I
    don't need to reallocate at every domain line that I update */
   double *diagonal, *upper, *lower, *rhs, *x;
+  double *dz, *rR, *rL;
 
   /*[Opt] Maybe I could do that it allocates static arrays with size NMAX_POINT (=max(NX1_TOT,NX2_TOT)) ?*/
   if (dir == IDIR) {
@@ -76,6 +77,8 @@ void ImplicitUpdate (double **v, double **b, double **source,
   /********************
   * Case direction IDIR
   *********************/
+    dz = grid[JDIR].dx_glob;
+
     for (l = 0; l < Nlines; l++) {
       j = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
@@ -117,30 +120,53 @@ void ImplicitUpdate (double **v, double **b, double **source,
         QUIT_PLUTO(1);
       }
 
+      /*---------------------------------------------------------------------*/
       /* --- Now I solve the system --- */
       tdm_solver( x+lidx, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
       /*[Opt] Is this for a waste of time? maybe I could engineer better the use of tdm_solver function(or the way it is written)*/
       for (i=lidx; i<=ridx; i++)
         v[j][i] = x[i];
       
+      /*---------------------------------------------------------------------*/
       /*--- I set the boundary values (ghost cells) in the solution
             [I do it now as I for the NEUMANN conditions I could't do it before solving the tridiag. system] ---*/
       // Cells near left boundary
       if (lbound[l].kind == DIRICHLET){
         // I assign the ghost value (needed by ResEnergyIncrease and maybe others..)
         v[j][lidx-1] = 2*lbound[l].values[0] - b[j][lidx];
+        if (compute_inflow) {
+          /*--- I compute the inflow ---*/
+          *inflow += (v[j][lidx-1]-v[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j];
+        }
+
       } else if (lbound[l].kind == NEUMANN_HOM) {
         /* I assign the ghost value (needed by ResEnergyIncrease and maybe others..).*/
         v[j][lidx-1] = v[j][lidx];
+        if (compute_inflow) {
+          /*--- I compute the inflow (0!!!)---*/
+          *inflow += 0;
+        }
+
       } else {
         print1("\n[ImplcitUpdate]Error setting left ghost in solution (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
       }
+
       // Cells near right boundary
       if (rbound[l].kind == DIRICHLET){
         v[j][ridx+1] = 2*rbound[l].values[0] - v[j][ridx];
+        if (compute_inflow) {
+          /*--- I compute the inflow ---*/
+          *inflow += (v[j][ridx+1]-v[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j];
+        }
+
       } else if (rbound[l].kind == NEUMANN_HOM) {
         v[j][ridx+1] = v[j][ridx];
+        if (compute_inflow) {
+          /*--- I compute the inflow (0!!!)---*/
+          *inflow += 0;
+        } 
+
       } else {
         print1("\n[ImplcitUpdate]Error setting right ghost in solution (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
@@ -150,6 +176,9 @@ void ImplicitUpdate (double **v, double **b, double **source,
     /********************
     * Case direction JDIR
     *********************/
+    rR = grid[IDIR].xr_glob;
+    rL = grid[IDIR].xl_glob;
+
     for (l = 0; l < Nlines; l++) {
       i = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
@@ -191,28 +220,49 @@ void ImplicitUpdate (double **v, double **b, double **source,
         QUIT_PLUTO(1);
       }
 
+      /*---------------------------------------------------------------------*/
       /* --- Now I solve the system --- */
       tdm_solver( x+lidx, diagonal+lidx, upper+lidx, lower+lidx+1, rhs+lidx, ridx-lidx+1);
       for (j=lidx; j<=ridx; j++)
         v[j][i] = x[j];
 
+      /*---------------------------------------------------------------------*/
       /*--- I set the boundary values (ghost cells) in the solution
             [I do it now as I for the NEUMANN conditions I could't do it before solving the tridiag. system] ---*/
             /*--- I set the boundary values (ghost cells) ---*/
       // Cells near left boundary
       if (lbound[l].kind == DIRICHLET){
         v[lidx-1][i] = 2*lbound[l].values[0] - v[lidx][i];
+        if (compute_inflow) {
+          /*--- I compute the inflow ---*/
+          *inflow += (v[lidx-1][i]-v[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]);
+        }
+
       } else if (lbound[l].kind == NEUMANN_HOM) {
         v[lidx-1][i] = v[lidx][i];
+        if (compute_inflow) {
+          /*--- I compute the inflow (0!!!)---*/
+          *inflow += 0;
+        }
+
       } else {
         print1("\n[ImplcitUpdate]Error setting left ghost in solution (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
+
       // Cells near right boundary
-      if (rbound[l].kind == DIRICHLET){
+      if (rbound[l].kind == DIRICHLET) {
         v[ridx+1][i] = 2*rbound[l].values[0] - v[ridx][i];
+        if (compute_inflow) {
+          /*--- I compute the inflow ---*/
+          *inflow += (v[ridx+1][i]-v[ridx][i]) * Hm[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]);
+        }
       } else if (rbound[l].kind == NEUMANN_HOM) {
         v[ridx+1][i] = v[ridx][i];
+        if (compute_inflow) {
+          /*--- I compute the inflow (0!!!)---*/
+          *inflow += 0;
+        }
       } else {
         print1("\n[ImplcitUpdate]Error setting right ghost in solution (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
@@ -238,6 +288,7 @@ for instance for ResEnergyIncrease())
 void ExplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
+                    //  int compute_inflow, double *inflow, Grid *grid,
                      int dir) {
   int i,j,l;
   int ridx, lidx;
@@ -508,7 +559,8 @@ void PeacemanRachford(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt*0.5, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt,
+                      diff == TDIFF, &en_cond_in, grid, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -539,7 +591,8 @@ void PeacemanRachford(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt,
+                      diff == TDIFF, &en_cond_in, grid, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -689,7 +742,8 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt*(1-fract), dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], (1-fract)*dt, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], (1-fract)*dt,
+                      diff == TDIFF, &en_cond_in, grid, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -740,7 +794,8 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-fract)*dt, dir1);
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-fract)*dt,
+                      diff == TDIFF, &en_cond_in, grid, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -810,6 +865,9 @@ void DouglasRachford(double **v_new, double **v_old,
       static double **Br_avg, **dUres_aux1;
     #endif
 
+    print1("\nAttenzione al calcolo dell'energia che entra dai bordi per conduzione/elettromagnetica:\n");
+    print1("\npotrebbe essere che sia sbagliata per come ho implmentato lo schema D-R (e per l'uso di variabili globali)\n");
+
     if (first_call) {
       v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       v_hat = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -875,7 +933,8 @@ void DouglasRachford(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt, dir2);
     // I compute phi^ (and save it in v_hat)
     ImplicitUpdate (v_hat, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], dt, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], dt,
+                      diff == TDIFF, &en_cond_in, grid, dir2);
     /**********************************
      (b.1) Explicit update sweeping DIR2
     **********************************/
@@ -894,7 +953,8 @@ void DouglasRachford(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt,
+                    diff == TDIFF, &en_cond_in, grid, dir1);
     //[Opt] Questa è una porcheria, avanzo esplicitamente per dt=0 solo per dare le bc in dir2 a v_new
     ExplicitUpdate (v_new, v_new, NULL, H2p, H2m, C2, &lines[dir2],
                     lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.0, dir2);
@@ -1022,7 +1082,8 @@ void FractionalTheta(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + theta*dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], theta*dt, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], theta*dt,
+                      diff == TDIFF, &en_cond_in, grid, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -1053,7 +1114,8 @@ void FractionalTheta(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + (1-theta)*dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-2*theta)*dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-2*theta)*dt,
+                    diff == TDIFF, &en_cond_in, grid, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -1084,7 +1146,8 @@ void FractionalTheta(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], theta*dt, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], theta*dt,
+                      diff == TDIFF, &en_cond_in, grid, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -1180,7 +1243,8 @@ void SplitImplicit(double **v_new, double **v_old,
      (a) Implicit update sweeping DIR1
     **********************************/
     ImplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt, dir1);
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt,
+                      diff == TDIFF, &en_cond_in, grid, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -1204,7 +1268,8 @@ void SplitImplicit(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], dt, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], dt,
+                      diff == TDIFF, &en_cond_in, grid, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line

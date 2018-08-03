@@ -236,19 +236,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #elif defined(FRACTIONAL_THETA)
         FractionalTheta(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA);
       #else
-        #if FIRST_JDIR_THEN_IDIR == AVERAGE
-          PeacemanRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, FIRST_IDIR, dt_reduced, t_start_sub);
-          PeacemanRachford(Br_new_other_order, Br_old, dUres_other_order, NULL, d, grid, lines, BDIFF, FIRST_JDIR, dt_reduced, t_start_sub);
-          // Now I average the two results
-          LINES_LOOP(lines[IDIR], l, j, i) {
-            Br_new[j][i] = 0.5 * (Br_new[j][i] + Br_new_other_order[j][i]);
-            dUres[j][i] = 0.5 * (dUres[j][i] + dUres_other_order[j][i]);
-          }
-        #else
-          PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT);
-          // DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
-        #endif
+        PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT);
+        // DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
       #endif
+      
 
       /* ---- Update cons variables ---- */
       KDOM_LOOP(k)

@@ -30,9 +30,9 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
     maybe it makes the program faster or just easier to write/read...*/
   Vc = d->Vc;
 
-  inv_dzi = grid[JDIR].inv_dxi;
+  inv_dzi = grid[JDIR].inv_dxi; // reciprocal of cell spacing between centers (see set_geometry.c)
   inv_dri = grid[IDIR].inv_dxi;
-  inv_dz = grid[JDIR].inv_dx;
+  inv_dz = grid[JDIR].inv_dx; // reciprocal of cell spacing between interfaces (see set_geometry.c)
   inv_dr = grid[IDIR].inv_dx;
   r_1 = grid[IDIR].r_1;
 
