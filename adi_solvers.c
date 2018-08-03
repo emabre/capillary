@@ -560,7 +560,7 @@ void PeacemanRachford(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt*0.5, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt,
-                      diff == TDIFF, &en_cond_in, grid, dir2);
+                      diff == TDIFF, &en_tc_in, grid, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -592,7 +592,7 @@ void PeacemanRachford(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
                       lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt,
-                      diff == TDIFF, &en_cond_in, grid, dir1);
+                      diff == TDIFF, &en_tc_in, grid, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -743,7 +743,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt*(1-fract), dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff], (1-fract)*dt,
-                      diff == TDIFF, &en_cond_in, grid, dir2);
+                      diff == TDIFF, &en_tc_in, grid, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -795,7 +795,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
                       lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-fract)*dt,
-                      diff == TDIFF, &en_cond_in, grid, dir1);
+                      diff == TDIFF, &en_tc_in, grid, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -934,7 +934,7 @@ void DouglasRachford(double **v_new, double **v_old,
     // I compute phi^ (and save it in v_hat)
     ImplicitUpdate (v_hat, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff], dt,
-                      diff == TDIFF, &en_cond_in, grid, dir2);
+                      diff == TDIFF, &en_tc_in, grid, dir2);
     /**********************************
      (b.1) Explicit update sweeping DIR2
     **********************************/
@@ -954,7 +954,7 @@ void DouglasRachford(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt,
-                    diff == TDIFF, &en_cond_in, grid, dir1);
+                    diff == TDIFF, &en_tc_in, grid, dir1);
     //[Opt] Questa è una porcheria, avanzo esplicitamente per dt=0 solo per dare le bc in dir2 a v_new
     ExplicitUpdate (v_new, v_new, NULL, H2p, H2m, C2, &lines[dir2],
                     lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.0, dir2);
@@ -1083,7 +1083,7 @@ void FractionalTheta(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + theta*dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff], theta*dt,
-                      diff == TDIFF, &en_cond_in, grid, dir2);
+                      diff == TDIFF, &en_tc_in, grid, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -1115,7 +1115,7 @@ void FractionalTheta(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + (1-theta)*dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-2*theta)*dt,
-                    diff == TDIFF, &en_cond_in, grid, dir1);
+                    diff == TDIFF, &en_tc_in, grid, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -1147,7 +1147,7 @@ void FractionalTheta(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff], theta*dt,
-                      diff == TDIFF, &en_cond_in, grid, dir2);
+                      diff == TDIFF, &en_tc_in, grid, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -1244,7 +1244,7 @@ void SplitImplicit(double **v_new, double **v_old,
     **********************************/
     ImplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
                       lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt,
-                      diff == TDIFF, &en_cond_in, grid, dir1);
+                      diff == TDIFF, &en_tc_in, grid, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -1269,7 +1269,7 @@ void SplitImplicit(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff], dt,
-                      diff == TDIFF, &en_cond_in, grid, dir2);
+                      diff == TDIFF, &en_tc_in, grid, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line

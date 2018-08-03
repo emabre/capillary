@@ -23,9 +23,9 @@ int extern i_cap_inter_end, j_cap_inter_end, j_elec_start;
 /* Variables defined for computation of energy conservation:
   en_adv_in : energy gained by resistivity (resistive part of poynting flux
                 through the boundary)
-  en_cond_in : energy gained by conduction through boundary
+  en_tc_in : energy gained by conduction through boundary
   en_adv_in: energy gained by advection of the total energy rhough boundary*/
-double extern en_cond_in, en_adv_in, en_adv_in;
+double extern en_tc_in, en_adv_in;
 
 /* ********************************************************************* */
 /*! [Ema]The Corr structure contains the correction to the solution 3D array

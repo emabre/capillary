@@ -144,7 +144,7 @@ void Analysis (const Data *d, Grid *grid)
 { 
   #if EN_CONS_CHECK
     double etot=0, Vtot=0;
-    double en_adv_in_gau;
+    double en_adv_in_gau, en_tc_in_gau;
     int i, j, k;
     // int nv;
     // double v[NVAR];
@@ -182,6 +182,7 @@ void Analysis (const Data *d, Grid *grid)
     etot *= unit_en;
     Vtot *= UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
     en_adv_in_gau = en_adv_in*unit_en;
+    en_tc_in_gau = en_tc_in*unit_en;
 
     /* Write to file (remember: prank is the processor rank (0 in serial mode),
       so this chunk of code should work also in parallel mode!).
@@ -194,7 +195,7 @@ void Analysis (const Data *d, Grid *grid)
       sprintf (fname, "%s/energy_cons.dat",RuntimeGet()->output_dir);
       if (g_stepNumber == 0) { /* Open for writing only when we’re starting */
         fp = fopen(fname,"w"); /* from beginning */
-        fprintf (fp,"# %7s %12s %12s %12s %12s\n", "t", "dt", "volume", "Etot", "E_adv_in");
+        fprintf (fp,"# %7s %12s %12s %12s %12s %12s\n", "t", "dt", "volume", "Etot", "E_adv_in", "E_tc_in");
       } else {
         /* Append if this is not step 0 */
         if (tpos < 0.0) { /* Obtain time coordinate of to last written row */
@@ -209,7 +210,7 @@ void Analysis (const Data *d, Grid *grid)
       }
       if (g_time > tpos){
       /* Write if current time if > tpos */
-      fprintf (fp, "%12.6e %12.6e %12.6e %12.6e %12.6e\n", g_time, g_dt, Vtot, etot, en_adv_in_gau);
+      fprintf (fp, "%12.6e %12.6e %12.6e %12.6e %12.6e %12.6e\n", g_time, g_dt, Vtot, etot, en_adv_in_gau, en_tc_in_gau);
       }
       fclose(fp);
     }
