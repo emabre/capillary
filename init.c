@@ -32,7 +32,7 @@ void Init (double *us, double x1, double x2, double x3)
   #ifdef DEBUG_EMA
     double rho_red_vac = 1;
   #else
-    double rho_red_vac = 0.01; // Fraction of rho inside capillary, used to emumate vacuum
+    double rho_red_vac = 1; // Fraction of rho inside capillary, used to emumate vacuum
   #endif
   double decay_z, decay_r; // Decay lenths in r and z, for setting density
 
@@ -134,127 +134,7 @@ void Init (double *us, double x1, double x2, double x3)
       GetMu(T0_K, us[RHO], &mu); // GetMu takes T in Kelvin, no need to adim. T
   #endif
   us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
-
-  /* >>>>>>>>>>> Initialization of  d_correction <<<<<<<<<<< */
-  /* This required for the userdef_output. Otherwise if somebody (e.g. userdef_output.c)
-     tries to evaluate d_correction[].Vc it reads uninitialized values.*/
-
-
-
-  /* >>>>>>>>>>> End initialization d_correction <<<<<<<<<<< */
 }
-
-//[Err] Test, for 1D case.
-// void Init (double *us, double x1, double x2, double x3)
-// /*
-//  *
-//  *********************************************************************** */
-// {
-//   double mu;/*Temperature in K and mean particle weight*/
-//   double curr, Bwall; //Bwall is in code units
-//   double unit_Mfield;
-//   double csi = x1/rcap;
-//   double alpha = g_inputParam[ALPHA_J]; //ratio between delta current density wall-axis and current density on axis
-//   double T0_K = g_inputParam[T0];
-//   double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
-//   double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
-
-//     // [Err]
-//   // double L = 0.02/UNIT_LENGTH;
-
-//   // Just a check that the geometrical settings makes sense:
-//   if (DZCAP > ZCAP){
-//     print1("\nElectrode is longer than whole capillary!");
-//     QUIT_PLUTO(1);
-//   }
-
-//   unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
-
-//   curr = current_from_time(0.0);
-//   // print1("Current from tab: %g", curr);
-//   // Mag field at the capillary wall, in code units
-//   Bwall = (BIOTSAV_GAUSS_A_CM(curr, RCAP))/unit_Mfield;
-
-//   #if GEOMETRY != CYLINDRICAL
-//    #error geometry not valid
-//   #endif
-//   #if PHYSICS != MHD
-//    #error physics not valid
-//   #endif
-
-//   //Remember: in cyl coords x1 is r, x2 is z
-
-//   /* -----------------------------------------------------
-//       Zones not covered in the next lines (except for zone "Everywhere")
-//     ----------------------------------------------------- */
-//   // us[RHO] = 0.001*dens0;
-//     // [Err]
-//   us[RHO] = dens0;
-//   us[iVZ] = 0.0;
-//   /* -----------------------------------------------------
-//       Inside capillary, excluded near-electrode zone
-//      ----------------------------------------------------- */
-//   if (x2 < zcap-dzcap && x1 <= rcap) {
-//     // us[iBPHI] = Bwall*x1/rcap;
-//     us[iBPHI] = Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi));
-//     us[RHO] = dens0;
-//     us[iVZ] = vz0;
-//   }
-//   /* -----------------------------------------------------
-//       Inside capillary, in near-electrode zone
-//      ----------------------------------------------------- */
-//   if (zcap-dzcap <= x2 && x2 < zcap && x1 < rcap) {
-//     /* the B field linearly decreses in z direction
-//     (this is provisory, better electrode have to be implemented) */
-//     // us[iBPHI] = (Bwall*x1/rcap) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
-//     us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi)));
-//     //[Err]
-//     // if (x2>zcap-dzcap+L) {
-//     //   us[iBPHI] = 0.0;
-//     // } else {
-//     // us[iBPHI] = (Bwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/L );
-//     // }
-//     // [Err] end previous test
-//     us[RHO] = dens0;
-//     us[iVZ] = vz0;
-//   }
-//   /* ------------------------------------------------------
-//       Above non-electrode wall (internal boundary, outside capillary)
-//      ------------------------------------------------------ */
-//   if (x2 < zcap-dzcap && x1>rcap) {
-//     us[iBPHI] = Bwall;
-//   }
-//   /* ------------------------------------------------------
-//       Above electrode wall (internal boundary, outside capillary)
-//      ------------------------------------------------------ */
-//   if ( zcap-dzcap <= x2 && x2 < zcap && x1 >= rcap) {
-//     us[iBPHI] = Bwall;
-//   }
-//   /* ------------------------------------------------------
-//       Outside capillary (not in internal boundary)
-//      ------------------------------------------------------ */
-//   if (x2 > zcap) {
-//     // No field outside capillary
-//     us[iBPHI] = 0.0;
-//   }
-//   /* -----------------------------------------------------
-//       Everywhere
-//      ----------------------------------------------------- */
-//   us[iBZ] = us[iBR] = 0.0;
-//   us[iVPHI] = us[iVR] = 0.0;
-//   #if EOS==IDEAL
-//       mu = MeanMolecularWeight(us);
-//   #elif EOS==PVTE_LAW
-//       GetMu(T0_K, us[RHO], &mu); // GetMu takes T in Kelvin, no need to adim. T
-//   #endif
-//   us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
-
-//   //[Err] Delete next if cycle
-//   // if (x2<zcap && x1<=rcap){
-//   //   GetMu(T0_K, us[RHO], &mu);
-//   //   us[PRS] = us[RHO]*(T0_K*x1/rcap + T0_K*0.8) / (KELVIN*mu);
-//   // }
-// }
 
 /* ********************************************************************* */
 void Analysis (const Data *d, Grid *grid)
@@ -263,7 +143,7 @@ void Analysis (const Data *d, Grid *grid)
  *********************************************************************** */
 { 
   #if EN_CONS_CHECK
-    double etot=0;
+    double etot=0, Vtot=0;
     double en_adv_in_gau;
     int i, j, k;
     // int nv;
@@ -284,21 +164,23 @@ void Analysis (const Data *d, Grid *grid)
     PrimToCons3D(Vc, Uc, box);
 
     DOM_LOOP (k,j,i) {
-      #if GEOMETRY == CYLINDRICAL
-      /* Note that I could use instead some element (like dV) of the grid itself,
-        I don't do that to make this chunk of code compatible for both the 2015 and 2018 version of PLUTO */
-        dV = CONST_PI*(rR[i]*rR[i]- rL[i]*rL[i])*dz[j];
-      #else
-        #error Only cyl. geom. is implemented for energy conservation computation
-      #endif
-      etot += dV*Uc[k][j][i][ENG];
+      // I do this to exclude points belonging to the wall
+      if (i<=i_cap_inter_end || j>j_cap_inter_end) {
+        #if GEOMETRY == CYLINDRICAL
+        /* Note that I could use instead some element (like dV) of the grid itself,
+          I don't do that to make this chunk of code compatible for both the 2015 and 2018 version of PLUTO */
+          dV = CONST_PI*(rR[i]*rR[i]- rL[i]*rL[i])*dz[j];
+        #else
+          #error Only cyl. geom. is implemented for energy conservation computation
+        #endif
+        etot += dV*Uc[k][j][i][ENG];
+        Vtot += dV;
+      }
     }
+
     // I convert etot to physical units
-    etot *= etot*unit_en;
-
-    // for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
-    // rhoe = InternalEnergyFunc(v, T[j][i]*KELVIN); // I guess in this way it is not conservative!
-
+    etot *= unit_en;
+    Vtot *= UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
     en_adv_in_gau = en_adv_in*unit_en;
 
     /* Write to file (remember: prank is the processor rank (0 in serial mode),
@@ -312,7 +194,7 @@ void Analysis (const Data *d, Grid *grid)
       sprintf (fname, "%s/energy_cons.dat",RuntimeGet()->output_dir);
       if (g_stepNumber == 0) { /* Open for writing only when we’re starting */
         fp = fopen(fname,"w"); /* from beginning */
-        fprintf (fp,"# %7s %12s %12s %12s\n", "t", "dt", "Etot", "E_adv_in");
+        fprintf (fp,"# %7s %12s %12s %12s %12s\n", "t", "dt", "volume", "Etot", "E_adv_in");
       } else {
         /* Append if this is not step 0 */
         if (tpos < 0.0) { /* Obtain time coordinate of to last written row */
@@ -327,7 +209,7 @@ void Analysis (const Data *d, Grid *grid)
       }
       if (g_time > tpos){
       /* Write if current time if > tpos */
-      fprintf (fp, "%12.6e %12.6e %12.6e %12.6e \n",g_time, g_dt, etot, en_adv_in_gau);
+      fprintf (fp, "%12.6e %12.6e %12.6e %12.6e %12.6e\n", g_time, g_dt, Vtot, etot, en_adv_in_gau);
       }
       fclose(fp);
     }
