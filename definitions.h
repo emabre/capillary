@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             NO
-#define  THERMAL_CONDUCTION      NO
+#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -26,7 +26,7 @@
 #define  ETAX_GAU                0
 #define  ETAY_GAU                1
 #define  ETAZ_GAU                2
-#define  KAPPA_GAUBOB            3
+#define  KAPPA_GAU               3
 #define  TWALL                   4
 #define  T0                      5
 #define  DENS0                   6

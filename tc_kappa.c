@@ -17,11 +17,11 @@ void TC_kappa(double *v, double x1, double x2, double x3,
   // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
   GetMu(T, v[RHO], &mu);
 
-  if (g_inputParam[KAPPA_GAUBOB] > 0.0) {
+  if (g_inputParam[KAPPA_GAU] > 0.0) {
     
     // Fixed value from pluto.ini
-    *kpar = g_inputParam[KAPPA_GAUBOB];
-    *knor = g_inputParam[KAPPA_GAUBOB];
+    *kpar = g_inputParam[KAPPA_GAU];
+    *knor = g_inputParam[KAPPA_GAU];
 
   } else {
     z = 1/mu - 1;

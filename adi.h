@@ -176,6 +176,8 @@ void ImplicitUpdate (double **v, double **b, double **source,
 void tdm_solver(double *x, double const *diagonal, double const *upper,
                 double const *lower, double const *right_hand_side, int const N);
 
+double GetCurrADI();
+
 #if THERMAL_CONDUCTION  == ALTERNATING_DIRECTION_IMPLICIT
   void BuildIJ_TC (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
                   double **Jp, double **Jm, double **CI, double **CJ, double **dEdT);

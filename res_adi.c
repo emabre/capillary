@@ -5,6 +5,12 @@
 
 #define UNUSED(x) (void)(x)
 
+double curr = 0;
+
+double GetCurrADI() {
+  return curr;
+}
+
 #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
 /****************************************************************************
 Function to build the Ip,Im,Jp,Jm for the electrical resistivity problem
@@ -317,7 +323,7 @@ void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t, int di
   int i,j,l;
   const double t_sec = t*(UNIT_LENGTH/UNIT_VELOCITY);
   double Bwall;
-  double curr, unit_Mfield;
+  double unit_Mfield;
   // [Err]
   // double L = 0.02/UNIT_LENGTH;
 

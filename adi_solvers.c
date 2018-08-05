@@ -136,7 +136,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[j][lidx-1] = 2*lbound[l].values[0] - b[j][lidx];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (v[j][lidx-1]-v[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j];
+          *inflow += (v[j][lidx-1]-v[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
         }
 
       } else if (lbound[l].kind == NEUMANN_HOM) {
@@ -157,7 +157,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[j][ridx+1] = 2*rbound[l].values[0] - v[j][ridx];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (v[j][ridx+1]-v[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j];
+          *inflow += (v[j][ridx+1]-v[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
         }
 
       } else if (rbound[l].kind == NEUMANN_HOM) {
@@ -235,7 +235,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[lidx-1][i] = 2*lbound[l].values[0] - v[lidx][i];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (v[lidx-1][i]-v[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]);
+          *inflow += (v[lidx-1][i]-v[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
         }
 
       } else if (lbound[l].kind == NEUMANN_HOM) {
@@ -255,7 +255,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[ridx+1][i] = 2*rbound[l].values[0] - v[ridx][i];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (v[ridx+1][i]-v[ridx][i]) * Hm[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]);
+          *inflow += (v[ridx+1][i]-v[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
         }
       } else if (rbound[l].kind == NEUMANN_HOM) {
         v[ridx+1][i] = v[ridx][i];
