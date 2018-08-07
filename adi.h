@@ -171,8 +171,9 @@ void ExplicitUpdate (double **v, double **rhs, double **source,
                      Lines *lines, Bcs *lbound, Bcs *rbound, double dt, int dir);
 void ImplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
-                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
-                     int compute_inflow, double *inflow, Grid *grid, int dir);
+                     Lines *lines, Bcs *lbound, Bcs *rbound,
+                     int compute_inflow, double *inflow, Grid *grid,
+                     double dt, int dir);
 void tdm_solver(double *x, double const *diagonal, double const *upper,
                 double const *lower, double const *right_hand_side, int const N);
 
@@ -191,7 +192,9 @@ double GetCurrADI();
                       double **Jp, double **Jm, double **CI, double **CJ, double **useless);
   #if (HAVE_ENERGY && JOULE_EFFECT_AND_MAG_ENG)
     void ResEnergyIncrease(double **dUres, double** Ip_B, double** Im_B, double **Br,
-                            Grid *grid, Lines *lines, double dt, int dir);
+                            Grid *grid, Lines *lines,
+                            int compute_inflow, double *inflow,
+                            double dt, int dir);
     void ResEnergyIncrease_DouglasRachford(double **dUres, double** Hp_B, double** Hm_B,
                                            double **Br, double **Br_hat,
                                            Grid *grid, Lines *lines, double dt, int dir);

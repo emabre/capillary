@@ -20,8 +20,9 @@ for instance for ResEnergyIncrease())
 *****************************************************************************/
 void ImplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
-                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
-                     int compute_inflow, double *inflow, Grid *grid, int dir) {
+                     Lines *lines, Bcs *lbound, Bcs *rbound,
+                     int compute_inflow, double *inflow, Grid *grid,
+                     double dt, int dir) {
   /*[Opt] Maybe I could pass to this func. an integer which tells which bc has to be
   used inside the structure *lines, instead of passing separately the bcs (which are
   still also contained inside *lines)*/
@@ -548,7 +549,9 @@ void PeacemanRachford(double **v_new, double **v_old,
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
         //       instead of doing it a line later 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], 0.5*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          0.5*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
       }
@@ -559,12 +562,15 @@ void PeacemanRachford(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt*0.5, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt,
-                      diff == TDIFF, &en_tc_in, grid, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      0.5*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
+                          EN_CONS_CHECK, &en_res_in,
+                          0.5*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -580,7 +586,9 @@ void PeacemanRachford(double **v_new, double **v_old,
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
            (but in this way it is more readable)*/
         // [Err] Decomment next line       
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], 0.5*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
+                          EN_CONS_CHECK, &en_res_in,
+                          0.5*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }    
@@ -591,12 +599,15 @@ void PeacemanRachford(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt,
-                      diff == TDIFF, &en_tc_in, grid, dir1);
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      0.5*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], 0.5*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          0.5*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -608,8 +619,12 @@ void PeacemanRachford(double **v_new, double **v_old,
           Br_avg[j][i] = sqrt((v_new[j][i]*v_new[j][i] + v_new[j][i]*v_old[j][i] + v_old[j][i]*v_old[j][i])/3);
         }
         // I compute the fluxes of poynting vector
-        ResEnergyIncrease(dUres_aux, H2p, H2m, Br_avg, grid, &lines[dir2], dt, dir2);
-        ResEnergyIncrease(dUres_aux1, H1p, H1m, Br_avg, grid, &lines[dir1], dt, dir1);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, Br_avg, grid, &lines[dir2],
+                          EN_CONS_CHECK, &en_res_in,
+                          dt, dir2);
+        ResEnergyIncrease(dUres_aux1, H1p, H1m, Br_avg, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          dt, dir1);
         // I update the increase in energy
         LINES_LOOP(lines[IDIR], l, j, i) {
           dUres[j][i] = dUres_aux[j][i];
@@ -720,7 +735,9 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
         //       instead of doing it a line later 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], fract*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          fract*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
       }
@@ -742,12 +759,15 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt*(1-fract), dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], (1-fract)*dt,
-                      diff == TDIFF, &en_tc_in, grid, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      (1-fract)*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], (1-fract)*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
+                          EN_CONS_CHECK, &en_res_in,
+                          (1-fract)*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -772,7 +792,9 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
            (but in this way it is more readable)*/
         // [Err] Decomment next line       
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], fract*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
+                          EN_CONS_CHECK, &en_res_in,
+                          fract*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }    
@@ -794,12 +816,15 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-fract)*dt,
-                      diff == TDIFF, &en_tc_in, grid, dir1);
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      (1-fract)*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], (1-fract)*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          (1-fract)*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -811,8 +836,12 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
           Br_avg[j][i] = sqrt((v_new[j][i]*v_new[j][i] + v_new[j][i]*v_old[j][i] + v_old[j][i]*v_old[j][i])/3);
         }
         // I compute the fluxes of poynting vector
-        ResEnergyIncrease(dUres_aux, H2p, H2m, Br_avg, grid, &lines[dir2], dt, dir2);
-        ResEnergyIncrease(dUres_aux1, H1p, H1m, Br_avg, grid, &lines[dir1], dt, dir1);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, Br_avg, grid, &lines[dir2],
+                          EN_CONS_CHECK, &en_res_in,
+                          dt, dir2);
+        ResEnergyIncrease(dUres_aux1, H1p, H1m, Br_avg, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          dt, dir1);
         // I update the increase in energy
         LINES_LOOP(lines[IDIR], l, j, i) {
           dUres[j][i] = dUres_aux[j][i];
@@ -933,8 +962,9 @@ void DouglasRachford(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0 + dt, dir2);
     // I compute phi^ (and save it in v_hat)
     ImplicitUpdate (v_hat, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], dt,
-                      diff == TDIFF, &en_tc_in, grid, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      dt, dir2);
     /**********************************
      (b.1) Explicit update sweeping DIR2
     **********************************/
@@ -953,15 +983,18 @@ void DouglasRachford(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt,
-                    diff == TDIFF, &en_tc_in, grid, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    dt, dir1);
     //[Opt] Questa è una porcheria, avanzo esplicitamente per dt=0 solo per dare le bc in dir2 a v_new
     ExplicitUpdate (v_new, v_new, NULL, H2p, H2m, C2, &lines[dir2],
                     lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.0, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // For one advancement of the energy I don't use DouglasRachf variant, since I don't need it!
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
         ResEnergyIncrease_DouglasRachford(dUres_aux, H2p, H2m, v_new, v_hat, grid, &lines[dir2], dt, dir2);
@@ -1071,7 +1104,9 @@ void FractionalTheta(double **v_new, double **v_old,
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
         //       instead of doing it a line later 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1], theta*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          theta*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
       }
@@ -1082,12 +1117,15 @@ void FractionalTheta(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + theta*dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], theta*dt,
-                      diff == TDIFF, &en_tc_in, grid, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      theta*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], theta*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
+                          EN_CONS_CHECK, &en_res_in,
+                          theta*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -1103,7 +1141,9 @@ void FractionalTheta(double **v_new, double **v_old,
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
            (but in this way it is more readable)*/
         // [Err] Decomment next line       
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], (1-2*theta)*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
+                          EN_CONS_CHECK, &en_res_in,
+                          (1-2*theta)*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }    
@@ -1114,12 +1154,15 @@ void FractionalTheta(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + (1-theta)*dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], (1-2*theta)*dt,
-                    diff == TDIFF, &en_tc_in, grid, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    (1-2*theta)*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], (1-2*theta)*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          (1-2*theta)*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -1135,7 +1178,9 @@ void FractionalTheta(double **v_new, double **v_old,
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
         //       instead of doing it a line later 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1], theta*dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          theta*dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -1146,12 +1191,15 @@ void FractionalTheta(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], theta*dt,
-                      diff == TDIFF, &en_tc_in, grid, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      theta*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], theta*dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
+                          EN_CONS_CHECK, &en_res_in,
+                          theta*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -1243,12 +1291,15 @@ void SplitImplicit(double **v_new, double **v_old,
      (a) Implicit update sweeping DIR1
     **********************************/
     ImplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                      lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt,
-                      diff == TDIFF, &en_tc_in, grid, dir1);
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_aux, grid, &lines[dir1], dt, dir1);
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_aux, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
       }
@@ -1268,12 +1319,15 @@ void SplitImplicit(double **v_new, double **v_old,
     **********************************/
     ApplyBCs(lines, d, grid, t0 + dt, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                      lines[dir2].lbound[diff], lines[dir2].rbound[diff], dt,
-                      diff == TDIFF, &en_tc_in, grid, dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2], dt, dir2);
+        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
+                          EN_CONS_CHECK, &en_res_in,
+                          dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }

@@ -137,7 +137,9 @@ only one among Hp_B and Hm_B is necessary. The other one is used to fill F
 at one side (left or right) of the domain.
 *****************************************************************************/
 void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br,
-                       Grid *grid, Lines *lines, double dt, int dir){
+                       Grid *grid, Lines *lines,
+                       int compute_inflow, double *inflow,
+                       double dt, int dir){
   /* F :Power flux flowing from cell (i,j) to (i+1,j), when dir==IDIR;
         or from cell (i,j) to (i,j+1), when dir == JDIR.
   */
@@ -172,10 +174,11 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   rbound = lines->rbound[BDIFF];
   dr = grid[IDIR].dx;
   r_1 = grid[IDIR].r_1;
+  dz = grid[JDIR].dx;
+  rR = grid[IDIR].xr;
+  rL = grid[IDIR].xl;
 
   if (dir == IDIR) {
-    rR = grid[IDIR].xr;
-    rL = grid[IDIR].xl;
     dV = grid[IDIR].dV;
     r = grid[IDIR].x_glob;
 
@@ -199,10 +202,15 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       // Build dU
       for (i=lidx; i<=ridx; i++)
         dUres[j][i] = -(rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
+
+      if (compute_inflow) {
+        /* --- I compute the inflow (energy entering from boundary) ---*/
+        *inflow += F[j][lidx-1] * 2*CONST_PI*rL[lidx]*dz[j] * dt;
+        *inflow += -F[j][ridx] * 2*CONST_PI*rR[ridx]*dz[j] * dt;
+      }
     }
 
   } else if (dir == JDIR) {
-    dz = grid[JDIR].dx;
     inv_dz = grid[JDIR].inv_dx;
 
     for (l = 0; l<Nlines; l++) {
@@ -217,6 +225,12 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       // Build dU
       for (j=lidx; j<=ridx; j++)
         dUres[j][i] = -(F[j][i] - F[j-1][i])*dt*inv_dz[j];
+      
+      if (compute_inflow) {
+        /* --- I compute the inflow (energy entering from boundary) ---*/
+        *inflow += F[lidx-1][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        *inflow += -F[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+      }
     }
   }
 }
