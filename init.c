@@ -32,7 +32,7 @@ void Init (double *us, double x1, double x2, double x3)
   #ifdef DEBUG_EMA
     double rho_red_vac = 1;
   #else
-    double rho_red_vac = 1; // Fraction of rho inside capillary, used to emumate vacuum
+    double rho_red_vac = 0.001; // Fraction of rho inside capillary, used to emumate vacuum
   #endif
   double decay_z, decay_r; // Decay lenths in r and z, for setting density
 

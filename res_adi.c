@@ -20,6 +20,9 @@ Function to build the Ip,Im,Jp,Jm for the electrical resistivity problem
 void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
                    double **Ip, double **Im, double **Jp,
                    double **Jm, double **CI, double **CJ, double **useless) {
+
+  static int first_call=1;
+  static double **protoIp, **protoIm, **protoJp, **protoJm, **protoCI, **protoCJ;
   int i,j,k;
   int nv, l;
   double eta[3]; // Electr. resistivity
@@ -36,12 +39,6 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
     maybe it makes the program faster or just easier to write/read...*/
   Vc = d->Vc;
 
-  inv_dzi = grid[JDIR].inv_dxi; // reciprocal of cell spacing between centers (see set_geometry.c)
-  inv_dri = grid[IDIR].inv_dxi;
-  inv_dz = grid[JDIR].inv_dx; // reciprocal of cell spacing between interfaces (see set_geometry.c)
-  inv_dr = grid[IDIR].inv_dx;
-  r_1 = grid[IDIR].r_1;
-
   theta = grid[KDIR].x;
 
   r = grid[IDIR].x;
@@ -51,19 +48,55 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
   zL = grid[JDIR].xl;
   zR = grid[JDIR].xr;
 
-  /*[Opt] This is probably useless, it is here just for debugging purposes*/
-  TOT_LOOP(k, j, i) {
-    Ip[j][i] = 0.0;
-    Im[j][i] = 0.0;
-    Jp[j][i] = 0.0;
-    Jm[j][i] = 0.0;
-    CI[j][i] = 0.0;
-    CJ[j][i] = 0.0;
+  // I compose the grid-related part once forever (in static variables) and only update eta
+  if (first_call) {
+    // Name shorthands
+    inv_dzi = grid[JDIR].inv_dxi; // reciprocal of cell spacing between centers (see set_geometry.c)
+    inv_dri = grid[IDIR].inv_dxi;
+    inv_dz = grid[JDIR].inv_dx; // reciprocal of cell spacing between interfaces (see set_geometry.c)
+    inv_dr = grid[IDIR].inv_dx;
+    r_1 = grid[IDIR].r_1;
+
+    /*Allocatin of memory for the proto variables*/
+    protoIp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    protoIm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    protoJp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    protoJm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    protoCI = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    protoCJ = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+
+    /*[Opt] This is probably useless, it is here just for debugging purposes*/
+    TOT_LOOP(k, j, i) {
+      protoIp[j][i] = 0.0;
+      protoIm[j][i] = 0.0;
+      protoJp[j][i] = 0.0;
+      protoJm[j][i] = 0.0;
+      protoCI[j][i] = 0.0;
+      protoCJ[j][i] = 0.0;
+    }
+    // I build the grid-related part of Im/p Jm/p, CI, CJ
+    KDOM_LOOP(k) {
+      LINES_LOOP(lines[IDIR], l, j, i) {
+        /* :::: Ip :::: */
+        protoIp[j][i] = inv_dr[i]*inv_dri[i]/rR[i];
+        /* :::: Im :::: */
+        if (rL[i]!=0.0)
+          protoIm[j][i] = inv_dri[i-1]*inv_dr[i]/rL[i];
+        else
+          protoIm[j][i] = 1/(r[i]*r[i])/rR[i];
+        /* :::: Jp :::: */
+        protoJp[j][i] = inv_dz[j]*inv_dzi[j];
+        /* :::: Jm :::: */
+        protoJm[j][i] = inv_dz[j]*inv_dzi[j-1];
+        /* :::: CI :::: */
+        protoCI[j][i] = r_1[i];
+        /* :::: CJ :::: */
+        protoCJ[j][i] = 1.0;
+      }
+    }
+    first_call = 0;
   }
-  // [Opt] I could compose the grid-related part once forever (in static variables) and only update eta
-  //       in this case I could make that this function allocates Ip Im Jp Jm , instead of letting the rest of
-  //       the program do that
-  // lines->lidx
+
   KDOM_LOOP(k) {
     LINES_LOOP(lines[IDIR], l, j, i) {
       /* :::: Ip :::: */
@@ -79,7 +112,7 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
         ComplainAnisotropic(v, eta, rR[i], z[j], theta[k]);
         QUIT_PLUTO(1);
       }
-      Ip[j][i] = eta[0]*inv_dr[i]*inv_dri[i]/rR[i];
+      Ip[j][i] = eta[0]*protoIp[j][i];
       /* [Opt] Here I could use the already computed eta to compute
       also Im[1,i+1] (since it needs eta at the same interface).
       Doing so I would reduce the calls to Resistive_eta by almost a factor 1/2
@@ -93,10 +126,7 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
         ComplainAnisotropic(v, eta, rL[i], z[j], theta[k]);
         QUIT_PLUTO(1);
       }
-      if (rL[i]!=0.0)
-        Im[j][i] = eta[0]*inv_dri[i-1]*inv_dr[i]/rL[i];
-      else
-        Im[j][i] = eta[0]/(r[i]*r[i])/rR[i];
+      Im[j][i] = eta[0]*protoIm[j][i];
 
       /* :::: Jp :::: */
       for (nv=0; nv<NVAR; nv++)
@@ -106,7 +136,7 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
         ComplainAnisotropic(v, eta, r[i], zR[j], theta[k]);
         QUIT_PLUTO(1);
       }
-      Jp[j][i] = eta[0]*inv_dz[j]*inv_dzi[j];
+      Jp[j][i] = eta[0]*protoJp[j][i];
 
       /* :::: Jm :::: */
       for (nv=0; nv<NVAR; nv++)
@@ -116,13 +146,13 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
         ComplainAnisotropic(v, eta, r[i], zL[j], theta[k]);
         QUIT_PLUTO(1);
       }
-      Jm[j][i] = eta[0]*inv_dz[j]*inv_dzi[j-1];
+      Jm[j][i] = eta[0]*protoJm[j][i];
 
       /* :::: CI :::: */
-      CI[j][i] = r_1[i];
+      CI[j][i] = protoCI[j][i];
 
       /* :::: CJ :::: */
-      CJ[j][i] = 1.0;
+      CJ[j][i] = protoCJ[j][i];
     }
   }
 }

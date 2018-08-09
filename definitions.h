@@ -16,7 +16,7 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             NO
+#define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
 #define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
@@ -63,7 +63,7 @@
 /*  Ema's additional macros                            */
 #define SPLIT_DIFF_ADV_ADV_DIFF
 // #define PROFILE_GPROF_STOPSTEP      8
-#define FREEZE_FLUID
+// #define FREEZE_FLUID
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */
 // #define FRACTIONAL_THETA           0.3
@@ -83,7 +83,7 @@
 #define IMPOSE_TWALL               NO
 #define IMPOSE_BWALL               NO
 /* Number of subcycles performed by ADI scheme*/
-#define NSUBS_ADI                  5
+#define NSUBS_ADI                  10
 // #define COMMON_RATIO_NSUBS_ADI    1.5
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
 #define ELECTR_B_NEUM
