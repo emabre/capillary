@@ -14,6 +14,8 @@ advance the energy in a way that conserves the energy
 void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
                    double **Ip, double **Im, double **Jp,
                    double **Jm, double **CI, double **CJ, double **dEdT) {
+  static int first_call=1;
+  static double **protoIp, **protoIm, **protoJp, **protoJm, **protoCI, **protoCJ;
   int i,j,k;
   int nv, l;
   double kpar, knor, phi; // Thermal conductivity
@@ -32,9 +34,6 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
     maybe it makes the program faster or just easier to write/read...*/
   Vc = d->Vc;
 
-  inv_dzi = grid[JDIR].inv_dxi;
-  inv_dri = grid[IDIR].inv_dxi;
-
   theta = grid[KDIR].x;
 
   r = grid[IDIR].x;
@@ -43,22 +42,58 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
   rR = grid[IDIR].xr;
   zL = grid[JDIR].xl;
   zR = grid[JDIR].xr;
-  ArR = grid[IDIR].A;
-  ArL = grid[IDIR].A - 1;
-  dVr = grid[IDIR].dV;
-  dVz = grid[JDIR].dV;
 
-  /*[Opt] This is probably useless, it is here just for debugging purposes*/
-  TOT_LOOP(k, j, i) {
-    Ip[j][i] = 0.0;
-    Im[j][i] = 0.0;
-    Jp[j][i] = 0.0;
-    Jm[j][i] = 0.0;
-    CI[j][i] = 0.0;
-    CJ[j][i] = 0.0;
-    dEdT[j][i] = 0.0;
+  // I compose the grid-related part once forever (in static variables) and only update eta
+  if (first_call) {
+    // Name shorthands
+    ArR = grid[IDIR].A;
+    ArL = grid[IDIR].A - 1;
+    dVr = grid[IDIR].dV;
+    dVz = grid[JDIR].dV;
+    inv_dzi = grid[JDIR].inv_dxi;
+    inv_dri = grid[IDIR].inv_dxi;
+
+    /*Allocatin of memory for the proto variables*/
+    protoIp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    protoIm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    protoJp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    protoJm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    protoCI = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    protoCJ = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+
+    /*[Opt] This is probably useless, it is here just for debugging purposes*/
+    TOT_LOOP(k, j, i) {
+      protoIp[j][i] = 0.0;
+      protoIm[j][i] = 0.0;
+      protoJp[j][i] = 0.0;
+      protoJm[j][i] = 0.0;
+      protoCI[j][i] = 0.0;
+      protoCJ[j][i] = 0.0;
+      dEdT[j][i] = 0.0;
+    }
+    KDOM_LOOP(k) {
+      LINES_LOOP(lines[IDIR], l, j, i) {
+        /* :::: Ip :::: */
+        protoIp[j][i] = ArR[i]*inv_dri[i];
+        /* [Opt] Here I could use the already computed k to compute
+        also Im[1,i+1] (since it needs k at the same interface).
+        Doing so I would reduce the calls to TC_kappa by almost a factor 1/2
+        (obviously I could do the same for Im/Ip) */
+        /* :::: Im :::: */
+        protoIm[j][i] = ArL[i]*inv_dri[i-1];
+        /* :::: Jp :::: */
+        protoJp[j][i] = inv_dzi[j];
+        /* :::: Jm :::: */
+        protoJm[j][i] = inv_dzi[j-1];
+        /* :::: CI :::: */
+        protoCI[j][i] = dVr[i];
+        /* :::: CJ :::: */
+        protoCJ[j][i] = dVz[j];
+      }
+    }
+    first_call = 0;
   }
-  // lines->lidx
+
   // [Opt] I could compose the grid-related part once forever (in static variables) and only update kappa
   //       in this case I could make that this function allocates Ip Im Jp Jm , instead of letting the rest of
   //       the program do that
@@ -68,7 +103,7 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
       TC_kappa( v, rR[i], z[j], theta[k], &kpar, &knor, &phi);
-      Ip[j][i] = knor*ArR[i]*inv_dri[i];
+      Ip[j][i] = knor*protoIp[j][i];
       /* [Opt] Here I could use the already computed k to compute
       also Im[1,i+1] (since it needs k at the same interface).
       Doing so I would reduce the calls to TC_kappa by almost a factor 1/2
@@ -78,19 +113,19 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i-1]);
       TC_kappa( v, rL[i], z[j], theta[k], &kpar, &knor, &phi);
-      Im[j][i] = knor*ArL[i]*inv_dri[i-1];
+      Im[j][i] = knor*protoIm[j][i];
 
       /* :::: Jp :::: */
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
       TC_kappa( v, r[i], zR[j], theta[k], &kpar, &knor, &phi);
-      Jp[j][i] = knor*inv_dzi[j];
+      Jp[j][i] = knor*protoJp[j][i];
 
       /* :::: Jm :::: */
       for (nv=0; nv<NVAR; nv++)
         v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
       TC_kappa( v, r[i], zL[j], theta[k], &kpar, &knor, &phi);
-      Jm[j][i] = knor*inv_dzi[j-1];
+      Jm[j][i] = knor*protoJm[j][i];
       #ifdef TEST_ADI
         HeatCapacity_test(v, r[i], z[j], theta[k], &(dEdT[j][i]) );
       #else
@@ -100,10 +135,10 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
         HeatCapacity(v, T, &(dEdT[j][i]) );
       #endif
       /* :::: CI :::: */
-      CI[j][i] = dEdT[j][i]*dVr[i];
+      CI[j][i] = dEdT[j][i]*protoCI[j][i];
       
       /* :::: CJ :::: */
-      CJ[j][i] = dEdT[j][i]*dVz[j];
+      CJ[j][i] = dEdT[j][i]*protoCJ[j][i];
     }
   }
 }
