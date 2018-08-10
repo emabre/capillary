@@ -207,10 +207,13 @@ void Analysis (const Data *d, Grid *grid)
         /* Append if this is not step 0 */
         if (tpos < 0.0) { /* Obtain time coordinate of to last written row */
           char sline[512];
-          fp = fopen(fname,"r");
-          while (fgets(sline, 512, fp)) {} /* read as many lines as you can, to reach the file end*/
-          sscanf(sline, "%*d %lf %*e %*e %*e %*e %*e %*e %*e\n",&tpos); /* read tpos (time of the last written row) from sline */
-          fclose(fp);
+          if ((fp = fopen(fname,"r")) != NULL) {
+            while (fgets(sline, 512, fp)) {} /* read as many lines as you can, to reach the file end*/
+            sscanf(sline, "%*d %lf %*e %*e %*e %*e %*e %*e %*e\n",&tpos); /* read tpos (time of the last written row) from sline */
+            fclose(fp);
+          } else {
+            print1("\n[Analysis] I could not open file %s", fname);
+          }
         }
         fp = fopen(fname,"a");
       }

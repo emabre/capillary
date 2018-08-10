@@ -80,7 +80,7 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
         Doing so I would reduce the calls to TC_kappa by almost a factor 1/2
         (obviously I could do the same for Im/Ip) */
         /* :::: Im :::: */
-        protoIm[j][i] = ArL[i]*inv_dri[i-1];
+        protoIm[j][i] = ArL[i]*inv_dri[i-1]; // forse allora Im[j][i] = Ip[j][i-1] ??
         /* :::: Jp :::: */
         protoJp[j][i] = inv_dzi[j];
         /* :::: Jm :::: */
@@ -141,6 +141,21 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
       CJ[j][i] = dEdT[j][i]*protoCJ[j][i];
     }
   }
+
+  #ifdef DEBUG_BUILDIJ
+    printf("\n[BuildIJ_TC] Im:");
+    printmat(Im, NX2_TOT, NX1_TOT);
+    printf("\n[BuildIJ_TC] Ip:");
+    printmat(Ip, NX2_TOT, NX1_TOT);
+    printf("\n[BuildIJ_TC] Jm:");
+    printmat(Jm, NX2_TOT, NX1_TOT);
+    printf("\n[BuildIJ_TC] Jp:");
+    printmat(Jp, NX2_TOT, NX1_TOT);
+    printf("\n[BuildIJ_TC] CI:");
+    printmat(CI, NX2_TOT, NX1_TOT);
+    printf("\n[BuildIJ_TC] CJ:");
+    printmat(CJ, NX2_TOT, NX1_TOT);
+  #endif
 }
 
 /**************************************************************************

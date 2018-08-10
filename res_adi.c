@@ -2,6 +2,7 @@
 #include "adi.h"
 #include "capillary_wall.h"
 #include "current_table.h"
+#include "debug_utilities.h"
 
 #define UNUSED(x) (void)(x)
 
@@ -155,6 +156,17 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
       CJ[j][i] = protoCJ[j][i];
     }
   }
+
+  #ifdef DEBUG_BUILDIJ
+    printf("\n[BuildIJ_Res] Im:");
+    printmat(Im, NX2_TOT, NX1_TOT);
+    printf("\n[BuildIJ_Res] Ip:");
+    printmat(Ip, NX2_TOT, NX1_TOT);
+    printf("\n[BuildIJ_Res] Jm:");
+    printmat(Jm, NX2_TOT, NX1_TOT);
+    printf("\n[BuildIJ_Res] Jp:");
+    printmat(Jp, NX2_TOT, NX1_TOT);
+  #endif
 }
 
 /****************************************************************************

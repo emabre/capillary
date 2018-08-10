@@ -110,3 +110,4 @@
 /*     FOR DEBUG    */
 // #define DEBUG_EMA
 // #define DEBUG_ACCURATE_BCS
+#define DEBUG_BUILDIJ
