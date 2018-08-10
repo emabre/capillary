@@ -33,6 +33,9 @@
 #define DIRICHLET    1
 #define NEUMANN_HOM  2
 
+// macro for calling RuntimeSet()
+#define AFTER_SETOUTPUT 1
+
 /* To loop on lines, the correct use is, usually:
    LINES_LOOP(lines[IDIR], l, j, i)
    or:

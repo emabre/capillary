@@ -131,3 +131,45 @@ void printcorr(Corr corr, char *info) {
 
   printf("\n--------------------------------------");
 }
+
+/************************************************************************************
+ * DumpQuit: function to perform output of data at the very moment when it is called
+ *           and then it quits pluto (to modify it removing the quit of pluto you
+ *           have to figure out how to deal with the file names and so on. In this
+ *           function I spoil the Runtime *ini structure, thus THE PLUTO PROGRAM MUST NOT CONTINUE)
+ *    (written copy-modifying PLUTO's CheckForOutput() )
+ * **********************************************************************************/
+void DumpQuit (const Data *d, Runtime *ini, Grid *grid) {
+  static int first_call = 1;
+  int  n;
+  Output *output;
+  static time_t clock_beg[MAX_OUTPUT_TYPES], clock_end;
+
+  /* -- on first execution initialize
+      current beginning time for all output types -- */
+
+  if (first_call){
+    for (n = 0; n < MAX_OUTPUT_TYPES; n++) time(clock_beg + n);
+  }
+
+  /* -- get current time -- */
+  time(&clock_end);
+
+  /* -------------------------------------------------------
+          start main loop on outputs
+    ------------------------------------------------------- */
+
+  for (n = 0; n < MAX_OUTPUT_TYPES; n++){
+    output = ini->output + n;
+   // I modify the nfile field to disinguish this output from all the others 
+    output->nfile = 9999;
+    
+    if (output->dt > 0.0 || output->dn > 0){
+      WriteData(d, output, grid);
+    }
+  }
+
+  first_call = 0;
+
+  QUIT_PLUTO(1);
+}

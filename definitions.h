@@ -93,6 +93,7 @@
 // #define ELECTR_T_NEUM
 #define ACCURATE_BCS               YES
 #define EN_CONS_CHECK              YES
+#define RUNTIMESET_CALL            AFTER_SETOUTPUT
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
@@ -110,4 +111,4 @@
 /*     FOR DEBUG    */
 // #define DEBUG_EMA
 // #define DEBUG_ACCURATE_BCS
-#define DEBUG_BUILDIJ
+// #define DEBUG_BUILDIJ

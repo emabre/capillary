@@ -7,4 +7,6 @@ void printmat4d(double ****matrix, int dim2, int dim1, int which0, int which1, i
 void printbox(RBox box, char *info);
 // void printcorr(Corr corr, char *info);
 
+void DumpQuit (const Data *d, Runtime *ini, Grid *grid);
+
 #endif
