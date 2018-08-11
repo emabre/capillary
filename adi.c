@@ -272,12 +272,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   }
   // Update the time where the diffusion process has arrived
   t_diff = t_start_sub;
-
-  //[Err] Test, delete later
-  if (g_stepNumber == 3) {
-    DumpQuit (d, RuntimeGet(), grid);
-    QUIT_PLUTO(1);
-  }
 }
 
 /****************************************************************************

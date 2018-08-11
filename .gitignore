@@ -3,6 +3,7 @@
 pluto
 pluto.log
 *.vtk
+*.dbl
 *.out
 makefile
 .directory

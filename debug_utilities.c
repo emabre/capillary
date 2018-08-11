@@ -143,26 +143,27 @@ void DumpQuit (const Data *d, Runtime *ini, Grid *grid) {
   static int first_call = 1;
   int  n;
   Output *output;
-  static time_t clock_beg[MAX_OUTPUT_TYPES], clock_end;
+  // static time_t clock_beg[MAX_OUTPUT_TYPES], clock_end;
 
-  /* -- on first execution initialize
-      current beginning time for all output types -- */
+    print1("\n[DumpQuit] I write data (if any) and quit\n");
 
-  if (first_call){
-    for (n = 0; n < MAX_OUTPUT_TYPES; n++) time(clock_beg + n);
-  }
+  // /* -- on first execution initialize
+  //     current beginning time for all output types -- */
 
-  /* -- get current time -- */
-  time(&clock_end);
+  // if (first_call){
+  //   for (n = 0; n < MAX_OUTPUT_TYPES; n++) time(clock_beg + n);
+  // }
+
+  // /* -- get current time -- */
+  // time(&clock_end);
 
   /* -------------------------------------------------------
           start main loop on outputs
     ------------------------------------------------------- */
-
   for (n = 0; n < MAX_OUTPUT_TYPES; n++){
     output = ini->output + n;
    // I modify the nfile field to disinguish this output from all the others 
-    output->nfile = 9999;
+    output->nfile = 9998;
     
     if (output->dt > 0.0 || output->dn > 0){
       WriteData(d, output, grid);
