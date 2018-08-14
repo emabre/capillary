@@ -25,6 +25,7 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
   static int first_call=1;
   static double **protoIp, **protoIm, **protoJp, **protoJm, **protoCI, **protoCJ;
   int i,j,k;
+  int Nlines, lidx, ridx;
   int nv, l;
   double eta[3]; // Electr. resistivity
   double v[NVAR];
@@ -82,7 +83,7 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
         protoIp[j][i] = inv_dr[i]*inv_dri[i]/rR[i];
         /* :::: Im :::: */
         if (rL[i]!=0.0)
-          protoIm[j][i] = inv_dri[i-1]*inv_dr[i]/rL[i];
+          protoIm[j][i] = inv_dr[i]*inv_dri[i-1]/rL[i];
         else
           protoIm[j][i] = 1/(r[i]*r[i])/rR[i];
         /* :::: Jp :::: */
@@ -99,65 +100,104 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
   }
 
   KDOM_LOOP(k) {
+    
+    /* :::: Ip and Im :::: */
+    Nlines = lines[IDIR].N;
+    for (l = 0; l<Nlines; l++) {
+      j = lines->dom_line_idx[l];
+      lidx = lines[IDIR].lidx[l];
+      ridx = lines[IDIR].ridx[l];
+
+      /* :::: Im on i=lidx :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][j][lidx] + Vc[nv][k][j][lidx-1]);
+      Resistive_eta( v, rL[lidx], z[j], theta[k], NULL, eta);  // rL, z
+      if (eta[0] != eta[1] || eta[1] != eta[2]) {
+        ComplainAnisotropic(v, eta, rL[lidx], z[j], theta[k]);
+        QUIT_PLUTO(1);
+      }
+      Im[j][lidx] = eta[0]*protoIm[j][lidx];
+
+      /* :::: Ip and Im for internal (non boundary) interfaces :::: */
+      for (i=lidx; i<ridx; i++) {
+        for (nv=0; nv<NVAR; nv++)
+          v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
+        Resistive_eta( v, rR[i], z[j], theta[k], NULL, eta);   // rR, z
+        if (eta[0] != eta[1] || eta[1] != eta[2]) {
+          ComplainAnisotropic(v, eta, rR[i], z[j], theta[k]);
+          QUIT_PLUTO(1);
+        }
+        Ip[j][i] = eta[0]*protoIp[j][i];
+        Im[j][i+1] = eta[0]*protoIm[j][i+1];
+      }
+
+      /* :::: Ip on i=ridx :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][j][ridx] + Vc[nv][k][j][ridx+1]);
+      Resistive_eta( v, rR[ridx], z[j], theta[k], NULL, eta);   // rR, z
+      if (eta[0] != eta[1] || eta[1] != eta[2]) {
+        ComplainAnisotropic(v, eta, rR[ridx], z[j], theta[k]);
+        QUIT_PLUTO(1);
+      }
+      Ip[j][ridx] = eta[0]*protoIp[j][ridx];
+    }
+
+    /* :::: Jp and Jm :::: */
+    Nlines = lines[JDIR].N;
+    for (l = 0; l<Nlines; l++) {
+      i = lines[JDIR].dom_line_idx[l];
+      lidx = lines[JDIR].lidx[l];
+      ridx = lines[JDIR].ridx[l];
+
+      /* :::: Jm on j=lidx :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][lidx][i] + Vc[nv][k][lidx-1][i]);
+      Resistive_eta( v, r[i], zL[lidx], theta[k], NULL, eta);
+      if (eta[0] != eta[1] || eta[1] != eta[2]) {
+        ComplainAnisotropic(v, eta, r[i], zL[lidx], theta[k]);
+        QUIT_PLUTO(1);
+      }
+      Jm[lidx][i] = eta[0]*protoJm[lidx][i];
+
+      /* :::: Jp and Jm for internal (non boundary) interfaces :::: */
+      for (j=lidx; j<ridx; j++) {
+        for (nv=0; nv<NVAR; nv++)
+          v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
+        Resistive_eta( v, r[i], zR[j], theta[k], NULL, eta);
+        if (eta[0] != eta[1] || eta[1] != eta[2]) {
+          ComplainAnisotropic(v, eta, r[i], zR[j], theta[k]);
+          QUIT_PLUTO(1);
+        }
+        Jp[j][i] = eta[0]*protoJp[j][i];
+        Jm[j+1][i] = eta[0]*protoJm[j+1][i];  
+      }
+
+      /* :::: Jp on j=ridx :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][ridx][i] + Vc[nv][k][ridx+1][i]);
+      Resistive_eta( v, r[i], zR[ridx], theta[k], NULL, eta);
+      if (eta[0] != eta[1] || eta[1] != eta[2]) {
+        ComplainAnisotropic(v, eta, r[i], zR[ridx], theta[k]);
+        QUIT_PLUTO(1);
+      }
+      Jp[ridx][i] = eta[0]*protoJp[ridx][i];
+
+    }
+
+    // I separate the computation of CI and CJ just to improve code readability,
+    // I could also inglobate them in the previous cycles
     LINES_LOOP(lines[IDIR], l, j, i) {
-      /* :::: Ip :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
-      /*[Rob] I should give also J to Resistive_eta().
-        I don't, but I could simply compute it by modifying easily the GetCurrent()
-        function, as it only uses J and B element of the Data structure.
-        Even easier: I could change the whole adi implementation and make it
-        advance directly d->Vc instead of allocating vectors for T and Br */
-      Resistive_eta( v, rR[i], z[j], theta[k], NULL, eta);
-      if (eta[0] != eta[1] || eta[1] != eta[2]) {
-        ComplainAnisotropic(v, eta, rR[i], z[j], theta[k]);
-        QUIT_PLUTO(1);
-      }
-      Ip[j][i] = eta[0]*protoIp[j][i];
-      /* [Opt] Here I could use the already computed eta to compute
-      also Im[1,i+1] (since it needs eta at the same interface).
-      Doing so I would reduce the calls to Resistive_eta by almost a factor 1/2
-      (obviously I could do the same for Im/Ip) */
-
-      /* :::: Im :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i-1]);
-      Resistive_eta( v, rL[i], z[j], theta[k], NULL, eta);
-      if (eta[0] != eta[1] || eta[1] != eta[2]) {
-        ComplainAnisotropic(v, eta, rL[i], z[j], theta[k]);
-        QUIT_PLUTO(1);
-      }
-      Im[j][i] = eta[0]*protoIm[j][i];
-
-      /* :::: Jp :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
-      Resistive_eta( v, r[i], zR[j], theta[k], NULL, eta);
-      if (eta[0] != eta[1] || eta[1] != eta[2]) {
-        ComplainAnisotropic(v, eta, r[i], zR[j], theta[k]);
-        QUIT_PLUTO(1);
-      }
-      Jp[j][i] = eta[0]*protoJp[j][i];
-
-      /* :::: Jm :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
-      Resistive_eta( v, r[i], zL[j], theta[k], NULL, eta);
-      if (eta[0] != eta[1] || eta[1] != eta[2]) {
-        ComplainAnisotropic(v, eta, r[i], zL[j], theta[k]);
-        QUIT_PLUTO(1);
-      }
-      Jm[j][i] = eta[0]*protoJm[j][i];
-
       /* :::: CI :::: */
       CI[j][i] = protoCI[j][i];
-
       /* :::: CJ :::: */
       CJ[j][i] = protoCJ[j][i];
     }
-  }
+
+
+    }
 
   #ifdef DEBUG_BUILDIJ
+    printf("\n[BuildIJ_Res] Step: %ld", g_stepNumber);
     printf("\n[BuildIJ_Res] Im:");
     printmat(Im, NX2_TOT, NX1_TOT);
     printf("\n[BuildIJ_Res] Ip:");
