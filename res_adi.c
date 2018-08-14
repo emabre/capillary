@@ -356,6 +356,8 @@ void ResEnergyIncrease_DouglasRachford(double **dUres, double** Hp_B, double** H
     JTOT_LOOP(j)
       dUres[j][i] = 0.0;
 
+  print1("\n Are you sure it is correct that you don't use Hm_B??? I suspect no!");
+
   lbound = lines->lbound[BDIFF];
   rbound = lines->rbound[BDIFF];
   dr = grid[IDIR].dx;
