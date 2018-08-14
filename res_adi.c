@@ -181,7 +181,6 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
         QUIT_PLUTO(1);
       }
       Jp[ridx][i] = eta[0]*protoJp[ridx][i];
-
     }
 
     // I separate the computation of CI and CJ just to improve code readability,
@@ -192,9 +191,7 @@ void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
       /* :::: CJ :::: */
       CJ[j][i] = protoCJ[j][i];
     }
-
-
-    }
+  }
 
   #ifdef DEBUG_BUILDIJ
     printf("\n[BuildIJ_Res] Step: %ld", g_stepNumber);

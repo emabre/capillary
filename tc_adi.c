@@ -28,6 +28,7 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
   double *dVr, *dVz;
   double *r, *z, *theta;
   double T;
+  int Nlines, lidx, ridx;
 
   /* -- set a pointer to the primitive vars array --
     I do this because it is done also in other parts of the code
@@ -94,38 +95,72 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
     first_call = 0;
   }
 
-  // [Opt] I could compose the grid-related part once forever (in static variables) and only update kappa
-  //       in this case I could make that this function allocates Ip Im Jp Jm , instead of letting the rest of
-  //       the program do that
+
   KDOM_LOOP(k) {
+
+    /* :::: Ip and Im :::: */
+    Nlines = lines[IDIR].N;
+    for (l = 0; l<Nlines; l++) {
+      j = lines->dom_line_idx[l];
+      lidx = lines[IDIR].lidx[l];
+      ridx = lines[IDIR].ridx[l];
+
+      /* :::: Im on i=lidx :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][j][lidx] + Vc[nv][k][j][lidx-1]);
+      TC_kappa( v, rL[lidx], z[j], theta[k], &kpar, &knor, &phi);
+      Im[j][lidx] = knor*protoIm[j][lidx];
+
+      /* :::: Ip and Im for internal (non boundary) interfaces :::: */
+      for (i=lidx; i<ridx; i++) {
+        for (nv=0; nv<NVAR; nv++)
+          v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
+        TC_kappa( v, rR[i], z[j], theta[k], &kpar, &knor, &phi);
+        Ip[j][i] = knor*protoIp[j][i];
+        Im[j][i+1] = knor*protoIm[j][i+1];
+      }
+
+      /* :::: Ip on i=ridx :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][j][ridx] + Vc[nv][k][j][ridx+1]);
+      TC_kappa( v, rR[ridx], z[j], theta[k], &kpar, &knor, &phi);
+      Ip[j][ridx] = knor*protoIp[j][ridx];
+    }
+
+    /* :::: Jp and Jm :::: */
+    Nlines = lines[JDIR].N;
+    for (l = 0; l<Nlines; l++) {
+      i = lines[JDIR].dom_line_idx[l];
+      lidx = lines[JDIR].lidx[l];
+      ridx = lines[JDIR].ridx[l];
+
+      /* :::: Jm on j=lidx :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][lidx][i] + Vc[nv][k][lidx-1][i]);
+      TC_kappa( v, r[i], zL[lidx], theta[k], &kpar, &knor, &phi);
+      Jm[lidx][i] = knor*protoJm[lidx][i];
+
+      /* :::: Jp and Jm for internal (non boundary) interfaces :::: */
+      for (j=lidx; j<ridx; j++) {
+        for (nv=0; nv<NVAR; nv++)
+          v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
+        TC_kappa( v, r[i], zR[j], theta[k], &kpar, &knor, &phi);
+        Jp[j][i] = knor*protoJp[j][i];
+        Jm[j+1][i] = knor*protoJm[j+1][i]; 
+      }
+
+      /* :::: Jp on j=ridx :::: */
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = 0.5 * (Vc[nv][k][ridx][i] + Vc[nv][k][ridx+1][i]);
+      TC_kappa( v, r[i], zR[ridx], theta[k], &kpar, &knor, &phi);
+      Jp[ridx][i] = knor*protoJp[ridx][i];
+    }
+
+    // I separate the computation of CI and CJ just to improve code readability,
+    // I could also inglobate them in the previous cycles
     LINES_LOOP(lines[IDIR], l, j, i) {
-      /* :::: Ip :::: */
       for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
-      TC_kappa( v, rR[i], z[j], theta[k], &kpar, &knor, &phi);
-      Ip[j][i] = knor*protoIp[j][i];
-      /* [Opt] Here I could use the already computed k to compute
-      also Im[1,i+1] (since it needs k at the same interface).
-      Doing so I would reduce the calls to TC_kappa by almost a factor 1/2
-      (obviously I could do the same for Im/Ip) */
-
-      /* :::: Im :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i-1]);
-      TC_kappa( v, rL[i], z[j], theta[k], &kpar, &knor, &phi);
-      Im[j][i] = knor*protoIm[j][i];
-
-      /* :::: Jp :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
-      TC_kappa( v, r[i], zR[j], theta[k], &kpar, &knor, &phi);
-      Jp[j][i] = knor*protoJp[j][i];
-
-      /* :::: Jm :::: */
-      for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j-1][i]);
-      TC_kappa( v, r[i], zL[j], theta[k], &kpar, &knor, &phi);
-      Jm[j][i] = knor*protoJm[j][i];
+        v[nv] = Vc[nv][k][j][i];
       #ifdef TEST_ADI
         HeatCapacity_test(v, r[i], z[j], theta[k], &(dEdT[j][i]) );
       #else
@@ -135,12 +170,10 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
         HeatCapacity(v, T, &(dEdT[j][i]) );
       #endif
       /* :::: CI :::: */
-      CI[j][i] = dEdT[j][i]*protoCI[j][i];
-      
+      CI[j][i] = dEdT[j][i]*protoCI[j][i];  
       /* :::: CJ :::: */
       CJ[j][i] = dEdT[j][i]*protoCJ[j][i];
     }
-  }
 
   #ifdef DEBUG_BUILDIJ
     printf("\n[BuildIJ_TC] Im:");
@@ -156,6 +189,7 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
     printf("\n[BuildIJ_TC] CJ:");
     printmat(CJ, NX2_TOT, NX1_TOT);
   #endif
+  }
 }
 
 /**************************************************************************
