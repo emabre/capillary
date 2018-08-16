@@ -503,6 +503,95 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
 }
 
 /************************************************************
+ * ApplyBCsonGhosts(): This func. applies the BCs to the "solution"
+ *                     vector/matrix as prescribed by rbound and lbound.
+ * *********************************************************/
+void ApplyBCsonGhosts(double **v, Lines *lines,
+                      Bcs *lbound, Bcs *rbound,
+                      int dir) {
+  int i,j,l;
+  int ridx, lidx;
+  int Nlines = lines->N;
+
+  if (dir == IDIR) {
+    /********************
+    * Case direction IDIR
+    *********************/
+    for (l = 0; l < Nlines; l++) {
+      j = lines->dom_line_idx[l];
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
+
+      /*--- I set the boundary values (ghost cells) ---*/
+      // Cells near left boundary
+      if (lbound[l].kind == DIRICHLET){
+        // I assign the ghost value (needed by ResEnergyIncrease and maybe others..)
+        // [Err] decomment next line
+        v[j][lidx-1] = 2*lbound[l].values[0] - v[j][lidx];
+        //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
+        // v[j][lidx-1] = 1/3*v[j][lidx+1] + 8/3*lbound[l].values[0] - 2*v[j][lidx];
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        /* I assign the ghost value (needed by ResEnergyIncrease and maybe others..).*/
+        v[j][lidx-1] = v[j][lidx];
+      } else {
+        print1("\n[ExplicitUpdate]Error setting left bc (in dir i), not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+      // Cells near right boundary
+      if (rbound[l].kind == DIRICHLET){
+        // [Err] decomment next line
+        v[j][ridx+1] = 2*rbound[l].values[0] - v[j][ridx];
+        //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
+        // v[j][ridx+1] = 1/3*v[j][ridx-1] + 8/3*rbound[l].values[0] - 2*v[j][ridx];
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        v[j][ridx+1] = v[j][ridx];
+      } else {
+        print1("\n[ExplicitUpdate]Error setting right bc (in dir i), not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+    }
+  } else if (dir == JDIR) {
+    /********************
+    * Case direction JDIR
+    *********************/
+    for (l = 0; l < Nlines; l++) {
+      i = lines->dom_line_idx[l];
+      lidx = lines->lidx[l];
+      ridx = lines->ridx[l];
+
+      /*--- I set the boundary values (ghost cells) ---*/
+      // Cells near left boundary
+      if (lbound[l].kind == DIRICHLET){
+        // [Err] decomment next line
+        v[lidx-1][i] = 2*lbound[l].values[0] - v[lidx][i];
+        //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
+        // v[lidx-1][i] = 1/3*v[lidx+1][i] + 8/3*lbound[l].values[0] - 2*v[lidx][i];
+      } else if (lbound[l].kind == NEUMANN_HOM) {
+        v[lidx-1][i] = v[lidx][i];
+      } else {
+        print1("\n[ExplicitUpdate]Error setting left bc (in dir j), not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+      // Cells near right boundary
+      if (rbound[l].kind == DIRICHLET){
+        // [Err] decomment next line
+        v[ridx+1][i] = 2*rbound[l].values[0] - v[ridx][i];
+        //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
+        // v[ridx+1][i] = 1/3*v[ridx-1][i] + 8/3*rbound[l].values[0] - 2*v[ridx][i];
+      } else if (rbound[l].kind == NEUMANN_HOM) {
+        v[ridx+1][i] = v[ridx][i];
+      } else {
+        print1("\n[ExplicitUpdate]Error setting right bc (in dir j), not known bc kind!");
+        QUIT_PLUTO(1);
+      }
+    }
+  } else {
+    print1("[ImplicitUpdate] Unimplemented choice for 'dir'!");
+    QUIT_PLUTO(1);
+  }
+}
+
+/************************************************************
  * Solve a linear system made by a tridiagonal matrix.
  * See  https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm
  * for info (accessed on 24/3/2017)
@@ -1085,7 +1174,7 @@ void DouglasRachford_old(double **v_new, double **v_old,
                           dt, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
-        ResEnergyIncrease_DouglasRachford(dUres_aux, H2p, H2m, v_new, v_hat, grid, &lines[dir2], dt, dir2);
+        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_new, v_hat, grid, &lines[dir2], dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -1191,6 +1280,27 @@ void DouglasRachford (double **v_new, double **v_old,
     **********************************/
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt, dir1);
+    // I apply the BCs at t0 for later (if I do it later, I will need to call AApplyBCs() once more) 
+    ApplyBCs(lines, d, grid, t0, dir2);
+    ApplyBCsonGhosts (v_old, &lines[dir2],
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                      dir2);
+    #ifdef DEBUG_EMA
+      printf("\nafter expl dir1:\n"); 
+      printf("\nv_old\n");
+      printmat(v_old, NX2_TOT, NX1_TOT);
+
+      printf("\nH1p\n");
+      printmat(H1p, NX2_TOT, NX1_TOT);
+      printf("\nH1m\n");
+      printmat(H1m, NX2_TOT, NX1_TOT);
+      printf("\nC1\n");
+      printmat(C1, NX2_TOT, NX1_TOT);
+
+      printf("\nv_aux\n");
+      printmat(v_aux, NX2_TOT, NX1_TOT);
+    #endif
+    
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
@@ -1200,31 +1310,69 @@ void DouglasRachford (double **v_new, double **v_old,
                     lines[dir2].lbound[diff], lines[dir2].rbound[diff],
                     0, &en_tc_in, grid,
                     dt, dir2);
+    #ifdef DEBUG_EMA
+      printf("\nafter impl dir2:\n");
+      printf("\nv_hat\n");
+      printmat(v_hat, NX2_TOT, NX1_TOT);
+    #endif
+    
     /**********************************
      (b.1) Explicit update sweeping DIR2
     **********************************/
     // I compute phi~ (and save it in v_aux)
+    // Note: I have already set the BCs on v_old in dir2!
     ExplicitUpdateDR (v_aux, v_old, v_hat, NULL, H2p, H2m, C2, &lines[dir2],
                       (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in,
                       dt, dir2);
+    #ifdef DEBUG_EMA
+      printf("\nafter expl(DR) dir2:\n");
+      printf("\nv_old\n");
+      printmat(v_old, NX2_TOT, NX1_TOT);
+      printf("\nv_aux\n");
+      printmat(v_aux, NX2_TOT, NX1_TOT);
+    #endif
+
     /**********************************
      (b.2) Implicit update sweeping DIR1
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt, dir1);
+    ApplyBCs (lines, d, grid, t0 + dt, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff],
                     (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
                     dt, dir1);
-
+    #ifdef DEBUG_EMA
+      printf("\nafter impl dir1:\n");
+      printf("\nv_new\n");
+      printmat(v_new, NX2_TOT, NX1_TOT);
+    #endif
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // For one advancement of the energy I don't use DouglasRachf variant, since I don't need it!
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
                           dt, dir1);
+        #ifdef DEBUG_EMA
+          printf("\nafter ResEnergyIncrease dir1");
+          printf("\ndUres_aux\n");
+          printmat(dUres_aux, NX2_TOT, NX1_TOT);
+        #endif
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
-        ResEnergyIncrease_DouglasRachford(dUres_aux, H2p, H2m, v_new, v_hat, grid, &lines[dir2], dt, dir2);
+        // Option 1 (it this conservative? to me this looks more natural):
+        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_hat, v_hat, grid, &lines[dir2], dt, dir2);
+        /*
+        // Option 2 (to me this looks less natural, sure not conservative but maybe more robust??):
+        ApplyBCs(lines, d, grid, t0 + dt, dir2);
+        ApplyBCsonGhosts (v_new, &lines[dir2],
+                          lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                          dir2);
+        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_new, v_hat, grid, &lines[dir2], dt, dir2);
+        */
+        #ifdef DEBUG_EMA
+          printf("\nafter ResEnergyIncrease(DR) dir2");
+          printf("\ndUres_aux\n");
+          printmat(dUres_aux, NX2_TOT, NX1_TOT);
+        #endif
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }

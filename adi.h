@@ -182,6 +182,9 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
                        Lines *lines,
                        int compute_inflow, double *inflow,
                        double dt, int dir);
+void ApplyBCsonGhosts(double **v, Lines *lines,
+                      Bcs *lbound, Bcs *rbound,
+                      int dir);
 void ImplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
                      Lines *lines, Bcs *lbound, Bcs *rbound,
@@ -208,7 +211,7 @@ double GetCurrADI();
                             Grid *grid, Lines *lines,
                             int compute_inflow, double *inflow,
                             double dt, int dir);
-    void ResEnergyIncrease_DouglasRachford(double **dUres, double** Hp_B, double** Hm_B,
+    void ResEnergyIncreaseDR(double **dUres, double** Hp_B, double** Hm_B,
                                            double **Br, double **Br_hat,
                                            Grid *grid, Lines *lines, double dt, int dir);
   #endif

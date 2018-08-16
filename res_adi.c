@@ -276,7 +276,10 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       if (lbound[l].kind == DIRICHLET && fabs(rL[lidx]) < 1e-20  && fabs(lbound[l].values[0]) < 1e-20) {
         F[j][lidx-1] = 0.0;
       } else {
+        // [Err] decomment next line
         F[j][lidx-1] = -Hp_B[j][lidx-1] * (Br[j][lidx] - Br[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
+        // [Err] Remove next line
+        // F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
       }
       // Build dU
       for (i=lidx; i<=ridx; i++)
@@ -323,7 +326,7 @@ input both the Hp_B and the Hm_B. But for the whole internal (i.e. boudary exclu
 only one among Hp_B and Hm_B is necessary. The other one is used to fill F
 at one side (left or right) of the domain.
 *****************************************************************************/
-void ResEnergyIncrease_DouglasRachford(double **dUres, double** Hp_B, double** Hm_B,
+void ResEnergyIncreaseDR(double **dUres, double** Hp_B, double** Hm_B,
                                        double **Br, double **Br_hat,
                                        Grid *grid, Lines *lines, double dt, int dir){
   /* F :Power flux flowing from cell (i,j) to (i+1,j), when dir==IDIR;

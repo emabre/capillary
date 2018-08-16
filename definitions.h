@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
+#define  THERMAL_CONDUCTION      NO
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -67,7 +67,8 @@
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */
 // #define FRACTIONAL_THETA           0.3
-#define SPLIT_IMPLICIT
+// #define SPLIT_IMPLICIT
+#define DOUGLAS_RACHFORD
 /* For a pseudo P-R algoritm: if FRACT==0.5 you have the usual P-R
   otherwise you unbalance the scheme towards the implcit or explicit part
   (keep it in ]0,1[). If you do not define it it will be set to 0.5*/
@@ -109,6 +110,6 @@
 
 /*------------------------------------------------------*/
 /*     FOR DEBUG    */
-// #define DEBUG_EMA
+#define DEBUG_EMA
 // #define DEBUG_ACCURATE_BCS
 // #define DEBUG_BUILDIJ

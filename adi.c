@@ -235,9 +235,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         SplitImplicit(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
       #elif defined(FRACTIONAL_THETA)
         FractionalTheta(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA);
+      #elif defined(DOUGLAS_RACHFORD)
+        // PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT);
+        DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
       #else
-        PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT);
-        // DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
+        print1("[ADI]No suitable scheme for resistivity has been selected!");
+        QUIT_PLUTO(1);
       #endif
       
 
