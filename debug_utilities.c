@@ -174,3 +174,21 @@ void DumpQuit (const Data *d, Runtime *ini, Grid *grid) {
 
   QUIT_PLUTO(1);
 }
+
+/***************************************************************************************
+ * [Ema] Print matrix from 4D vector choosing dimensions to print (useful for calling inside gdb)
+ * whichX (X=0,1,2,3) : Integer which tells whether the dimension X has to be printed (whichX = -1)
+ *          or kept fixed (whichX = value to keep)
+ ****************************************************************************************/
+void checknan(double **matrix, int dim2, int dim1) {
+    int i, j;
+
+  for (j = 0; j < dim2; ++j) {
+    for (i = 0; i < dim1; ++i) {
+      if (matrix[j][i] != matrix[j][i]) {
+        printf("\nNaN found in (%d, %d)", j, i);
+      }
+    }
+  }
+  printf("\n");
+}

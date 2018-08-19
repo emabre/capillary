@@ -8,5 +8,6 @@ void printbox(RBox box, char *info);
 // void printcorr(Corr corr, char *info);
 
 void DumpQuit (const Data *d, Runtime *ini, Grid *grid);
+void checknan(double **matrix, int dim2, int dim1);
 
 #endif

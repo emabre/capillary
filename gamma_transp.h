@@ -9,6 +9,8 @@
 
 #define ELEC_DENS(rho,z)  ((z) * (rho) / (CONST_mp+CONST_me))
 
+#define IONIZMIN 1.0e-9
+
 const double extern unit_Mfield;
 
 const double extern Gamma_jil[2][10][4];

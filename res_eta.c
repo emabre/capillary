@@ -4,7 +4,6 @@
 #include "capillary_wall.h"
 
 #define RESMAX 1.0e-9
-#define IONIZMIN 1.0e-9
 
 void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double *eta)
 {
@@ -49,11 +48,7 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
     }
     // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
     GetMu(T, v[RHO], &mu);
-    z = 1/mu - 1;
-    if (z<IONIZMIN) {
-      // print1("\n[Resistive_eta] Ioniz.deg. is below accepted value! I set it to IONIZMIN\n");
-      z = IONIZMIN;
-    }
+    z = fmax(1/mu - 1, IONIZMIN);
 
     // if (g_time>1.65e-1) {
     //   print1("\n--------\n");

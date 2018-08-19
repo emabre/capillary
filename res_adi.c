@@ -326,9 +326,9 @@ input both the Hp_B and the Hm_B. But for the whole internal (i.e. boudary exclu
 only one among Hp_B and Hm_B is necessary. The other one is used to fill F
 at one side (left or right) of the domain.
 *****************************************************************************/
-void ResEnergyIncreaseDR(double **dUres, double** Hp_B, double** Hm_B,
-                                       double **Br, double **Br_hat,
-                                       Grid *grid, Lines *lines, double dt, int dir){
+void ResEnergyIncreaseDR (double **dUres, double** Hp_B, double** Hm_B,
+                          double **Br, double **Br_hat,
+                          Grid *grid, Lines *lines, double dt, int dir){
   /* F :Power flux flowing from cell (i,j) to (i+1,j), when dir==IDIR;
         or from cell (i,j) to (i,j+1), when dir == JDIR.
   */

@@ -24,7 +24,7 @@ void TC_kappa(double *v, double x1, double x2, double x3,
     *knor = g_inputParam[KAPPA_GAU];
 
   } else {
-    z = 1/mu - 1;
+    z = fmax(1/mu - 1, IONIZMIN);
 
     // unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
     // k = thermCond_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
