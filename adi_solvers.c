@@ -258,16 +258,19 @@ void ImplicitUpdate (double **v, double **b, double **source,
           /*--- I compute the inflow ---*/
           *inflow += (v[ridx+1][i]-v[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
         }
+        
       } else if (rbound[l].kind == NEUMANN_HOM) {
         v[ridx+1][i] = v[ridx][i];
         if (compute_inflow) {
           /*--- I compute the inflow (0!!!)---*/
           *inflow += 0;
         }
+
       } else {
         print1("\n[ImplcitUpdate]Error setting right ghost in solution (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
+
     }
   } else {
     print1("[ImplicitUpdate] Unimplemented choice for 'dir'!");
@@ -288,12 +291,13 @@ for instance for ResEnergyIncrease())
 *****************************************************************************/
 void ExplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
-                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt,
-                    //  int compute_inflow, double *inflow, Grid *grid,
-                     int dir) {
+                     Lines *lines, Bcs *lbound, Bcs *rbound,
+                     int compute_inflow, double *inflow, Grid *grid,
+                     double dt, int dir) {
   int i,j,l;
   int ridx, lidx;
   int Nlines = lines->N;
+  double *dz, *rR, *rL;
   static double **rhs;
   static int first_call = 1;
 
@@ -306,6 +310,8 @@ void ExplicitUpdate (double **v, double **b, double **source,
     /********************
     * Case direction IDIR
     *********************/
+    dz = grid[JDIR].dx_glob;
+
     for (l = 0; l < Nlines; l++) {
       j = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
@@ -331,9 +337,19 @@ void ExplicitUpdate (double **v, double **b, double **source,
         b[j][lidx-1] = 2*lbound[l].values[0] - b[j][lidx];
         //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
         // b[j][lidx-1] = 1/3*b[j][lidx+1] + 8/3*lbound[l].values[0] - 2*b[j][lidx];
+        if (compute_inflow) {
+          /*--- I compute the inflow ---*/
+          *inflow += (b[j][lidx-1]-b[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
+        }
+
       } else if (lbound[l].kind == NEUMANN_HOM) {
         /* I assign the ghost value (needed by ResEnergyIncrease and maybe others..).*/
         b[j][lidx-1] = b[j][lidx];
+        if (compute_inflow) {
+          /*--- I compute the inflow (0!!!)---*/
+          *inflow += 0;
+        }
+
       } else {
         print1("\n[ExplicitUpdate]Error setting left bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
@@ -344,8 +360,18 @@ void ExplicitUpdate (double **v, double **b, double **source,
         b[j][ridx+1] = 2*rbound[l].values[0] - b[j][ridx];
         //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
         // b[j][ridx+1] = 1/3*b[j][ridx-1] + 8/3*rbound[l].values[0] - 2*b[j][ridx];
+        if (compute_inflow) {
+          /*--- I compute the inflow ---*/
+          *inflow += (b[j][ridx+1]-b[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
+        }
+
       } else if (rbound[l].kind == NEUMANN_HOM) {
         b[j][ridx+1] = b[j][ridx];
+        if (compute_inflow) {
+          /*--- I compute the inflow (0!!!)---*/
+          *inflow += 0;
+        }
+
       } else {
         print1("\n[ExplicitUpdate]Error setting right bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
@@ -354,11 +380,15 @@ void ExplicitUpdate (double **v, double **b, double **source,
       /*--- Actual update ---*/
       for (i = lidx; i <= ridx; i++)
         v[j][i] = rhs[j][i] + dt/C[j][i] * (b[j][i+1]*Hp[j][i] - b[j][i]*(Hp[j][i]+Hm[j][i]) + b[j][i-1]*Hm[j][i]);
+      
     }
   } else if (dir == JDIR) {
     /********************
     * Case direction JDIR
     *********************/
+    rR = grid[IDIR].xr_glob;
+    rL = grid[IDIR].xl_glob;
+
     for (l = 0; l < Nlines; l++) {
       i = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
@@ -383,20 +413,41 @@ void ExplicitUpdate (double **v, double **b, double **source,
         b[lidx-1][i] = 2*lbound[l].values[0] - b[lidx][i];
         //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
         // b[lidx-1][i] = 1/3*b[lidx+1][i] + 8/3*lbound[l].values[0] - 2*b[lidx][i];
+        if (compute_inflow) {
+          /*--- I compute the inflow ---*/
+          *inflow += (b[lidx-1][i]-b[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        }
+      
       } else if (lbound[l].kind == NEUMANN_HOM) {
         b[lidx-1][i] = b[lidx][i];
+        if (compute_inflow) {
+          /*--- I compute the inflow (0!!!)---*/
+          *inflow += 0;
+        }
+
       } else {
         print1("\n[ExplicitUpdate]Error setting left bc (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
+
       // Cells near right boundary
       if (rbound[l].kind == DIRICHLET){
         // [Err] decomment next line
         b[ridx+1][i] = 2*rbound[l].values[0] - b[ridx][i];
         //[Err] Experimental: 2nd order accurate bc for cell centered FD (as explained in L.Chen draft on FDM)
         // b[ridx+1][i] = 1/3*b[ridx-1][i] + 8/3*rbound[l].values[0] - 2*b[ridx][i];
+        if (compute_inflow) {
+          /*--- I compute the inflow ---*/
+          *inflow += (b[ridx+1][i]-b[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        }
+
       } else if (rbound[l].kind == NEUMANN_HOM) {
         b[ridx+1][i] = b[ridx][i];
+        if (compute_inflow) {
+          /*--- I compute the inflow (0!!!)---*/
+          *inflow += 0;
+        }
+      
       } else {
         print1("\n[ExplicitUpdate]Error setting right bc (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
@@ -720,7 +771,9 @@ void PeacemanRachford(double **v_new, double **v_old,
      (a.1) Explicit update sweeping DIR1
     **********************************/
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], 0.5*dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    0.5*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -757,7 +810,9 @@ void PeacemanRachford(double **v_new, double **v_old,
      (b.1) Explicit update sweeping DIR2
     **********************************/
     ExplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
-                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.5*dt, dir2);
+                    lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    0.5*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
@@ -906,7 +961,9 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
      (a.1) Explicit update sweeping DIR1
     **********************************/
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], fract*dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    fract*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -963,7 +1020,9 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
      (b.1) Explicit update sweeping DIR2
     **********************************/
     ExplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
-                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], fract*dt, dir2);
+                    lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    fract*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
@@ -1132,7 +1191,9 @@ void DouglasRachford_old(double **v_new, double **v_old,
      (a.1) Explicit update sweeping DIR1
     **********************************/
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    dt, dir1);
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
@@ -1147,7 +1208,9 @@ void DouglasRachford_old(double **v_new, double **v_old,
     **********************************/
     // I compute phi~ (and save it in v_aux)
     ExplicitUpdate (v_aux, v_hat, NULL, H2p, H2m, C2, &lines[dir2],
-                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], dt, dir2);
+                    lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    dt, dir2);
     /**********************************
      (b.1_bis) This step is in order not to rewrite the updating routines,
       it is not convenient from a performance point of view
@@ -1165,7 +1228,9 @@ void DouglasRachford_old(double **v_new, double **v_old,
                     dt, dir1);
     //[Opt] Questa è una porcheria, avanzo esplicitamente per dt=0 solo per dare le bc in dir2 a v_new
     ExplicitUpdate (v_new, v_new, NULL, H2p, H2m, C2, &lines[dir2],
-                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], 0.0, dir2);
+                    lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                    0, NULL, grid,
+                    0.0, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // For one advancement of the energy I don't use DouglasRachf variant, since I don't need it!
@@ -1279,7 +1344,9 @@ void DouglasRachford (double **v_new, double **v_old,
      (a.1) Explicit update sweeping DIR1
     **********************************/
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    dt, dir1);
     // I apply the BCs at t0 for later (if I do it later, I will need to call AApplyBCs() once more) 
     ApplyBCs(lines, d, grid, t0, dir2);
     ApplyBCsonGhosts (v_old, &lines[dir2],
@@ -1359,7 +1426,7 @@ void DouglasRachford (double **v_new, double **v_old,
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
         // Option 1 (it this conservative? to me this looks more natural):
-        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_hat, v_hat, grid, &lines[dir2], dt, dir2);
+        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_old, v_hat, grid, &lines[dir2], dt, dir2);
         /*
         // Option 2 (to me this looks less natural, sure not conservative but maybe more robust??):
         ApplyBCs(lines, d, grid, t0 + dt, dir2);
@@ -1473,7 +1540,9 @@ void FractionalTheta(double **v_new, double **v_old,
      (a.1) Explicit update sweeping DIR1
     **********************************/
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], theta*dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    theta*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
@@ -1510,7 +1579,9 @@ void FractionalTheta(double **v_new, double **v_old,
      (b.1) Explicit update sweeping DIR2
     **********************************/
     ExplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
-                    lines[dir2].lbound[diff], lines[dir2].rbound[diff], (1-2*theta)*dt, dir2);
+                    lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    (1-2*theta)*dt, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
@@ -1547,7 +1618,9 @@ void FractionalTheta(double **v_new, double **v_old,
      (c.1) Explicit update sweeping DIR1
     **********************************/
     ExplicitUpdate (v_aux, v_new, NULL, H1p, H1m, C1, &lines[dir1],
-                    lines[dir1].lbound[diff], lines[dir1].rbound[diff], theta*dt, dir1);
+                    lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    theta*dt, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line

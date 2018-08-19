@@ -174,9 +174,12 @@ void DouglasRachford_old( double **v_new, double **v_old,
                           Lines *lines, int diff, int order,
                           double dt, double t0);
 
-void ExplicitUpdate (double **v, double **rhs, double **source,
+void ExplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,
-                     Lines *lines, Bcs *lbound, Bcs *rbound, double dt, int dir);
+                     Lines *lines, Bcs *lbound, Bcs *rbound,
+                     int compute_inflow, double *inflow, Grid *grid,
+                     double dt, int dir);
+                     
 void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
                        double **Hp, double **Hm, double **C,
                        Lines *lines,
