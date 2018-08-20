@@ -14,6 +14,8 @@ This file contains also some other quantities and parameter useful for computing
 - plasma parameters as defined inside dued
 */
 
+#define ERG2KEV(kT) ((kT)/CONST_eV/1e3)
+
 const double sigma_ea = 1.4e-15;  // See Golant book
 
 
@@ -42,13 +44,6 @@ const double Gamma_jil[2][10][4] = {
                       {149.4/49,        254.46/49,  465.61/(49*4), 0},
                       {576/700,         1806/700,   1068/700,      0}}
                   };
-
-/*---------------------------------------------------
-  Erg to keV conversion
----------------------------------------------------*/
-double erg2keV(double kT) {
-    return kT/CONST_eV/1e3;
-}
 
 /*---------------------------------------------*/
 /*Returns the value of the parameter "capital gamma (xe,w)" with subscript i.
@@ -166,31 +161,48 @@ double elRes_norm(double z, double rho, double kT, int corr, double B) {
 
 /*------------------------------------------------
   Electrical resistivity as in code DUED.
-  (the expression implemented here is valid ONLY FOR z<1)
+  (the expression implemented here is valid ONLY FOR z<1).
+  Resistivity of Spitzer, in direction parallel to magnetic field,
+  (ONLY VALID FOR HYDROGEN), corrected incuding collisions e-e.
 ------------------------------------------------*/
 double elRes_norm_DUED(double z, double rho, double kT) {
-  double TkeV, Z_ion, Zmin, sqrt_TkeV;
+  double TkeV = ERG2KEV(kT);
+  double sqrt_TkeV = TkeV*TkeV;
+  double Z_ion = fmax(1.0,z);
+  double Z_ion_sq = Z_ion*Z_ion;
   double ne = ELEC_DENS(rho,z);
   double elRes_norm_en, elRes_norm_ei;
-  double cl_ei_el;
+  double cl_ei_el, cl_quant;
+  // double Zmin = fmin(z,1.0);
+
+  /*-----------------------------------------------------------------------*/
   /*Electrical resitivity due to collisions with neutrals according to DUED*/
-  TkeV = erg2keV(kT);
+  
   sqrt_TkeV = sqrt(TkeV);
   elRes_norm_en = 1.03e-14 * (1-z)/(z+1e-20) * sqrt_TkeV * (sigma_ea/1.4e-15);
+  /*-----------------------------------------------------------------------*/
 
+  /*-----------------------------------------------------------------------*/
   /*Electrical resitivity due to collisions with ions according to DUED.*/
-  Z_ion = fmax(1.0,z); /*Normally it should be the maximum between z and 1*/
-  Zmin = fmin(z,1.0); /*Normally it should be the minimum between z and 1*/
 
-  /* Resistivity(Spitzer) in direction parallel to magnetic field,
-     (ONLY VALID FOR HYDROGEN), corrected incuding collisions e-e*/
-  if ( (cl_ei_el = cl_ei_el_DUED(ne, kT, z)) <= 0){
-    print1("\n[elRes_norm_DUED] Coulomb log <= 0! Quitting\n");
-    QUIT_PLUTO(1);
+  // Coulomb log computation
+  cl_quant = 7.1 - 0.5*log(ne/1e21) + log(TkeV);
+  if (TkeV < 0.01/Z_ion_sq){
+      cl_ei_el = cl_quant + 2.3 + 0.5*log(TkeV/Z_ion_sq);
+  } else {
+      cl_ei_el = cl_quant;
   }
-  elRes_norm_ei = 1.840e-19 * Z_ion * cl_ei_el /(TkeV*sqrt_TkeV) * Z_ion*Zmin/(z+1e-20);
-  // print1("%e", sqrt_TkeV);
-  // QUIT_PLUTO(1);
+  cl_ei_el = fmax(cl_ei_el,1.0);
+
+  /*Old (equivalent) version, less performing,
+    (I used to call a function) */
+  // cl_ei_el = cl_ei_el_DUED(ne, kT, z);
+
+   elRes_norm_ei = 1.840e-19 * cl_ei_el /(TkeV*sqrt_TkeV) * Z_ion;
+  // Old (equivalent) version, less performing
+  // elRes_norm_ei = 1.840e-19 * Z_ion * cl_ei_el /(TkeV*sqrt_TkeV) * Z_ion*Zmin/(z+1e-20);  
+  /*-----------------------------------------------------------------------*/
+
   return elRes_norm_ei + elRes_norm_en;
 }
 /*---------------------------------------------------
@@ -199,7 +211,7 @@ double elRes_norm_DUED(double z, double rho, double kT) {
 double cl_ei_el_DUED(double ne, double kT, double z){
   double TkeV, Z_ion, cl_quant, cl;
 
-  TkeV = erg2keV(kT);
+  TkeV = ERG2KEV(kT);
   Z_ion = fmax(1.0,z);
   cl_quant = 7.1 - 0.5*log(ne/1e21) + log(TkeV);
   if (TkeV < 0.01/(Z_ion*Z_ion)){
@@ -232,32 +244,44 @@ double thermCond_norm(double z,double rho, double kT, int corr, double B) {
 }
 
 /*------------------------------------------------
-  Thermal conductivity according to DUED. Works for an equation of conduction where
+  Thermal conductivity of Hydrogen according to DUED. Works for an equation of conduction where
   temperature gradients expressed WITH TEMPERTURE DEFINED IN KELVIN (Kelvin/cm).
   I removed the "chie multiplier" which is (to my knowledge) always 1
   for the cases of our interest
 ------------------------------------------------*/
 double thermCond_norm_DUED(double z, double rho, double kT) {
   double ne = ELEC_DENS(rho,z);
-  double Z_ion, T, cl, Zion_pow_089, deleps;
+  double cl, deleps;
+  double Z_ion = fmax(1.0,z); // This is called ZEI in dued
+  double Z_ion_sq = Z_ion*Z_ion;
+  double Zion_pow_089 = pow(Z_ion,0.89);
+  double T=kT/CONST_kB;
+  double Tsq = T*T;
   double chie;
-  double Tsq, Z_ion_sq;
 
-  Z_ion = fmax(1.0,z); // This is called ZEI in dued
-  Z_ion_sq = Z_ion*Z_ion;
-  T = kT/CONST_kB;  // temperature in Kelvin
-  Tsq = T*T;
+  // I compute the Coulomb-Log (different from the one computed for resistivity)
+  // Old version (just for performance): I used a function
+  // cl = cl_ei_th(ne, kT, z);
+  if (T <= 1.57e5*Z_ion_sq){
+      cl = -18.34 + log( T*sqrt(T) / (sqrt(ne/CONST_NA) * Z_ion));
+  } else {
+      cl = -12.36 + log(T / sqrt(ne/CONST_NA));
+  }
 
-  cl = cl_ei_th(ne, kT, z);
-  Zion_pow_089 = pow(Z_ion,0.89);
   deleps = 0.4*Zion_pow_089/(3.25+Zion_pow_089);
 
-  chie = deleps * (z/fmin(1.0,z)/(Z_ion_sq)) * 1.96e-4 * (Tsq*sqrt(T)) / cl;
+  chie = deleps * 1.96e-4 * (Tsq*sqrt(T)) / cl / Z_ion;
+  // Old (equivalent) version, less performing
+  // chie = deleps * (z/fmin(1.0,z)/(Z_ion_sq)) * 1.96e-4 * (Tsq*sqrt(T)) / cl;
+
   if (z<1) {
-      chie = chie / (1 + 4e-9*fmax(0.0,1-z)/fmin(1.0,z)/Z_ion_sq *(sigma_ea/1.4e-15) * Tsq );
+      chie = chie / (1 + 4e-9*(1-z)/z/Z_ion_sq *(sigma_ea/1.4e-15) * Tsq );
+      // Old (equivalent) version, less performing
+      // chie = chie / (1 + 4e-9*fmax(0.0,1-z)/fmin(1.0,z)/Z_ion_sq *(sigma_ea/1.4e-15) * Tsq );
   }
   return chie;
 }
+
 /*-----------------------------------------------------------------
 Coulomb log for e-i according to DUED, for computation of thermal conductivity'''
 -----------------------------------------------------------------*/

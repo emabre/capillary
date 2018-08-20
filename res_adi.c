@@ -18,9 +18,9 @@ Function to build the Ip,Im,Jp,Jm for the electrical resistivity problem
 (**useless parameter is intentionally unused, to make this function suitable for a pointer
  which also wants that parameter)
 *****************************************************************************/
-void BuildIJ_Res(const Data *d, Grid *grid, Lines *lines,
-                   double **Ip, double **Im, double **Jp,
-                   double **Jm, double **CI, double **CJ, double **useless) {
+void BuildIJ_Res (const Data *d, Grid *grid, Lines *lines,
+                  double **Ip, double **Im, double **Jp,
+                  double **Jm, double **CI, double **CJ, double **useless) {
 
   static int first_call=1;
   static double **protoIp, **protoIm, **protoJp, **protoJm, **protoCI, **protoCJ;
@@ -277,9 +277,9 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
         F[j][lidx-1] = 0.0;
       } else {
         // [Err] decomment next line
-        F[j][lidx-1] = -Hp_B[j][lidx-1] * (Br[j][lidx] - Br[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
+        // F[j][lidx-1] = -Hp_B[j][lidx-1] * (Br[j][lidx] - Br[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
         // [Err] Remove next line
-        // F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
+        F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
       }
       // Build dU
       for (i=lidx; i<=ridx; i++)

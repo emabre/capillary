@@ -32,48 +32,22 @@ void ImplicitUpdate (double **v, double **b, double **source,
   // int s, dom_line_idx;
   // const int zero=0;
   int i,j;
+  static int first_call = 1;
   int Nlines = lines->N;
   int ridx, lidx, l;
   /* I allocate these as big as if I had to cover the whole domain, so that I
    don't need to reallocate at every domain line that I update */
-  double *diagonal, *upper, *lower, *rhs, *x;
+  static double *diagonal, *upper, *lower, *rhs, *x;
   double *dz, *rR, *rL;
 
-  /*[Opt] Maybe I could do that it allocates static arrays with size NMAX_POINT (=max(NX1_TOT,NX2_TOT)) ?*/
-  if (dir == IDIR) {
-    diagonal = ARRAY_1D(NX1_TOT, double);
-    rhs = ARRAY_1D(NX1_TOT, double);
-    upper = ARRAY_1D(NX1_TOT, double);
-    lower = ARRAY_1D(NX1_TOT, double);
-    x = ARRAY_1D(NX1_TOT, double);
-  } else if (dir == JDIR) {
-    diagonal = ARRAY_1D(NX2_TOT, double);
-    rhs = ARRAY_1D(NX2_TOT, double);
-    upper = ARRAY_1D(NX2_TOT, double);
-    lower = ARRAY_1D(NX2_TOT, double);
-    x = ARRAY_1D(NX2_TOT, double);
+  if (first_call) {
+    diagonal = ARRAY_1D(MAX(NX1_TOT, NX2_TOT), double);
+    rhs = ARRAY_1D(MAX(NX1_TOT, NX2_TOT), double);
+    upper = ARRAY_1D(MAX(NX1_TOT, NX2_TOT), double);
+    lower = ARRAY_1D(MAX(NX1_TOT, NX2_TOT), double);
+    x = ARRAY_1D(MAX(NX1_TOT, NX2_TOT), double);
   }
-    /*[Opt] potrei sempificare il programma facendo che
-  i membri di destra delle assegnazione prendono degli indici
-  che puntano a j o a i a seconda del valore di dir*/
-  // if (dir == IDIR) {
-  //   j = &dom_line_idx;
-  //   m = &zero;
-  //   n = &s;
-  //   i = &lidx;
-  // } else if (dir == JDIR) {
-  //   j = &lidx;
-  //   m = &s;
-  //   n = &zero;
-  //   i = &dom_line_idx;
-  // }
-  // for (l = 0; l<Nlines; l++) {
-  //   dom_line_idx = lines->dom_line_idx;
-  //   lidx = lines->lidx;
-  //   ridx = lines->ridx;
-  //   s = lidx;
-  //     [*j+*m][*i+*n];
-  // }
+
   if (dir == IDIR) {
   /********************
   * Case direction IDIR
@@ -277,11 +251,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
     QUIT_PLUTO(1);
   }
 
-  FreeArray1D(diagonal);
-  FreeArray1D(x);
-  FreeArray1D(upper);
-  FreeArray1D(lower);
-  FreeArray1D(rhs);
+  first_call = 0;
 }
 //
 /****************************************************************************
@@ -646,28 +616,21 @@ void ApplyBCsonGhosts(double **v, Lines *lines,
  * Solve a linear system made by a tridiagonal matrix.
  * See  https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm
  * for info (accessed on 24/3/2017)
+ * BE CAREFUL: THIS FUNC. MODIFIES ITS INPUT (NOT ONLY X!)
  *
  * N: the size of the arrays x, diagonal, right_hand_side.
  * x: solution
  * *********************************************************/
-void tdm_solver(double *x, double const *diagonal, double const *upper,
-                double const *lower, double const *right_hand_side, int const N) {
+void tdm_solver(double *x, double const *diagonal, double *up,
+                double const *lower, double *rhs, int const N) {
   /*[Opt] Is it really needed to define two new arrays?
           Maybe I can make that it uses directly the diagonal, upper,
           lower arrays, modifying them, the only problem is that I
           don't like the idea as a principle, that the function
           modifies its actual input with no apparent reason*/
-  double up[N-1];
-  double rhs[N];
   int i;
 
-  /*[Opt] Maybe there is another way to copy the arrays... more clever, shorter, faster..*/
-  for (i=0;i<N;i++)
-    rhs[i] = right_hand_side[i];
-  for (i=0;i<N-1;i++)
-    up[i] = upper[i];
-
-  up[0] = upper[0]/diagonal[0];
+  up[0] = up[0]/diagonal[0];
   for (i=1; i<N-1; i++)
     up[i] = up[i] / (diagonal[i]-lower[i-1]*up[i-1]);
 

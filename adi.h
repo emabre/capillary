@@ -193,8 +193,9 @@ void ImplicitUpdate (double **v, double **b, double **source,
                      Lines *lines, Bcs *lbound, Bcs *rbound,
                      int compute_inflow, double *inflow, Grid *grid,
                      double dt, int dir);
-void tdm_solver(double *x, double const *diagonal, double const *upper,
-                double const *lower, double const *right_hand_side, int const N);
+
+void tdm_solver(double *x, double const *diagonal, double *up,
+                double const *lower, double *rhs, int const N);
 
 double GetCurrADI();
 
