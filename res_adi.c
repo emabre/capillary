@@ -1,3 +1,4 @@
+#include <math.h>
 #include "pluto.h"
 #include "adi.h"
 #include "capillary_wall.h"
@@ -5,6 +6,8 @@
 #include "debug_utilities.h"
 
 #define UNUSED(x) (void)(x)
+
+// #define HARMAVG(a,b) ( 1/(0.5*( 1/(a) + 1/(b) )) )
 
 double curr = 0;
 
@@ -266,7 +269,7 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
       for (i=lidx; i<=ridx; i++){ // I start from lidx because I must treat carefully the lidx interface (at i=lidx-1), since there could be the domain axis
-      // [Err] Decomment next line (original)
+        // [Err] Decomment next line (original)
         F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1]*r_1[i+1] + Br[j][i]*r_1[i]);
         // [Err] Delete next line (test)
         // F[j][i] = -Hp_B[j][i] * (Br[j][i+1] - Br[j][i])*dr[i] * 0.5*(Br[j][i+1] + Br[j][i])/rR[i];
@@ -276,10 +279,7 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       if (lbound[l].kind == DIRICHLET && fabs(rL[lidx]) < 1e-20  && fabs(lbound[l].values[0]) < 1e-20) {
         F[j][lidx-1] = 0.0;
       } else {
-        // [Err] decomment next line
-        // F[j][lidx-1] = -Hp_B[j][lidx-1] * (Br[j][lidx] - Br[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
-        // [Err] Remove next line
-        F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
+        F[j][lidx-1] = -Hm_B[j][lidx] * (Br[j][lidx] - Br[j][lidx-1])*dr[lidx] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
       }
       // Build dU
       for (i=lidx; i<=ridx; i++)
@@ -300,8 +300,9 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
       
-      for (j=lidx-1; j<=ridx; j++){
-        //[Err] ho aggiunto *r_1[i] nella formula ( e questa modifica sembra ok!)
+      F[lidx][i] = -Hm_B[lidx][i] * (Br[lidx][i] - Br[lidx-1][i])*dz[lidx]*r_1[i]*r_1[i] * 0.5*(Br[lidx][i] + Br[lidx-1][i]);
+      for (j=lidx; j<=ridx; j++){
+        // [Err] Decomment next line
         F[j][i] = -Hp_B[j][i] * (Br[j+1][i] - Br[j][i])*dz[j]*r_1[i]*r_1[i] * 0.5*(Br[j+1][i] + Br[j][i]);
       }
       // Build dU
@@ -359,8 +360,6 @@ void ResEnergyIncreaseDR (double **dUres, double** Hp_B, double** Hm_B,
     JTOT_LOOP(j)
       dUres[j][i] = 0.0;
 
-  print1("\n Are you sure it is correct that you don't use Hm_B??? I suspect no!");
-
   lbound = lines->lbound[BDIFF];
   rbound = lines->rbound[BDIFF];
   dr = grid[IDIR].dx;
@@ -376,6 +375,7 @@ void ResEnergyIncreaseDR (double **dUres, double** Hp_B, double** Hm_B,
       j = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
+
       for (i=lidx; i<=ridx; i++){ // I start from lidx because I must treat carefully the lidx interface (at i=lidx-1), since there could be the domain axis
         F[j][i] = -Hp_B[j][i] * (Br_hat[j][i+1] - Br_hat[j][i])*dr[i] * 0.5*(Br[j][i+1]*r_1[i+1] + Br[j][i]*r_1[i]);
       }
@@ -384,8 +384,9 @@ void ResEnergyIncreaseDR (double **dUres, double** Hp_B, double** Hm_B,
       if (lbound[l].kind == DIRICHLET && fabs(rL[lidx]) < 1e-20  && fabs(lbound[l].values[0]) < 1e-20) {
         F[j][lidx-1] = 0.0;
       } else {
-        F[j][lidx-1] = -Hp_B[j][lidx-1] * (Br_hat[j][lidx] - Br_hat[j][lidx-1])*dr[lidx-1] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
+        F[j][lidx-1] = -Hm_B[j][lidx] * (Br_hat[j][lidx] - Br_hat[j][lidx-1])*dr[lidx] * 0.5*(Br[j][lidx]*r_1[lidx] + Br[j][lidx-1]*r_1[lidx-1]);
       }
+
       // Build dU
       for (i=lidx; i<=ridx; i++)
         dUres[j][i] = -(rR[i]*F[j][i] - rL[i]*F[j][i-1])*dt/dV[i];
@@ -400,10 +401,12 @@ void ResEnergyIncreaseDR (double **dUres, double** Hp_B, double** Hm_B,
       lidx = lines->lidx[l];
       ridx = lines->ridx[l];
       
-      for (j=lidx-1; j<=ridx; j++){
+      F[lidx][i] = -Hm_B[lidx][i] * (Br_hat[lidx][i] - Br_hat[lidx-1][i])*dz[lidx]*r_1[i]*r_1[i] * 0.5*(Br[lidx][i] + Br[lidx-1][i]);
+      for (j=lidx; j<=ridx; j++){
         //[Err] ho aggiunto *r_1[i] nella formula ( e questa modifica sembra ok!)
         F[j][i] = -Hp_B[j][i] * (Br_hat[j+1][i] - Br_hat[j][i])*dz[j]*r_1[i]*r_1[i] * 0.5*(Br[j+1][i] + Br[j][i]);
       }
+      
       // Build dU
       for (j=lidx; j<=ridx; j++)
         dUres[j][i] = -(F[j][i] - F[j-1][i])*dt*inv_dz[j];
