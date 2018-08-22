@@ -46,7 +46,8 @@ void ConsToPrimLines (Data_Arr U, Data_Arr V, unsigned char ***flag, Lines *line
 
       if (err) {
         print1("[ConsToPrimLines] Error converting Cons->Prim (k:%d,j:%d)", k,j);
-        QUIT_PLUTO(1);        
+        // QUIT_PLUTO(1);
+        print1("\nI move on...");        
       }
 
       for (i = ibeg; i <= iend; i++) NVAR_LOOP(nv) V[nv][k][j][i] = v[i][nv];
