@@ -62,19 +62,20 @@
 
 /*  Ema's additional macros                            */
 #define SPLIT_DIFF_ADV_ADV_DIFF
-// #define PROFILE_GPROF_STOPSTEP      8
+// #define PROFILE_GPROF_STOPSTEP      40
 // #define FREEZE_FLUID
 /* Either give value in ]0,0.5[
    or comment if you prefer to use Peaceman-Rachford scheme */
 // #define FRACTIONAL_THETA           0.3
 // #define SPLIT_IMPLICIT
-#define DOUGLAS_RACHFORD
+// #define DOUGLAS_RACHFORD
+#define STRANG_LIE                 80
 /* For a pseudo P-R algoritm: if FRACT==0.5 you have the usual P-R
   otherwise you unbalance the scheme towards the implcit or explicit part
   (keep it in ]0,1[). If you do not define it it will be set to 0.5*/
 // #define FRACT                      0.000001
 // to set the order of the ADI scheme, allowed values: YES, NO, RANDOM, PERMUTE.
-#define FIRST_JDIR_THEN_IDIR       NO
+#define FIRST_JDIR_THEN_IDIR       YES
 // #define  TEST_ADI
 #define JOULE_EFFECT_AND_MAG_ENG   (YES &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
 //Keep it YES for now. If YES: power flux is computed inside adi schemes (if NO, outside)
@@ -84,7 +85,7 @@
 #define IMPOSE_TWALL               NO
 #define IMPOSE_BWALL               NO
 /* Number of subcycles performed by ADI scheme*/
-#define NSUBS_ADI                  10
+#define NSUBS_ADI                  1
 // #define COMMON_RATIO_NSUBS_ADI    1.5
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
 #define ELECTR_B_NEUM
@@ -110,6 +111,6 @@
 
 /*------------------------------------------------------*/
 /*     FOR DEBUG    */
-#define DEBUG_EMA
+// #define DEBUG_EMA
 // #define DEBUG_ACCURATE_BCS
 // #define DEBUG_BUILDIJ
