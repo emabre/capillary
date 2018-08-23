@@ -179,6 +179,11 @@ void Strang_Lie (double **v_new, double **v_old,
                  const Data *d, Grid *grid,
                  Lines *lines, int diff, int order,
                  double dt, double t0, int M);
+void Strang    (double **v_new, double **v_old,
+                double **dUres, double **dEdT,
+                const Data *d, Grid *grid,
+                Lines *lines, int diff, int order,
+                double dt, double t0, int M);
 
 void ExplicitUpdate (double **v, double **b, double **source,
                      double **Hp, double **Hm, double **C,

@@ -69,11 +69,12 @@
 // #define FRACTIONAL_THETA           0.3
 // #define SPLIT_IMPLICIT
 // #define DOUGLAS_RACHFORD
-#define STRANG_LIE                 80
+// #define STRANG_LIE                 80
+#define STRANG                        40
 /* For a pseudo P-R algoritm: if FRACT==0.5 you have the usual P-R
   otherwise you unbalance the scheme towards the implcit or explicit part
   (keep it in ]0,1[). If you do not define it it will be set to 0.5*/
-// #define FRACT                      0.000001
+// #define FRACT                      0.4999999999999
 // to set the order of the ADI scheme, allowed values: YES, NO, RANDOM, PERMUTE.
 #define FIRST_JDIR_THEN_IDIR       YES
 // #define  TEST_ADI

@@ -241,6 +241,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT);
       #elif defined(STRANG_LIE)
         Strang_Lie (Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, STRANG_LIE);
+      #elif defined(STRANG)
+        Strang (Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, STRANG);      
       #else
         print1("[ADI]No suitable scheme for resistivity has been selected!");
         QUIT_PLUTO(1);
