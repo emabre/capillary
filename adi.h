@@ -109,6 +109,34 @@
   #define TDIFF 300
 #endif
 
+/******************************************/
+/* I define the schemes                   */
+#define FRACTIONAL_THETA      1
+#define SPLIT_IMPLICIT        2
+#define STRANG_LIE            3
+#define DOUGLAS_RACHFORD      4
+#define PEACEMAN_RACHFORD_MOD 5
+#define STRANG                6
+/**************************************************/
+/* Consistency check of some definitions          */
+#if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
+  #if METHOD_RES==FRACTIONAL_THETA && !defined(FRACTIONAL_THETA_THETA_RES)
+    #error FRACTIONAL_THETA_THETA must be defined when FRACTIONAL_THETA is used
+  #endif
+  #if METHOD_RES==PEACEMAN_RACHFORD_MOD && !defined(FRACT_RES)
+    #error FRACT_RES must be defined when FRACTIONAL_THETA is used
+  #endif
+#endif
+#if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+  #if METHOD_TC==FRACTIONAL_THETA && !defined(FRACTIONAL_THETA_THETA_TC)
+    #error FRACTIONAL_THETA_THETA must be defined when FRACTIONAL_THETA is used
+  #endif
+  #if METHOD_TC==PEACEMAN_RACHFORD_MOD && !defined(FRACT_TC)
+    #error FRACT_TC must be defined when FRACTIONAL_THETA is used
+  #endif
+#endif
+/***************************************************/
+
 // Time where the diffusion process has arrived (code units)
 double extern t_diff;
 
@@ -138,12 +166,6 @@ void InitializeLines (Lines *, int);
 void GeometryADI (Lines *lines, Grid *grid);
 void BoundaryADI_Res(Lines lines[2], const Data *d, Grid *grid, double t, int dir);
 void BoundaryADI_TC(Lines lines[2], const Data *d, Grid *grid, double t, int dir);
-
-void PeacemanRachford(double **v_new, double **v_old,
-                      double **dUres, double **dEdT,
-                      const Data *d, Grid *grid,
-                      Lines *lines, int diff, int order,
-                      double dt, double t0);
 
 void FractionalTheta(double **v_new, double **v_old,
                      double **dUres, double **dEdT,

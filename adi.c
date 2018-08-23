@@ -38,29 +38,17 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   int s;
   double t_start_sub;
   double dt_reduced;  
-  int const adi_steps = NSUBS_ADI;
+  int const adi_steps = NSUBS_ADI_TOT;
   const double dt = g_dt;
   double ****Uc, ****Vc;
   double *r, *r_1;
-
-  #ifdef PRESUBS_RES
-    #if  THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-      #error Thermal conduction is not compatible with PRESUBS_RES
-    #endif
-    double dt_test = 0.1*2.7964e-8;
-    int Npresubs = PRESUBS_RES;
-    double t_start_presub;
-  #else
-    int Npresubs = 0;
-    double dt_test = 0.0;
-  #endif
 
   #if FIRST_JDIR_THEN_IDIR == RANDOM
     if (first_call)
       srand(time(NULL));   // should only be called once
   #elif FIRST_JDIR_THEN_IDIR == AVERAGE
-    #if (defined(FRACTIONAL_THETA) || defined(SPLIT_IMPLICIT))
-      #error Average order is not yet implemented for FractionalTheta and SplitImplicit
+    #if METHOD_RES==FRACTIONAL_THETA||METHOD_RES==SPLIT_IMPLICIT||METHOD_TC==FRACTIONAL_THETA||METHOD_TC==SPLIT_IMPLICIT 
+      #error Average order is not yet implemented for FractionalTheta or SplitImplicit
     #endif
     static double **Br_new_other_order; //Additional Br result when the other order of direction is used
     static double **dUres_other_order; //Additional dUres result when the other order of direction is used
@@ -132,37 +120,8 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     }
   #endif
 
-  #ifdef PRESUBS_RES
-    t_start_presub = g_time;
-    for (s=0; s<Npresubs; s++) {
-      PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_test, t_start_presub, 0.5);
-      /* ---- Update cons variables ---- */
-      KDOM_LOOP(k)
-        LINES_LOOP(lines[IDIR], l, j, i) {
-          Uc[k][j][i][BX3] = Br_new[j][i]*r_1[i];
-
-          #if (JOULE_EFFECT_AND_MAG_ENG)
-            // [Err] Decomment next line
-            Uc[k][j][i][ENG] += dUres[j][i];
-          #endif
-        }
-      /* ---- Swap pointers to be ready for next cycle ---*/
-      SwapDoublePointers (&Br_new, &Br_old);
-      /* -------------------------------------------------------------------------
-        Compute back the primitive vector from the updated conservative vector.
-        ------------------------------------------------------------------------- */
-      ConsToPrimLines (Uc, Vc, d->flag, lines);
-      Boundary(d, ALL_DIR, grid);
-      t_start_presub += dt_test;
-    }
-  #endif
-
-  t_start_sub = g_time+dt_test*Npresubs; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
-  #ifndef COMMON_RATIO_NSUBS_ADI
-    dt_reduced = (dt-dt_test*Npresubs)/adi_steps;
-  #else
-    dt_reduced = (dt-dt_test*Npresubs) / ((1-pow(COMMON_RATIO_NSUBS_ADI,adi_steps))/(1-COMMON_RATIO_NSUBS_ADI));
-  #endif
+  t_start_sub = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
+  dt_reduced = dt/adi_steps;
 
   for (s=0; s<adi_steps; s++) {
     #ifdef DEBUG_EMA
@@ -188,10 +147,37 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #endif
 
       /* ---- Avdance T with ADI ---- */
-      #ifdef FRACTIONAL_THETA
-        FractionalTheta(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA);
+      #if METHOD_TC==SPLIT_IMPLICIT
+        #error SPLIT_IMPLICIT has not yet been tested with thermal conduction
+        if (NSUBS_TC!=1) {
+          print1("\n[ADI] In SPLIT_IMPLICIT method only NSUBS_TC=1 is implemented");
+          QUIT_PLUTO(1);
+        }
+      #elif METHOD_TC==FRACTIONAL_THETA
+        if (NSUBS_TC!=1) {
+          print1("\n[ADI] In FRACTIONAL_THETA method only NSUBS_TC=1 is implemented");
+          QUIT_PLUTO(1);
+        }
+        FractionalTheta(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA_THETA_TC);
+      #elif METHOD_TC==DOUGLAS_RACHFORD
+        #error DOUGLAS_RACHFORD has not yet been tested with thermal conduction
+        if (NSUBS_TC!=1) {
+          print1("\n[ADI] In DOUGLAS_RACHFORD method only NSUBS_TC=1 is implemented");
+          QUIT_PLUTO(1);
+        }
+      #elif METHOD_TC==PEACEMAN_RACHFORD_MOD
+        if (NSUBS_TC!=1) {
+          print1("\n[ADI] In PEACEMAN_RACHFORD_MOD method only NSUBS_TC=1 is implemented");
+          QUIT_PLUTO(1);
+        }
+        PeacemanRachfordMod(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, FRACT_TC);
+      #elif METHOD_TC==STRANG_LIE
+        #error STRANG_LIE has not yet been tested with thermal conduction
+      #elif METHOD_TC==STRANG
+        #error STRANG has not yet been tested with thermal conduction
       #else
-        PeacemanRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub);
+        print1("[ADI]No suitable scheme for thermal conduction has been selected!");
+        QUIT_PLUTO(1);
       #endif
 
       /* ---- Update cons variables ---- */
@@ -231,18 +217,34 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       // No need to re-build the magnetic field, as it does not depend on U[][][][whatever]
 
       /* ---- Avdance B*r with ADI ---- */
-      #ifdef SPLIT_IMPLICIT
+      #if METHOD_RES==SPLIT_IMPLICIT
+        if (NSUBS_RES!=1) {
+          print1("\n[ADI] In SPLIT_IMPLICIT method only NSUBS_RES=1 is implemented");
+          QUIT_PLUTO(1);
+        }
         SplitImplicit(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
-      #elif defined(FRACTIONAL_THETA)
-        FractionalTheta(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA);
-      #elif defined(DOUGLAS_RACHFORD)
+      #elif METHOD_RES==FRACTIONAL_THETA
+        if (NSUBS_RES!=1) {
+          print1("\n[ADI] In FRACTIONAL_THETA method only NSUBS_RES=1 is implemented");
+          QUIT_PLUTO(1);
+        }
+        FractionalTheta(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA_THETA_RES);
+      #elif METHOD_RES==DOUGLAS_RACHFORD
+        if (NSUBS_RES!=1) {
+          print1("\n[ADI] In D-R method only NSUBS_RES=1 is implemented");
+          QUIT_PLUTO(1);
+        }
         DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
-      #elif defined(FRACT)
-        PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT);
-      #elif defined(STRANG_LIE)
-        Strang_Lie (Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, STRANG_LIE);
-      #elif defined(STRANG)
-        Strang (Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, STRANG);      
+      #elif METHOD_RES==PEACEMAN_RACHFORD_MOD
+        if (NSUBS_RES!=1) {
+          print1("\n[ADI] In P-R method only NSUBS_RES=1 is implemented");
+          QUIT_PLUTO(1);
+        }
+        PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT_RES);
+      #elif METHOD_RES==STRANG_LIE
+        Strang_Lie (Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_RES);
+      #elif METHOD_RES==STRANG
+        Strang (Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_RES);      
       #else
         print1("[ADI]No suitable scheme for resistivity has been selected!");
         QUIT_PLUTO(1);
@@ -273,10 +275,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     //[Err] Remove next line
     Boundary(d, ALL_DIR, grid);
 
-    #ifdef COMMON_RATIO_NSUBS_ADI
-    // I update the dt_reduced
-      dt_reduced *= COMMON_RATIO_NSUBS_ADI;
-    #endif
   }
   // Update the time where the diffusion process has arrived
   t_diff = t_start_sub;

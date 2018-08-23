@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      NO
+#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -62,38 +62,66 @@
 
 /*  Ema's additional macros                            */
 #define SPLIT_DIFF_ADV_ADV_DIFF
-// #define PROFILE_GPROF_STOPSTEP      40
+// #define PROFILE_GPROF_STOPSTEP  40
 // #define FREEZE_FLUID
-/* Either give value in ]0,0.5[
-   or comment if you prefer to use Peaceman-Rachford scheme */
-// #define FRACTIONAL_THETA           0.3
-// #define SPLIT_IMPLICIT
-// #define DOUGLAS_RACHFORD
-// #define STRANG_LIE                 80
-#define STRANG                        40
+
+/* ---------------------------------------------------- */
+/* ADI scheme settings                                  */
+/*
+Method for Thermal conduction and Resisitivity (when ADI is chosen), available choices:
+  - FRACTIONAL_THETA
+  - SPLIT_IMPLICIT
+  - STRANG_LIE
+  - DOUGLAS_RACHFORD
+  - PEACEMAN_RACHFORD_MOD
+  - STRANG
+*/
+#define METHOD_TC                  PEACEMAN_RACHFORD_MOD
+#define METHOD_RES                 STRANG
+/*
+Number of sub-iterations in the whole "adi" scheme (at every sub-iteration the
+conservative variables are updated and the kappa/eta re-evaluated)
+*/
+#define NSUBS_ADI_TOT              1
+/*
+Number of sub-iterations for the thermal conduction scheme (the
+conservative variables and kappa, are not updated between two iterations)
+*/
+#define NSUBS_TC                   1
+/*
+Number of sub-iterations for the magnetic diffusion scheme (the
+conservative variables and eta, are not updated between two iterations)
+*/
+#define NSUBS_RES                  40
+
+/*Theta value for Glowinsky's fractional theta method (a value in ]0,0.5[)*/
+// #define FRACTIONAL_THETA_THETA_TC   0.3
+// #define FRACTIONAL_THETA_THETA_RES  0.3
 /* For a pseudo P-R algoritm: if FRACT==0.5 you have the usual P-R
   otherwise you unbalance the scheme towards the implcit or explicit part
-  (keep it in ]0,1[). If you do not define it it will be set to 0.5*/
-// #define FRACT                      0.4999999999999
-// to set the order of the ADI scheme, allowed values: YES, NO, RANDOM, PERMUTE.
+  (keep it in ]0,1[)*/
+#define FRACT_TC                   0.4999999999999
+// #define FRACT_RES            0.4999999999999
+/*
+To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDOM, PERMUTE.
+*/
 #define FIRST_JDIR_THEN_IDIR       YES
 // #define  TEST_ADI
 #define JOULE_EFFECT_AND_MAG_ENG   (YES &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
 //Keep it YES for now. If YES: power flux is computed inside adi schemes (if NO, outside)
 #define POW_INSIDE_ADI             YES
+
+/*--------------------------------------------------------------------------*/
+/* Other settings                                                           */
+
 /* Macros to impose T (B) on walls also for advection (unphisical!)
    (if NO, conduction and B diffusion can be modeled only via ADI scheme) */
 #define IMPOSE_TWALL               NO
 #define IMPOSE_BWALL               NO
-/* Number of subcycles performed by ADI scheme*/
-#define NSUBS_ADI                  1
-// #define COMMON_RATIO_NSUBS_ADI    1.5
 /* Decide whether the electrode must be set as a hom-Neumann boundary*/
 #define ELECTR_B_NEUM
 /* To set to 0 the mag field in a region outside capillary*/
 // #define FLATTEN_B_OUTCAP
-// #define PRESUBS_RES
-// #define ELECTR_T_NEUM
 #define ACCURATE_BCS               YES
 #define EN_CONS_CHECK              YES
 #define RUNTIMESET_CALL            AFTER_SETOUTPUT
