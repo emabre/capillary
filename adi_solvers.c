@@ -889,91 +889,107 @@ void DouglasRachford (double **v_new, double **v_old,
                       double **dUres, double **dEdT,
                       const Data *d, Grid *grid,
                       Lines *lines, int diff, int order,
-                      double dt, double t0) {
+                      double dt, double t0, int M) {
 
-    static double **v_aux, **v_hat; // auxiliary solution vector
-    static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
-    static int first_call = 1;
-    double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
-    // void (*BoundaryADI) (Lines, const Data, Grid, double);
-    BoundaryADI *ApplyBCs;
-    BuildIJ *MakeIJ;
-    int dir1, dir2;
-    int l,i,j;
+  static double **v_aux, **v_hat; // auxiliary solution vector
+  static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
+  static int first_call = 1;
+  double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
+  // void (*BoundaryADI) (Lines, const Data, Grid, double);
+  BoundaryADI *ApplyBCs;
+  BuildIJ *MakeIJ;
+  int dir1, dir2;
+  int l,i,j,s;
+  double dts;
+  double t_now;
+  #if (JOULE_EFFECT_AND_MAG_ENG)
+    static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
+  #endif
+  #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
+    static double **Br_avg, **dUres_aux1;
+  #endif
+
+  /*
+  print1("\nAttenzione al calcolo dell'energia che entra dai bordi per conduzione/elettromagnetica:\n");
+  print1("\npotrebbe essere che sia sbagliata per come ho implmentato lo schema D-R (e per l'uso di variabili globali)\n");
+  */
+  if (first_call) {
+    v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    v_hat = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #if (JOULE_EFFECT_AND_MAG_ENG)
-      static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
+      dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #endif
     #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
-      static double **Br_avg, **dUres_aux1;
+      Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      dUres_aux1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #endif
+    Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Jp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Jm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    CI = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    CJ = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    first_call = 0;
+  }
 
-    /*
-    print1("\nAttenzione al calcolo dell'energia che entra dai bordi per conduzione/elettromagnetica:\n");
-    print1("\npotrebbe essere che sia sbagliata per come ho implmentato lo schema D-R (e per l'uso di variabili globali)\n");
-    */
-    if (first_call) {
-      v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      v_hat = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #if (JOULE_EFFECT_AND_MAG_ENG)
-        dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #endif
-      #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
-        Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-        dUres_aux1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #endif
-      Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Jp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Jm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      CI = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      CJ = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      first_call = 0;
-    }
+  /* Set the direction order*/
+  if (order == FIRST_IDIR) {
+    H1p = Ip;     H1m = Im;
+    H2p = Jp;     H2m = Jm;
+    C1 = CI;      C2 = CJ;
+    dir1 = IDIR;  dir2 = JDIR;
+  } else if (order == FIRST_JDIR) {
+    H1p = Jp;     H1m = Jm;
+    H2p = Ip;     H2m = Im;
+    C1 = CJ;      C2 = CI;
+    dir1 = JDIR;  dir2 = IDIR;
+  }
 
-    /* Set the direction order*/
-    if (order == FIRST_IDIR) {
-      H1p = Ip;     H1m = Im;
-      H2p = Jp;     H2m = Jm;
-      C1 = CI;      C2 = CJ;
-      dir1 = IDIR;  dir2 = JDIR;
-    } else if (order == FIRST_JDIR) {
-      H1p = Jp;     H1m = Jm;
-      H2p = Ip;     H2m = Im;
-      C1 = CJ;      C2 = CI;
-      dir1 = JDIR;  dir2 = IDIR;
-    }
-
-    switch (diff) {
-      #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
-        case BDIFF:
-          ApplyBCs = BoundaryADI_Res;
-          MakeIJ = BuildIJ_Res;
-          break;
-      #endif
-      #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
-        case TDIFF:
-          ApplyBCs = BoundaryADI_TC;
-          MakeIJ = BuildIJ_TC;
-          break;
-      #endif
-      default:
-        print1("\n[PeachmanRachford]Wrong setting for diffusion (diff) problem");
-        QUIT_PLUTO(1);
+  switch (diff) {
+    #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
+      case BDIFF:
+        ApplyBCs = BoundaryADI_Res;
+        MakeIJ = BuildIJ_Res;
         break;
-    }
+    #endif
+    #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+      case TDIFF:
+        ApplyBCs = BoundaryADI_TC;
+        MakeIJ = BuildIJ_TC;
+        break;
+    #endif
+    default:
+      print1("\n[PeachmanRachford]Wrong setting for diffusion (diff) problem");
+      QUIT_PLUTO(1);
+      break;
+  }
 
-    ApplyBCs(lines, d, grid, t0, dir1);
-    MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
+  print1("I apply a Douglas-Rachford scheme for diff=%d (BDIFF=%d,TDIFF=%d)\n", diff, BDIFF, TDIFF);
+  print1(" -> I do %d calls to ImplicitUpdate() and %d calls to ExplicitUpdate()\n", 2*M,2*M);
+
+  /*****************************************
+  * ---------------------------------------
+  *  I perform the actual cycle
+  * ---------------------------------------
+  * ****************************************/
+  dts = dt/M;
+  t_now = t0;
+
+  ApplyBCs(lines, d, grid, t_now, dir1);
+  MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
+
+  for (s=0; s<M; s++) {
     
+    ApplyBCs(lines, d, grid, t_now, dir1);
     /**********************************
      (a.1) Explicit update sweeping DIR1
     **********************************/
     ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff],
                     (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                    dt, dir1);
+                    dts, dir1);
     // I apply the BCs at t0 for later (if I do it later, I will need to call ApplyBCs() once more) 
-    ApplyBCs(lines, d, grid, t0, dir2);
+    ApplyBCs(lines, d, grid, t_now, dir2);
     ApplyBCsonGhosts (v_old, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff],
                       dir2);
@@ -996,12 +1012,12 @@ void DouglasRachford (double **v_new, double **v_old,
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt, dir2);
+    ApplyBCs(lines, d, grid, t_now + dts, dir2);
     // I compute phi^ (and save it in v_hat)
     ImplicitUpdate (v_hat, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                     lines[dir2].lbound[diff], lines[dir2].rbound[diff],
                     0, &en_tc_in, grid,
-                    dt, dir2);
+                    dts, dir2);
     #ifdef DEBUG_EMA
       printf("\nafter impl dir2:\n");
       printf("\nv_hat\n");
@@ -1015,7 +1031,7 @@ void DouglasRachford (double **v_new, double **v_old,
     // Note: I have already set the BCs on v_old in dir2!
     ExplicitUpdateDR (v_aux, v_old, v_hat, NULL, H2p, H2m, C2, &lines[dir2],
                       (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in,
-                      dt, dir2);
+                      dts, dir2);
     #ifdef DEBUG_EMA
       printf("\nafter expl(DR) dir2:\n");
       printf("\nv_old\n");
@@ -1027,11 +1043,11 @@ void DouglasRachford (double **v_new, double **v_old,
     /**********************************
      (b.2) Implicit update sweeping DIR1
     **********************************/
-    ApplyBCs (lines, d, grid, t0 + dt, dir1);
+    ApplyBCs (lines, d, grid, t_now + dts, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff],
                     (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                    dt, dir1);
+                    dts, dir1);
     #ifdef DEBUG_EMA
       printf("\nafter impl dir1:\n");
       printf("\nv_new\n");
@@ -1085,7 +1101,7 @@ void DouglasRachford (double **v_new, double **v_old,
         //   dUres[j][i] = dUres_aux[j][i];
 
         ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_new, v_hat, grid, &lines[dir2],
-                            dt, dir2);
+                            dts, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
 
@@ -1097,7 +1113,7 @@ void DouglasRachford (double **v_new, double **v_old,
         
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
-                          dt, dir1);
+                          dts, dir1);
 
         #ifdef DEBUG_EMA
           printf("\nafter ResEnergyIncrease(DR) dir2");
@@ -1111,6 +1127,16 @@ void DouglasRachford (double **v_new, double **v_old,
     #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
       #error "!POW_INSIDE_ADI" is not implemented in DouglasRachford
     #endif
+
+    t_now += dts;
+
+    LINES_LOOP(lines[IDIR], l, j, i)
+      v_old[j][i] = v_new[j][i]; 
+  }
+  
+  if (fabs((t_now-t0) - dt)/dt > 1e-10) {
+    print1("\n\n Inaccurate dt, actual dt performed: %e, desired: %e\n", t_now-t0, dt);
+  }
 }
 
 /* ***********************************************************
@@ -1230,6 +1256,8 @@ static double **v_aux, **v_hat; // auxiliary solution vector
   * ---------------------------------------
   * ****************************************/
   t_now = t0;
+  LINES_LOOP(lines[IDIR], l, j, i)
+            v_new[j][i] = v_old[j][i];
   // "Ascending"
   for (s=0; s<M/2; s++) {
     if (!(s%2)){
@@ -1237,10 +1265,10 @@ static double **v_aux, **v_hat; // auxiliary solution vector
       (a) Implicit update sweeping DIR1
       **********************************/
       ApplyBCs(lines, d, grid, t_now+dts[s], dir1);
-      ImplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                        lines[dir1].lbound[diff], lines[dir1].rbound[diff],
-                        (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                        dts[s], dir1);
+      ImplicitUpdate (v_aux, v_new, NULL, H1p, H1m, C1, &lines[dir1],
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      dts[s], dir1);
       #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
         if (diff == BDIFF) {
           // [Err] Decomment next line
@@ -1251,24 +1279,15 @@ static double **v_aux, **v_hat; // auxiliary solution vector
             dUres[j][i] = dUres_aux[j][i];
         }
       #endif
-      #ifdef DEBUG_EMA
-        printf("\nafter impl dir1:\n");
-        printf("\nv_new\n");
-        printmat(v_new, NX2_TOT, NX1_TOT);
-        #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
-          printf("\ndUres_aux\n");
-          printmat(dUres_aux, NX2_TOT, NX1_TOT);
-        #endif
-      #endif
     } else {
       /**********************************
        (b) Implicit update sweeping DIR2
       **********************************/
       ApplyBCs(lines, d, grid, t_now+dts[s], dir2);
       ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                        lines[dir2].lbound[diff], lines[dir2].rbound[diff],
-                        (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                        dts[s], dir2);
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      dts[s], dir2);
       #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
         if (diff == BDIFF) {
           // [Err] Decomment next line
@@ -1278,15 +1297,6 @@ static double **v_aux, **v_hat; // auxiliary solution vector
           LINES_LOOP(lines[IDIR], l, j, i)
             dUres[j][i] += dUres_aux[j][i];
         }
-      #endif
-      #ifdef DEBUG_EMA
-        printf("\nafter impl dir1:\n");
-        printf("\nv_new\n");
-        printmat(v_new, NX2_TOT, NX1_TOT);
-        #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
-          printf("\ndUres_aux\n");
-          printmat(dUres_aux, NX2_TOT, NX1_TOT);
-        #endif
       #endif
     }
     t_now += dts[s];
@@ -1298,10 +1308,10 @@ static double **v_aux, **v_hat; // auxiliary solution vector
       (a) Implicit update sweeping DIR1
       **********************************/
       ApplyBCs(lines, d, grid, t_now+dts[s], dir1);
-      ImplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
-                        lines[dir1].lbound[diff], lines[dir1].rbound[diff],
-                        (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                        dts[s], dir1);
+      ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
+                      lines[dir1].lbound[diff], lines[dir1].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      dts[s], dir1);
       #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
         if (diff == BDIFF) {
           // [Err] Decomment next line
@@ -1309,27 +1319,18 @@ static double **v_aux, **v_hat; // auxiliary solution vector
                             EN_CONS_CHECK, &en_res_in,
                             dts[s], dir1);
           LINES_LOOP(lines[IDIR], l, j, i)
-            dUres[j][i] = dUres_aux[j][i];
+            dUres[j][i] += dUres_aux[j][i];
         }
-      #endif
-      #ifdef DEBUG_EMA
-        printf("\nafter impl dir1:\n");
-        printf("\nv_new\n");
-        printmat(v_new, NX2_TOT, NX1_TOT);
-        #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
-          printf("\ndUres_aux\n");
-          printmat(dUres_aux, NX2_TOT, NX1_TOT);
-        #endif
       #endif
     } else {
       /**********************************
        (b) Implicit update sweeping DIR2
       **********************************/
       ApplyBCs(lines, d, grid, t_now+dts[s], dir2);
-      ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
-                        lines[dir2].lbound[diff], lines[dir2].rbound[diff],
-                        (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                        dts[s], dir2);
+      ImplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
+                      lines[dir2].lbound[diff], lines[dir2].rbound[diff],
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                      dts[s], dir2);
       #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
         if (diff == BDIFF) {
           // [Err] Decomment next line
@@ -1339,15 +1340,6 @@ static double **v_aux, **v_hat; // auxiliary solution vector
           LINES_LOOP(lines[IDIR], l, j, i)
             dUres[j][i] += dUres_aux[j][i];
         }
-      #endif
-      #ifdef DEBUG_EMA
-        printf("\nafter impl dir1:\n");
-        printf("\nv_new\n");
-        printmat(v_new, NX2_TOT, NX1_TOT);
-        #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
-          printf("\ndUres_aux\n");
-          printmat(dUres_aux, NX2_TOT, NX1_TOT);
-        #endif
       #endif
     }
     t_now += dts[s];
@@ -1452,6 +1444,8 @@ void Strang(double **v_new, double **v_old,
   // I build dts
   dts = dt/(2*M);
   t_now = t0;
+  LINES_LOOP(lines[IDIR], l, j, i)
+    v_new[j][i] = v_old[j][i];
 
   for (s=0; s<2*M+1; s++) {
 
@@ -1465,7 +1459,7 @@ void Strang(double **v_new, double **v_old,
       (a) Implicit update sweeping DIR1
       **********************************/
       ApplyBCs(lines, d, grid, t_now+dt_now, dir1);
-      ImplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
+      ImplicitUpdate (v_aux, v_new, NULL, H1p, H1m, C1, &lines[dir1],
                         lines[dir1].lbound[diff], lines[dir1].rbound[diff],
                         (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
                         dt_now, dir1);
@@ -1746,84 +1740,103 @@ void SplitImplicit(double **v_new, double **v_old,
                       double **dUres, double **dEdT,
                       const Data *d, Grid *grid,
                       Lines *lines, int diff, int order,
-                      double dt, double t0) {
+                      double dt, double t0, int M) {
 
-    static double **v_aux; // auxiliary solution vector
-    static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
-    static int first_call = 1;
-    double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
-    // void (*BoundaryADI) (Lines, const Data, Grid, double);
-    BoundaryADI *ApplyBCs;
-    BuildIJ *MakeIJ;
-    int dir1, dir2;
+  static double **v_aux; // auxiliary solution vector
+  static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
+  static int first_call = 1;
+  double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
+  // void (*BoundaryADI) (Lines, const Data, Grid, double);
+  BoundaryADI *ApplyBCs;
+  BuildIJ *MakeIJ;
+  int dir1, dir2;
+  int s;
+  double dts, t_now;
+  #if (JOULE_EFFECT_AND_MAG_ENG)
+    static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
+    int l,i,j;
+  #endif
+
+  if (first_call) {
+    v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #if (JOULE_EFFECT_AND_MAG_ENG)
-      static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
-      int l,i,j;
+      dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #endif
 
-    if (first_call) {
-      v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #if (JOULE_EFFECT_AND_MAG_ENG)
-        dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #endif
+    Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Jp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Jm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    CI = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    CJ = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    first_call = 0;
+  }
 
-      Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Jp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Jm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      CI = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      CJ = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      first_call = 0;
-    }
+  /* Set the direction order*/
+  if (order == FIRST_IDIR) {
+    H1p = Ip;     H1m = Im;
+    H2p = Jp;     H2m = Jm;
+    C1 = CI;      C2 = CJ;
+    dir1 = IDIR;  dir2 = JDIR;
+  } else if (order == FIRST_JDIR) {
+    H1p = Jp;     H1m = Jm;
+    H2p = Ip;     H2m = Im;
+    C1 = CJ;      C2 = CI;
+    dir1 = JDIR;  dir2 = IDIR;
+  }
 
-    /* Set the direction order*/
-    if (order == FIRST_IDIR) {
-      H1p = Ip;     H1m = Im;
-      H2p = Jp;     H2m = Jm;
-      C1 = CI;      C2 = CJ;
-      dir1 = IDIR;  dir2 = JDIR;
-    } else if (order == FIRST_JDIR) {
-      H1p = Jp;     H1m = Jm;
-      H2p = Ip;     H2m = Im;
-      C1 = CJ;      C2 = CI;
-      dir1 = JDIR;  dir2 = IDIR;
-    }
-
-    switch (diff) {
-      #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
-        case BDIFF:
-          ApplyBCs = BoundaryADI_Res;
-          MakeIJ = BuildIJ_Res;
-          break;
-      #endif
-      #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
-        case TDIFF:
-          ApplyBCs = BoundaryADI_TC;
-          MakeIJ = BuildIJ_TC;
-          break;
-      #endif
-      default:
-        print1("\n[SplitImplicit]Wrong setting for diffusion (diff) problem");
-        QUIT_PLUTO(1);
+  switch (diff) {
+    #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
+      case BDIFF:
+        ApplyBCs = BoundaryADI_Res;
+        MakeIJ = BuildIJ_Res;
         break;
-    }
+    #endif
+    #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+      case TDIFF:
+        ApplyBCs = BoundaryADI_TC;
+        MakeIJ = BuildIJ_TC;
+        break;
+    #endif
+    default:
+      print1("\n[SplitImplicit]Wrong setting for diffusion (diff) problem");
+      QUIT_PLUTO(1);
+      break;
+  }
 
-    ApplyBCs(lines, d, grid, t0+dt, dir1);
-    MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
+  print1("I apply a Lie scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()\n",
+          diff, BDIFF, TDIFF, 2*M);
+
+  ApplyBCs(lines, d, grid, t0+dts, dir1);
+  MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
+
+  /*****************************************
+  * ---------------------------------------
+  *  I perform the actual cycle
+  * ---------------------------------------
+  * ****************************************/
+  // I build dts
+  dts = dt/M;
+  t_now = t0;
+  LINES_LOOP(lines[IDIR], l, j, i)
+    v_new[j][i] = v_old[j][i];
+    
+  for (s=0; s<M; s++) {
 
     /**********************************
      (a) Implicit update sweeping DIR1
     **********************************/
-    ImplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
+    ApplyBCs(lines, d, grid, t_now+dts, dir1);
+    ImplicitUpdate (v_aux, v_new, NULL, H1p, H1m, C1, &lines[dir1],
                       lines[dir1].lbound[diff], lines[dir1].rbound[diff],
                       (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                      dt, dir1);
+                      dts, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_aux, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
-                          dt, dir1);
+                          dts, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
       }
@@ -1841,17 +1854,17 @@ void SplitImplicit(double **v_new, double **v_old,
     /**********************************
      (b) Implicit update sweeping DIR2
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt, dir2);
+    ApplyBCs(lines, d, grid, t_now + dts, dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff],
                       (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                      dt, dir2);
+                      dts, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
                           EN_CONS_CHECK, &en_res_in,
-                          dt, dir2);
+                          dts, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -1865,6 +1878,13 @@ void SplitImplicit(double **v_new, double **v_old,
         printmat(dUres_aux, NX2_TOT, NX1_TOT);
       #endif
     #endif
+
+    t_now += dts;
+  }
+
+  if (fabs((t_now-t0) - dt)/dt > 1e-10) {
+    print1("\n\n Inaccurate dt, actual dt performed: %e, desired: %e\n", t_now-t0, dt);
+  }
 }
 
 /*******************************************************

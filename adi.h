@@ -177,7 +177,7 @@ void SplitImplicit(double **v_new, double **v_old,
                   double **dUres, double **dEdT,
                   const Data *d, Grid *grid,
                   Lines *lines, int diff, int order,
-                  double dt, double t0);
+                  double dt, double t0, int M);
 
 void PeacemanRachfordMod(double **v_new, double **v_old,
                       double **dUres, double **dEdT,
@@ -189,12 +189,7 @@ void DouglasRachford( double **v_new, double **v_old,
                       double **dUres, double **dEdT,
                       const Data *d, Grid *grid,
                       Lines *lines, int diff, int order,
-                      double dt, double t0);
-void DouglasRachford_old( double **v_new, double **v_old,
-                          double **dUres, double **dEdT,
-                          const Data *d, Grid *grid,
-                          Lines *lines, int diff, int order,
-                          double dt, double t0);
+                      double dt, double t0, int M);
 
 void Strang_Lie (double **v_new, double **v_old,
                  double **dUres, double **dEdT,

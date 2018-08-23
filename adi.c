@@ -161,10 +161,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         FractionalTheta(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA_THETA_TC);
       #elif METHOD_TC==DOUGLAS_RACHFORD
         #error DOUGLAS_RACHFORD has not yet been tested with thermal conduction
-        if (NSUBS_TC!=1) {
-          print1("\n[ADI] In DOUGLAS_RACHFORD method only NSUBS_TC=1 is implemented");
-          QUIT_PLUTO(1);
-        }
       #elif METHOD_TC==PEACEMAN_RACHFORD_MOD
         if (NSUBS_TC!=1) {
           print1("\n[ADI] In PEACEMAN_RACHFORD_MOD method only NSUBS_TC=1 is implemented");
@@ -218,11 +214,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
       /* ---- Avdance B*r with ADI ---- */
       #if METHOD_RES==SPLIT_IMPLICIT
-        if (NSUBS_RES!=1) {
-          print1("\n[ADI] In SPLIT_IMPLICIT method only NSUBS_RES=1 is implemented");
-          QUIT_PLUTO(1);
-        }
-        SplitImplicit(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
+        SplitImplicit(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_RES);
       #elif METHOD_RES==FRACTIONAL_THETA
         if (NSUBS_RES!=1) {
           print1("\n[ADI] In FRACTIONAL_THETA method only NSUBS_RES=1 is implemented");
@@ -230,11 +222,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         }
         FractionalTheta(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA_THETA_RES);
       #elif METHOD_RES==DOUGLAS_RACHFORD
-        if (NSUBS_RES!=1) {
-          print1("\n[ADI] In D-R method only NSUBS_RES=1 is implemented");
-          QUIT_PLUTO(1);
-        }
-        DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub);
+        DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_RES);
       #elif METHOD_RES==PEACEMAN_RACHFORD_MOD
         if (NSUBS_RES!=1) {
           print1("\n[ADI] In P-R method only NSUBS_RES=1 is implemented");
