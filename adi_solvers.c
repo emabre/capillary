@@ -732,6 +732,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     }
 
     ApplyBCs(lines, d, grid, t0, dir1);
+    ApplyBCs(lines, d, grid, t0, dir2);
     MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
     
     /**********************************
@@ -939,6 +940,7 @@ void DouglasRachford (double **v_new, double **v_old,
     C1 = CI;      C2 = CJ;
     dir1 = IDIR;  dir2 = JDIR;
   } else if (order == FIRST_JDIR) {
+    print1("\n[DouglasRachford]Be careful! I suspect there is a mistake in D-R scheme when you start with the JDIR direction");
     H1p = Jp;     H1m = Jm;
     H2p = Ip;     H2m = Im;
     C1 = CJ;      C2 = CI;
@@ -976,6 +978,7 @@ void DouglasRachford (double **v_new, double **v_old,
   t_now = t0;
 
   ApplyBCs(lines, d, grid, t_now, dir1);
+  ApplyBCs(lines, d, grid, t_now, dir2);
   MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
 
   for (s=0; s<M; s++) {
@@ -988,24 +991,26 @@ void DouglasRachford (double **v_new, double **v_old,
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff],
                     (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
                     dts, dir1);
+    // [Err] decomment next lines
     // I apply the BCs at t0 for later (if I do it later, I will need to call ApplyBCs() once more) 
     ApplyBCs(lines, d, grid, t_now, dir2);
     ApplyBCsonGhosts (v_old, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff],
                       dir2);
     #ifdef DEBUG_EMA
+      printf("\ns = %d", s);
       printf("\nafter expl dir1:\n"); 
-      printf("\nv_old\n");
+      printf("\nv_old(input)\n");
       printmat(v_old, NX2_TOT, NX1_TOT);
 
-      printf("\nH1p\n");
-      printmat(H1p, NX2_TOT, NX1_TOT);
-      printf("\nH1m\n");
-      printmat(H1m, NX2_TOT, NX1_TOT);
-      printf("\nC1\n");
-      printmat(C1, NX2_TOT, NX1_TOT);
+      // printf("\nH1p\n");
+      // printmat(H1p, NX2_TOT, NX1_TOT);
+      // printf("\nH1m\n");
+      // printmat(H1m, NX2_TOT, NX1_TOT);
+      // printf("\nC1\n");
+      // printmat(C1, NX2_TOT, NX1_TOT);
 
-      printf("\nv_aux\n");
+      printf("\nv_aux(result)\n");
       printmat(v_aux, NX2_TOT, NX1_TOT);
     #endif
     
@@ -1020,7 +1025,9 @@ void DouglasRachford (double **v_new, double **v_old,
                     dts, dir2);
     #ifdef DEBUG_EMA
       printf("\nafter impl dir2:\n");
-      printf("\nv_hat\n");
+      printf("\nv_aux(input)\n");
+      printmat(v_aux, NX2_TOT, NX1_TOT);
+      printf("\nv_hat(result)\n");
       printmat(v_hat, NX2_TOT, NX1_TOT);
     #endif
     
@@ -1034,9 +1041,11 @@ void DouglasRachford (double **v_new, double **v_old,
                       dts, dir2);
     #ifdef DEBUG_EMA
       printf("\nafter expl(DR) dir2:\n");
-      printf("\nv_old\n");
+      printf("\nv_old(input1)\n");
       printmat(v_old, NX2_TOT, NX1_TOT);
-      printf("\nv_aux\n");
+      printf("\nv_hat(input2)\n");
+      printmat(v_hat, NX2_TOT, NX1_TOT);
+      printf("\nv_aux(result)\n");
       printmat(v_aux, NX2_TOT, NX1_TOT);
     #endif
 
@@ -1050,7 +1059,9 @@ void DouglasRachford (double **v_new, double **v_old,
                     dts, dir1);
     #ifdef DEBUG_EMA
       printf("\nafter impl dir1:\n");
-      printf("\nv_new\n");
+      printf("\nv_aux(input)\n");
+      printmat(v_aux, NX2_TOT, NX1_TOT);
+      printf("\nv_new(result)\n");
       printmat(v_new, NX2_TOT, NX1_TOT);
     #endif
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
@@ -1228,9 +1239,6 @@ static double **v_aux, **v_hat; // auxiliary solution vector
   print1("I apply a Strang-Lie scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()\n",
          diff, BDIFF, TDIFF, M);
 
-  ApplyBCs(lines, d, grid, t0, dir1);
-  MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
-
   // I build dts[0]
   N = M/4;
   two_to_N = 1;
@@ -1254,10 +1262,14 @@ static double **v_aux, **v_hat; // auxiliary solution vector
   * ---------------------------------------
   *  I perform the actual cycle
   * ---------------------------------------
-  * ****************************************/
+  * ****************************************/  
   t_now = t0;
   LINES_LOOP(lines[IDIR], l, j, i)
             v_new[j][i] = v_old[j][i];
+  
+  ApplyBCs(lines, d, grid, t_now, dir1);
+  ApplyBCs(lines, d, grid, t_now, dir2);
+  MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
   // "Ascending"
   for (s=0; s<M/2; s++) {
     if (!(s%2)){
@@ -1433,9 +1445,6 @@ void Strang(double **v_new, double **v_old,
   print1("I apply a Strang scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()\n",
          diff, BDIFF, TDIFF, 2*M+1);
 
-  ApplyBCs(lines, d, grid, t0, dir1);
-  MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
-
   /*****************************************
   * ---------------------------------------
   *  I perform the actual cycle
@@ -1444,6 +1453,11 @@ void Strang(double **v_new, double **v_old,
   // I build dts
   dts = dt/(2*M);
   t_now = t0;
+
+  ApplyBCs(lines, d, grid, t_now, dir1);
+  ApplyBCs(lines, d, grid, t_now, dir2);
+  MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
+  
   LINES_LOOP(lines[IDIR], l, j, i)
     v_new[j][i] = v_old[j][i];
 
@@ -1604,6 +1618,7 @@ void FractionalTheta(double **v_new, double **v_old,
     }
 
     ApplyBCs(lines, d, grid, t0, dir1);
+    ApplyBCs(lines, d, grid, t0, dir2);
     MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
     
     /**********************************
@@ -1750,11 +1765,11 @@ void SplitImplicit(double **v_new, double **v_old,
   BoundaryADI *ApplyBCs;
   BuildIJ *MakeIJ;
   int dir1, dir2;
+  int l,i,j;
   int s;
   double dts, t_now;
   #if (JOULE_EFFECT_AND_MAG_ENG)
     static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
-    int l,i,j;
   #endif
 
   if (first_call) {
@@ -1807,9 +1822,6 @@ void SplitImplicit(double **v_new, double **v_old,
   print1("I apply a Lie scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()\n",
           diff, BDIFF, TDIFF, 2*M);
 
-  ApplyBCs(lines, d, grid, t0+dts, dir1);
-  MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
-
   /*****************************************
   * ---------------------------------------
   *  I perform the actual cycle
@@ -1818,6 +1830,11 @@ void SplitImplicit(double **v_new, double **v_old,
   // I build dts
   dts = dt/M;
   t_now = t0;
+
+  ApplyBCs(lines, d, grid, t_now, dir1);
+  ApplyBCs(lines, d, grid, t_now, dir2);
+  MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
+
   LINES_LOOP(lines[IDIR], l, j, i)
     v_new[j][i] = v_old[j][i];
     
