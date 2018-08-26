@@ -160,7 +160,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         }
         FractionalTheta(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA_THETA_TC);
       #elif METHOD_TC==DOUGLAS_RACHFORD
-        #error DOUGLAS_RACHFORD has not yet been tested with thermal conduction
+        DouglasRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_TC);
       #elif METHOD_TC==PEACEMAN_RACHFORD_MOD
         if (NSUBS_TC!=1) {
           print1("\n[ADI] In PEACEMAN_RACHFORD_MOD method only NSUBS_TC=1 is implemented");
