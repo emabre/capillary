@@ -1111,10 +1111,10 @@ void DouglasRachford (double **v_new, double **v_old,
         // LINES_LOOP(lines[IDIR], l, j, i)
         //   dUres[j][i] = dUres_aux[j][i];
 
-        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_new, v_hat, grid, &lines[dir2],
-                            dts, dir2);
-        LINES_LOOP(lines[IDIR], l, j, i)
-          dUres[j][i] = dUres_aux[j][i];
+        // ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_new, v_hat, grid, &lines[dir2],
+        //                     dts, dir2);
+        // LINES_LOOP(lines[IDIR], l, j, i)
+        //   dUres[j][i] = dUres_aux[j][i];
 
         // ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1],
         //                   EN_CONS_CHECK, &en_res_in,
@@ -1122,9 +1122,35 @@ void DouglasRachford (double **v_new, double **v_old,
         // LINES_LOOP(lines[IDIR], l, j, i)
         //   dUres[j][i] += dUres_aux[j][i];
         
+        // ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
+        //                   EN_CONS_CHECK, &en_res_in,
+        //                   dts, dir1);
+        Ricordati di fare tutte le direzioni e tutti i casi, con i corretti coefficienti moltiplicativi per dts
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1],
+                          EN_CONS_CHECK, &en_res_in,
+                          dts, dir1);
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] = dUres_aux[j][i] * dts/3;
+
+        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_new, v_old, grid, &lines[dir2],
+                            dts, dir2);
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] = dUres_aux[j][i] * dts/3;
+        ResEnergyIncreaseDR(dUres_aux, H1p, H1m, v_new, v_old, grid, &lines[dir1],
+                            dts, dir1);
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] += dUres_aux[j][i] * dts/6;
+
+        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_old, v_new, grid, &lines[dir2],
+                            dts, dir2);
+        LINES_LOOP(lines[IDIR], l, j, i)
+
+          dUres[j][i] += dUres_aux[j][i] * dts/6;
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
                           dts, dir1);
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] += dUres_aux[j][i] * dts/3;
 
         #ifdef DEBUG_EMA
           printf("\nafter ResEnergyIncrease(DR) dir2");
