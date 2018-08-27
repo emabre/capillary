@@ -32,7 +32,10 @@
       "unordered_map": "c",
       "debug_utilities.h": "c",
       "functional": "c",
-      "adi.h": "c"
+      "adi.h": "c",
+      "istream": "c",
+      "tuple": "c",
+      "utility": "c"
     }
   }
 }

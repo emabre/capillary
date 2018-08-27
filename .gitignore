@@ -13,3 +13,4 @@ profiled.txt
 rplots/.Rproj.user
 rplots/rplots.Rproj
 profiled*
+*.Rhistory
