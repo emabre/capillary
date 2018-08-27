@@ -221,78 +221,75 @@ void ChangeDumpVar ()
   SetDumpVar("vx3", VTK_OUTPUT, NO);
 }
 
-#if WRITE_J == YES
-  void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz){
-    int i, j, k;
-    double *r, ***B;
-    double Jleft, Jright;
-    // RBox box;
-    double unit_Mfield;
+void ComputeJ1DforOutput(const Data *d, Grid *grid, double ***Jz){
+  int i, j, k;
+  double *r, ***B;
+  double Jleft, Jright;
+  // RBox box;
+  double unit_Mfield;
 
-    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+  unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
 
-    r = grid[IDIR].x;
-    // x = grid[0].x_glob;
-    // print1("for 0, gbeg: %d, gend: %d", grid[IDIR].gbeg, grid[IDIR].gend);
-    B = d->Vc[iBPHI];
+  r = grid[IDIR].x;
+  // x = grid[0].x_glob;
+  // print1("for 0, gbeg: %d, gend: %d", grid[IDIR].gbeg, grid[IDIR].gend);
+  B = d->Vc[iBPHI];
 
-    DOM_LOOP(k,j,i){
-      if (i == IBEG){
-        Jz[k][j][i] = -2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
-      }
-      else if (i == IEND){
-        Jz[k][j][i] = -2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
-      } else {
-        Jleft = -2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
-        Jright = -2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
-        Jz[k][j][i] = 0.5*(Jleft+Jright);
-      }
-      // Now I make Jz dimensional
-      Jz[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
-      // I put to zero the current density where I don't need it
+  DOM_LOOP(k,j,i){
+    if (i == IBEG){
+      Jz[k][j][i] = -2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
     }
-    // Now I put to 0 the Jr where I have boundary
-    // (I could not do it before, as I need some values at the internal boundary
-    // to compute some values near the internal boundary)
-    DOM_LOOP(k,j,i)
-      if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY))
-        Jz[k][j][i] = 0.0;
-  }
-#endif
-#if WRITE_J == YES
-  void ComputeJrforOutput(const Data *d, Grid *grid, double ***Jr) {
-    int i, j, k;
-    double *z, ***B;
-    double Jleft, Jright;
-    // RBox box;
-    double unit_Mfield;
-
-    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
-
-    z = grid[JDIR].x;
-    // x = grid[0].x_glob;
-    // print1("for 0, gbeg: %d, gend: %d", grid[IDIR].gbeg, grid[IDIR].gend);
-    B = d->Vc[iBPHI];
-
-    DOM_LOOP(k,j,i){
-      if (i == IBEG){
-        Jr[k][j][i] = (B[k][j+1][i]-B[k][j][i])/(z[j+1]-z[j]);
-      }
-      else if (i == IEND){
-        Jr[k][j][i] = (B[k][j][i]-B[k][j-1][i])/(z[j+1]-z[j]);
-      } else {
-        Jleft = (B[k][j][i]-B[k][j-1][i])/(z[j]-z[j-1]);
-        Jright = (B[k][j+1][i]-B[k][j][i])/(z[j+1]-z[j]);
-        Jr[k][j][i] = 0.5*(Jleft+Jright);
-      }
-      // Now I make Jr dimensional
-      Jr[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
+    else if (i == IEND){
+      Jz[k][j][i] = -2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
+    } else {
+      Jleft = -2/(r[i-1]+r[i]) * (B[k][j][i]*r[i]-B[k][j][i-1]*r[i-1])/(r[i]-r[i-1]);
+      Jright = -2/(r[i]+r[i+1]) * (B[k][j][i+1]*r[i+1]-B[k][j][i]*r[i])/(r[i+1]-r[i]);
+      Jz[k][j][i] = 0.5*(Jleft+Jright);
     }
-    // Now I put to 0 the Jr where I have boundary
-    // (I could not do it before, as I need some values at the internal boundary
-    // to compute some values near the internal boundary)
-    DOM_LOOP(k,j,i)
-      if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY))
-        Jr[k][j][i] = 0.0;
+    // Now I make Jz dimensional
+    Jz[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
+    // I put to zero the current density where I don't need it
   }
-#endif
+  // Now I put to 0 the Jr where I have boundary
+  // (I could not do it before, as I need some values at the internal boundary
+  // to compute some values near the internal boundary)
+  DOM_LOOP(k,j,i)
+    if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY))
+      Jz[k][j][i] = 0.0;
+}
+
+void ComputeJrforOutput(const Data *d, Grid *grid, double ***Jr) {
+  int i, j, k;
+  double *z, ***B;
+  double Jleft, Jright;
+  // RBox box;
+  double unit_Mfield;
+
+  unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+
+  z = grid[JDIR].x;
+  // x = grid[0].x_glob;
+  // print1("for 0, gbeg: %d, gend: %d", grid[IDIR].gbeg, grid[IDIR].gend);
+  B = d->Vc[iBPHI];
+
+  DOM_LOOP(k,j,i){
+    if (i == IBEG){
+      Jr[k][j][i] = (B[k][j+1][i]-B[k][j][i])/(z[j+1]-z[j]);
+    }
+    else if (i == IEND){
+      Jr[k][j][i] = (B[k][j][i]-B[k][j-1][i])/(z[j+1]-z[j]);
+    } else {
+      Jleft = (B[k][j][i]-B[k][j-1][i])/(z[j]-z[j-1]);
+      Jright = (B[k][j+1][i]-B[k][j][i])/(z[j+1]-z[j]);
+      Jr[k][j][i] = 0.5*(Jleft+Jright);
+    }
+    // Now I make Jr dimensional
+    Jr[k][j][i] *= CONST_c/(4*CONST_PI)*unit_Mfield/UNIT_LENGTH;
+  }
+  // Now I put to 0 the Jr where I have boundary
+  // (I could not do it before, as I need some values at the internal boundary
+  // to compute some values near the internal boundary)
+  DOM_LOOP(k,j,i)
+    if ((int) (d->flag[k][j][i] & FLAG_INTERNAL_BOUNDARY))
+      Jr[k][j][i] = 0.0;
+}

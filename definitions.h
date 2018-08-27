@@ -17,7 +17,7 @@
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
-#define  THERMAL_CONDUCTION      NO
+#define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
@@ -76,7 +76,7 @@ Method for Thermal conduction and Resisitivity (when ADI is chosen), available c
   - PEACEMAN_RACHFORD_MOD
   - STRANG
 */
-#define METHOD_TC                  PEACEMAN_RACHFORD_MOD
+#define METHOD_TC                  DOUGLAS_RACHFORD
 #define METHOD_RES                 DOUGLAS_RACHFORD
 /*
 Number of sub-iterations in the whole "adi" scheme (at every sub-iteration the
@@ -87,12 +87,12 @@ conservative variables are updated and the kappa/eta re-evaluated)
 Number of sub-iterations for the thermal conduction scheme (the
 conservative variables and kappa, are not updated between two iterations)
 */
-#define NSUBS_TC                   1
+#define NSUBS_TC                   10
 /*
 Number of sub-iterations for the magnetic diffusion scheme (the
 conservative variables and eta, are not updated between two iterations)
 */
-#define NSUBS_RES                  100
+#define NSUBS_RES                  200
 
 /*Theta value for Glowinsky's fractional theta method (a value in ]0,0.5[)*/
 // #define FRACTIONAL_THETA_THETA_TC   0.3
@@ -100,7 +100,7 @@ conservative variables and eta, are not updated between two iterations)
 /* For a pseudo P-R algoritm: if FRACT==0.5 you have the usual P-R
   otherwise you unbalance the scheme towards the implcit or explicit part
   (keep it in ]0,1[)*/
-#define FRACT_TC                   0.4999999999999
+// #define FRACT_TC                   0.4999999999999
 // #define FRACT_RES            0.4999999999999
 /*
 To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDOM, PERMUTE.
@@ -133,10 +133,6 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 #define DZCAP                      0.1 /*the electrodes are wide DZCAP cm*/
 #define ZCAP                       1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 /* ---------------------------------------------------- */
-
-/* ---------------------------------------------------- */
-/*     ADDITTIONAL OUTPUT                               */
-#define WRITE_J                     YES
 
 /*------------------------------------------------------*/
 /*     FOR DEBUG    */
