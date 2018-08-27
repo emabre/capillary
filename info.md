@@ -36,3 +36,9 @@ Thus I edited the file prototypes.h in the original Source folder, since copying
 **Optimizations for performance and robustness/ease of use**
 + In comments: [Opt] means possibility to optimize the code
 + In comments: [Rob] means possibility to optimize the rubustness of the code
+
+**Output**
++ You can add/remove the following variables to the uservar (output variables) (in pluto.ini): interBound Jr Jz etax1 knor vr_c_r vr_c_z vz_c_r vz_c_z rho_c_z rho_c_r T_c_z T_c_r Bx3_c_z Bx3_c_r, and the program takes care of outputting the right quantities!
+(provided you don't misspell them!!)
++ Instead, T, ne, ioniz, cannot be removed/added without modifing the source files (deactivate/modify macro WRITE_T_MU_NE_IONIZ).
++ When you add/remove output variables remember to update the counter right after the word "uservar" in pluto.ini file.
