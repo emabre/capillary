@@ -14,3 +14,4 @@ rplots/.Rproj.user
 rplots/rplots.Rproj
 profiled*
 *.Rhistory
+.Rproj.user
