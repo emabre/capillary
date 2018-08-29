@@ -9,6 +9,7 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
 {
   double mu=0.0, z=0.0, T=0.0;
   double res=0.0;
+  double const res_copper = 7.8e-18;
   // double unit_Mfield;
 
   if (g_inputParam[ETAX_GAU] > 0.0) {
@@ -61,6 +62,11 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
     // unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
     // res = elRes_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
     res = elRes_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
+
+    // I check if I am on the wall or electrode
+    if (x2>=zcap_real-dzcap_real && x2<=zcap_real && x1>=rcap_real) {
+      res = 0.5*(res_copper+res);
+    }
     
     #ifdef RESMAX
       // This is a test limiter
