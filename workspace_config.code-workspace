@@ -24,6 +24,7 @@
       "cmath": "c",
       "stdlib.h": "c",
       "time.h": "c",
+      "math.h": "c",
       "type_traits": "cpp",
       "bitset": "c",
       "vector": "c",

@@ -4,6 +4,7 @@
 #include "current_table.h"
 #include "prototypes.h"
 #include "debug_utilities.h"
+#include "math.h"
 
 #define WRITE_T_MU_NE_IONIZ YES
 
@@ -29,6 +30,7 @@ void ComputeUserVar (const Data *d, Grid *grid)
   char interBound_name[] = "interBound";
   char etax1_name[] = "etax1";
   char knor_name[] = "knor";
+  char c2p_fail_name[] = "c2p_fail";
 
   #if WRITE_T_MU_NE_IONIZ==YES
     double ***T, ***ioniz, ***ne;
@@ -174,6 +176,20 @@ void ComputeUserVar (const Data *d, Grid *grid)
       #else 
         knor[k][j][i] = 0.0;
       #endif
+    }
+  }
+
+  if(CheckUserVar(c2p_fail_name)) {
+    double ***c2p_fail;
+    c2p_fail = GetUserVar(c2p_fail_name);
+    DOM_LOOP(k,j,i) {
+      if (d->flag[k][j][i] & FLAG_CONS2PRIM_FAIL) {
+        /* I guess this is not the most clever way to get the bit number which is on,
+           but I don't care, since this func. is called not very often */
+        c2p_fail[k][j][i] = 1;
+      } else {
+        c2p_fail[k][j][i] = 0;
+      }
     }
   }
 
