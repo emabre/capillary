@@ -663,101 +663,127 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
                       double **dUres, double **dEdT,
                       const Data *d, Grid *grid,
                       Lines *lines, int diff, int order,
-                      double dt, double t0, double fract) {
+                      double dt, double t0, double fract, int M) {
 
-    static double **v_aux; // auxiliary solution vector
-    static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
-    static int first_call = 1;
-    double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
-    // void (*BoundaryADI) (Lines, const Data, Grid, double);
-    BoundaryADI *ApplyBCs;
-    BuildIJ *MakeIJ;
-    int dir1, dir2;
+  static double **v_aux, **v_old_aux;; // auxiliary solution vector
+  double **v_new_save; // To save the actual address of v_new
+  static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
+  static int first_call = 1;
+  double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
+  // void (*BoundaryADI) (Lines, const Data, Grid, double);
+  BoundaryADI *ApplyBCs;
+  BuildIJ *MakeIJ;
+  int dir1, dir2;
+  double dts;
+  double t_now;
+  int l,i,j, s;
+  #if (JOULE_EFFECT_AND_MAG_ENG)
+    static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
+  #endif
+  #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
+    static double **Br_avg, **dUres_aux1;
+  #endif
+
+  if (first_call) {
+    v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    v_old_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #if (JOULE_EFFECT_AND_MAG_ENG)
-      static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
-      int l,i,j;
+      dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #endif
     #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
-      static double **Br_avg, **dUres_aux1;
+      Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      dUres_aux1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #endif
+    Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Jp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    Jm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    CI = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    CJ = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    first_call = 0;
+  }
 
-    if (first_call) {
-      v_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #if (JOULE_EFFECT_AND_MAG_ENG)
-        dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #endif
-      #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
-        Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-        dUres_aux1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      #endif
-      Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Jp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      Jm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      CI = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      CJ = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      first_call = 0;
-    }
+  /* Set the direction order*/
+  if (order == FIRST_IDIR) {
+    H1p = Ip;     H1m = Im;
+    H2p = Jp;     H2m = Jm;
+    C1 = CI;      C2 = CJ;
+    dir1 = IDIR;  dir2 = JDIR;
+  } else if (order == FIRST_JDIR) {
+    H1p = Jp;     H1m = Jm;
+    H2p = Ip;     H2m = Im;
+    C1 = CJ;      C2 = CI;
+    dir1 = JDIR;  dir2 = IDIR;
+  }
 
-    /* Set the direction order*/
-    if (order == FIRST_IDIR) {
-      H1p = Ip;     H1m = Im;
-      H2p = Jp;     H2m = Jm;
-      C1 = CI;      C2 = CJ;
-      dir1 = IDIR;  dir2 = JDIR;
-    } else if (order == FIRST_JDIR) {
-      H1p = Jp;     H1m = Jm;
-      H2p = Ip;     H2m = Im;
-      C1 = CJ;      C2 = CI;
-      dir1 = JDIR;  dir2 = IDIR;
-    }
-
-    switch (diff) {
-      #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
-        case BDIFF:
-          ApplyBCs = BoundaryADI_Res;
-          MakeIJ = BuildIJ_Res;
-          break;
-      #endif
-      #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
-        case TDIFF:
-          ApplyBCs = BoundaryADI_TC;
-          MakeIJ = BuildIJ_TC;
-          break;
-      #endif
-      default:
-        print1("\n[PeachmanRachford]Wrong setting for diffusion (diff) problem");
-        QUIT_PLUTO(1);
+  switch (diff) {
+    #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
+      case BDIFF:
+        ApplyBCs = BoundaryADI_Res;
+        MakeIJ = BuildIJ_Res;
         break;
-    }
+    #endif
+    #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+      case TDIFF:
+        ApplyBCs = BoundaryADI_TC;
+        MakeIJ = BuildIJ_TC;
+        break;
+    #endif
+    default:
+      print1("\n[PeachmanRachford]Wrong setting for diffusion (diff) problem");
+      QUIT_PLUTO(1);
+      break;
+  }
 
-    ApplyBCs(lines, d, grid, t0, dir1);
-    ApplyBCs(lines, d, grid, t0, dir2);
-    MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
-    
+  // I copy v_old inside v_old_aux, as I cannot use directly v_old in the cycle, it will be modified!
+  LINES_LOOP(lines[IDIR], l, j, i)
+    v_new[j][i] = v_old[j][i];
+  
+  v_new_save = v_new;
+
+  print1("\nI apply a Peaceman-Rachford scheme for diff=%d (BDIFF=%d,TDIFF=%d)\n", diff, BDIFF, TDIFF);
+  print1(" -> I do %d calls to ImplicitUpdate() and %d calls to ExplicitUpdate()", 2*M,2*M);
+
+  /*****************************************
+  * ---------------------------------------
+  *  I perform the actual cycle
+  * ---------------------------------------
+  * ****************************************/
+  dts = dt/M;
+  t_now = t0;
+
+  ApplyBCs(lines, d, grid, t_now, dir1);
+  ApplyBCs(lines, d, grid, t_now, dir2);
+  MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
+  
+  for (s=0; s<M; s++) {
+    /* ---- Swap pointers to be ready for next cycle ---*/
+    SwapDoublePointers (&v_old_aux, &v_new);
+
+    ApplyBCs(lines, d, grid, t_now, dir1);
     /**********************************
      (a.1) Explicit update sweeping DIR1
     **********************************/
-    ExplicitUpdate (v_aux, v_old, NULL, H1p, H1m, C1, &lines[dir1],
+    ExplicitUpdate (v_aux, v_old_aux, NULL, H1p, H1m, C1, &lines[dir1],
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff],
                     (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                    fract*dt, dir1);
+                    fract*dts, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
         //       instead of doing it a line later 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1],
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old_aux, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
-                          fract*dt, dir1);
+                          fract*dts, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
       }
     #endif
     #ifdef DEBUG_EMA
       printf("\nafter expl dir1:\n"); 
-      printf("\nv_old\n");
-      printmat(v_old, NX2_TOT, NX1_TOT);
+      printf("\nv_old_aux\n");
+      printmat(v_old_aux, NX2_TOT, NX1_TOT);
       printf("\nv_aux\n");
       printmat(v_aux, NX2_TOT, NX1_TOT);
       #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
@@ -769,17 +795,17 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt*(1-fract), dir2);
+    ApplyBCs(lines, d, grid, t_now + dts*(1-fract), dir2);
     ImplicitUpdate (v_new, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff],
                       (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                      (1-fract)*dt, dir2);
+                      (1-fract)*dts, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
                           EN_CONS_CHECK, &en_res_in,
-                          (1-fract)*dt, dir2);
+                          (1-fract)*dts, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -800,15 +826,15 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     ExplicitUpdate (v_aux, v_new, NULL, H2p, H2m, C2, &lines[dir2],
                     lines[dir2].lbound[diff], lines[dir2].rbound[diff],
                     (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                    fract*dt, dir2);
+                    fract*dts, dir2);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
-           (but in this way it is more readable)*/
+            (but in this way it is more readable)*/
         // [Err] Decomment next line       
         ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
                           EN_CONS_CHECK, &en_res_in,
-                          fract*dt, dir2);
+                          fract*dts, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }    
@@ -828,17 +854,17 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
     /**********************************
      (b.2) Implicit update sweeping DIR1
     **********************************/
-    ApplyBCs(lines, d, grid, t0 + dt, dir1);
+    ApplyBCs(lines, d, grid, t_now + dts, dir1);
     ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
                       lines[dir1].lbound[diff], lines[dir1].rbound[diff],
                       (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
-                      (1-fract)*dt, dir1);
+                      (1-fract)*dts, dir1);
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
         // [Err] Decomment next line
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
-                          (1-fract)*dt, dir1);
+                          (1-fract)*dts, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
@@ -852,10 +878,10 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
         // I compute the fluxes of poynting vector
         ResEnergyIncrease(dUres_aux, H2p, H2m, Br_avg, grid, &lines[dir2],
                           EN_CONS_CHECK, &en_res_in,
-                          dt, dir2);
+                          dts, dir2);
         ResEnergyIncrease(dUres_aux1, H1p, H1m, Br_avg, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
-                          dt, dir1);
+                          dts, dir1);
         // I update the increase in energy
         LINES_LOOP(lines[IDIR], l, j, i) {
           dUres[j][i] = dUres_aux[j][i];
@@ -872,6 +898,24 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
         printmat(dUres_aux, NX2_TOT, NX1_TOT);
       #endif
     #endif
+
+    t_now += dts;
+  }
+
+  /* If necessary, I copy the final result to the correct memory address,
+     to get it available outside.
+     THe reason why I have to do this is that I mixed up the addresses calling:
+     "SwapDoublePointers (&v_old_aux, &v_new);", but this exchange of addresses
+     cannot be seen from outside the functin, as in C parameters are passed 
+     to functinos by value!*/
+  if (v_new_save != v_new) {
+    LINES_LOOP(lines[IDIR], l, j, i)
+      v_new_save[j][i] = v_new[j][i];
+  }
+  
+  if (fabs((t_now-t0) - dt)/dt > 1e-10) {
+    print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
+  }
 }
 
 /* ***********************************************************
@@ -893,6 +937,7 @@ void DouglasRachford (double **v_new, double **v_old,
                       double dt, double t0, int M) {
 
   static double **v_aux, **v_hat, **v_old_aux; // auxiliary solution vector
+  double **v_new_save; // To save the actual address of v_new
   static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
   static int first_call = 1;
   double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
@@ -969,10 +1014,12 @@ void DouglasRachford (double **v_new, double **v_old,
 
   // I copy v_old inside v_old_aux, as I cannot use directly v_old in the cycle, it will be modified!
   LINES_LOOP(lines[IDIR], l, j, i)
-      v_old_aux[j][i] = v_old[j][i];
+      v_new[j][i] = v_old[j][i];
+  
+  v_new_save = v_new;
 
-  print1("I apply a Douglas-Rachford scheme for diff=%d (BDIFF=%d,TDIFF=%d)\n", diff, BDIFF, TDIFF);
-  print1(" -> I do %d calls to ImplicitUpdate() and %d calls to ExplicitUpdate()\n", 2*M,2*M);
+  print1("\nI apply a Douglas-Rachford scheme for diff=%d (BDIFF=%d,TDIFF=%d)\n", diff, BDIFF, TDIFF);
+  print1(" -> I do %d calls to ImplicitUpdate() and %d calls to ExplicitUpdate()", 2*M,2*M);
 
   /*****************************************
   * ---------------------------------------
@@ -987,6 +1034,8 @@ void DouglasRachford (double **v_new, double **v_old,
   MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
 
   for (s=0; s<M; s++) {
+    /* ---- Swap pointers to be ready for next cycle ---*/
+    SwapDoublePointers (&v_old_aux, &v_new);
     
     ApplyBCs(lines, d, grid, t_now, dir1);
     /**********************************
@@ -1071,36 +1120,6 @@ void DouglasRachford (double **v_new, double **v_old,
     #endif
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
-        // For one advancement of the energy I don't use DouglasRachf variant, since I don't need it!
-        // [Err] decomment next line if option 4 is not used
-        // ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
-        //                   EN_CONS_CHECK, &en_res_in,
-        //                   dt, dir1);
-        // [Err] decomment next 2 lines if option 4 is not used
-        // LINES_LOOP(lines[IDIR], l, j, i)
-        //   dUres[j][i] = dUres_aux[j][i];
-        /*
-        // Option 1 (it this conservative? to me this looks more natural):
-        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_old_aux, v_hat, grid, &lines[dir2], dt, dir2);
-        */
-        /*
-        // Option 2 (to me this looks less natural, sure not conservative but maybe more robust??):
-        ApplyBCs(lines, d, grid, t0 + dt, dir2);
-        ApplyBCsonGhosts (v_new, &lines[dir2],
-                          lines[dir2].lbound[diff], lines[dir2].rbound[diff],
-                          dir2);
-        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_new, v_hat, grid, &lines[dir2], dt, dir2);
-        */
-        /*
-        // Option 3 (is this ok?): No, energy decreases near field discontinuities (e.g. near electrode-non electrode transition)
-        ApplyBCsonGhosts (v_new, &lines[dir2],
-                          lines[dir2].lbound[diff], lines[dir2].rbound[diff],
-                          dir2);
-        ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
-                          EN_CONS_CHECK, &en_res_in,
-                          dt, dir2);
-        */
-        // Option 4.
         ApplyBCsonGhosts (v_new, &lines[dir2],
                           lines[dir2].lbound[diff], lines[dir2].rbound[diff],
                           dir2);
@@ -1133,13 +1152,21 @@ void DouglasRachford (double **v_new, double **v_old,
     #endif
 
     t_now += dts;
+  }
 
-    /* ---- Swap pointers to be ready for next cycle ---*/
-    SwapDoublePointers (&v_old_aux, &v_new);
+  /* If necessary, I copy the final result to the correct memory address,
+    to get it available outside.
+    THe reason why I have to do this is that I mixed up the addresses calling:
+    "SwapDoublePointers (&v_old_aux, &v_new);", but this exchange of addresses
+    cannot be seen from outside the functin, as in C parameters are passed 
+    to functinos by value!*/
+  if (v_new_save != v_new) {
+    LINES_LOOP(lines[IDIR], l, j, i)
+      v_new_save[j][i] = v_new[j][i];
   }
   
   if (fabs((t_now-t0) - dt)/dt > 1e-10) {
-    print1("\n\n Inaccurate dt, actual dt performed: %e, desired: %e\n", t_now-t0, dt);
+    print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
   }
 }
 
@@ -1224,7 +1251,7 @@ void Strang(double **v_new, double **v_old,
       break;
   }
 
-  print1("I apply a Strang scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()\n",
+  print1("I apply a Strang scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()",
          diff, BDIFF, TDIFF, 2*M+1);
 
   /*****************************************
@@ -1311,7 +1338,7 @@ void Strang(double **v_new, double **v_old,
   }
 
   if (fabs((t_now-t0) - dt)/dt > 1e-10) {
-    print1("\n\n Inaccurate dt, actual dt performed: %e, desired: %e\n", t_now-t0, dt);
+    print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
   }
 }
 
@@ -1601,7 +1628,7 @@ void SplitImplicit(double **v_new, double **v_old,
       break;
   }
 
-  print1("I apply a Lie scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()\n",
+  print1("I apply a Lie scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()",
           diff, BDIFF, TDIFF, 2*M);
 
   /*****************************************
@@ -1682,7 +1709,7 @@ void SplitImplicit(double **v_new, double **v_old,
   }
 
   if (fabs((t_now-t0) - dt)/dt > 1e-10) {
-    print1("\n\n Inaccurate dt, actual dt performed: %e, desired: %e\n", t_now-t0, dt);
+    print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
   }
 }
 

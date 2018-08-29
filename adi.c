@@ -162,11 +162,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #elif METHOD_TC==DOUGLAS_RACHFORD
         DouglasRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_TC);
       #elif METHOD_TC==PEACEMAN_RACHFORD_MOD
-        if (NSUBS_TC!=1) {
-          print1("\n[ADI] In PEACEMAN_RACHFORD_MOD method only NSUBS_TC=1 is implemented");
-          QUIT_PLUTO(1);
-        }
-        PeacemanRachfordMod(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, FRACT_TC);
+        PeacemanRachfordMod(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, FRACT_TC, NSUBS_TC);
       #elif METHOD_TC==STRANG_LIE
         #error STRANG_LIE has not yet been tested with thermal conduction
       #elif METHOD_TC==STRANG
@@ -224,11 +220,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #elif METHOD_RES==DOUGLAS_RACHFORD
         DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_RES);
       #elif METHOD_RES==PEACEMAN_RACHFORD_MOD
-        if (NSUBS_RES!=1) {
-          print1("\n[ADI] In P-R method only NSUBS_RES=1 is implemented");
-          QUIT_PLUTO(1);
-        }
-        PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT_RES);
+        PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT_RES, NSUBS_RES);
       #elif METHOD_RES==STRANG_LIE
         Strang_Lie (Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_RES);
       #elif METHOD_RES==STRANG

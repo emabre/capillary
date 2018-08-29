@@ -183,7 +183,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
                       double **dUres, double **dEdT,
                       const Data *d, Grid *grid,
                       Lines *lines, int diff, int order,
-                      double dt, double t0, double fract);
+                      double dt, double t0, double fract, int M);
 
 void DouglasRachford( double **v_new, double **v_old,
                       double **dUres, double **dEdT,
