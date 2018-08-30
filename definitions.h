@@ -16,7 +16,7 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             NO
+#define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
 #define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
@@ -78,7 +78,7 @@ Method for Thermal conduction and Resisitivity (when ADI is chosen), available c
   - STRANG
 */
 #define METHOD_TC                  DOUGLAS_RACHFORD
-#define METHOD_RES                 PEACEMAN_RACHFORD_MOD
+#define METHOD_RES                 DOUGLAS_RACHFORD
 /*
 Number of sub-iterations in the whole "adi" scheme (at every sub-iteration the
 conservative variables are updated and the kappa/eta re-evaluated)
@@ -93,7 +93,7 @@ conservative variables and kappa, are not updated between two iterations)
 Number of sub-iterations for the magnetic diffusion scheme (the
 conservative variables and eta, are not updated between two iterations)
 */
-#define NSUBS_RES                  200
+#define NSUBS_RES                  50
 
 /*Theta value for Glowinsky's fractional theta method (a value in ]0,0.5[)*/
 // #define FRACTIONAL_THETA_THETA_TC   0.3
@@ -108,7 +108,7 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 */
 #define FIRST_JDIR_THEN_IDIR       NO
 // #define  TEST_ADI
-#define JOULE_EFFECT_AND_MAG_ENG   (YES &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
+#define JOULE_EFFECT_AND_MAG_ENG   (NO &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
 //Keep it YES for now. If YES: power flux is computed inside adi schemes (if NO, outside)
 #define POW_INSIDE_ADI             YES
 
@@ -126,6 +126,7 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 #define ACCURATE_BCS               YES
 #define EN_CONS_CHECK              YES
 #define RUNTIMESET_CALL            AFTER_SETOUTPUT
+#define CONE_LOW_TCKAPPA           (CONST_PI/4)
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
@@ -140,3 +141,4 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 // #define DEBUG_EMA
 // #define DEBUG_ACCURATE_BCS
 // #define DEBUG_BUILDIJ
+#define DEBUG_TNEGATIVE

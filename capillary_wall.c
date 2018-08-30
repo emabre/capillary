@@ -448,3 +448,17 @@ void ZeroBoundCap (double ****q, int nv, int s, int side, int vpos)
     QUIT_PLUTO(1);
   }
 }
+
+/******************************************************
+ * IsOutCone : Checks whether a certain point is
+ * outside from a cone (departing from the corner of the capillary)
+ * with a defined angle
+ * ***************************************************/
+int IsOutCone(double angle, double r, double z) {
+
+  if (atan((r-rcap_real) / (z-zcap_real)) >= angle) {
+    return 1;
+  } else {
+    return 0;
+  }
+}

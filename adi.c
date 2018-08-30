@@ -195,6 +195,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
                 /*I think in this way the update should conserve the energy(23052018)*/
                 // Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T_old[j][i]);
               #else
+                #ifdef DEBUG_TNEGATIVE
+                  if (T_new[j][i]<=0.0) {
+                    print1("! ADI: T_new[%d][%d] = %g < 0", j,i,T_new[j][i] );
+                  }
+                #endif
                 /*I think in this way the update should conserve the energy*/
                 Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T_old[j][i]);
               #endif
@@ -334,12 +339,14 @@ void SwapDoublePointers (double ***a, double ***b) {
   *b = temp;
 }
 
-/* ***********************************************************
- * Function to get T_old outside this file
- * ***********************************************************/
-double GetT_old (int j, int i) {
-  return T_old[j][i];
-}
+#if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+  /* ***********************************************************
+  * Function to get T_old outside this file
+  * ***********************************************************/
+  double GetT_old (int j, int i) {
+    return T_old[j][i];
+  }
+#endif
 
 /*******************************************************
  * COSE DA FARE, ma che sono secondarie:
