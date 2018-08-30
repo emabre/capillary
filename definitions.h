@@ -16,7 +16,7 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
+#define  RESISTIVITY             NO
 #define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
 #define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
@@ -54,6 +54,7 @@
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
 #define  SHOW_TIME_STEPS           YES
+#define  T_CUT_RHOE                1000
 
 /* ---------------------------------------------------- */
 /* Additional constants */
@@ -77,7 +78,7 @@ Method for Thermal conduction and Resisitivity (when ADI is chosen), available c
   - STRANG
 */
 #define METHOD_TC                  DOUGLAS_RACHFORD
-#define METHOD_RES                 DOUGLAS_RACHFORD
+#define METHOD_RES                 PEACEMAN_RACHFORD_MOD
 /*
 Number of sub-iterations in the whole "adi" scheme (at every sub-iteration the
 conservative variables are updated and the kappa/eta re-evaluated)
@@ -101,7 +102,7 @@ conservative variables and eta, are not updated between two iterations)
   otherwise you unbalance the scheme towards the implcit or explicit part
   (keep it in ]0,1[)*/
 // #define FRACT_TC                   0.4999999999999
-// #define FRACT_RES            0.4999999999999
+#define FRACT_RES            0.4999999999999
 /*
 To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDOM, PERMUTE.
 */

@@ -16,6 +16,11 @@ and thermal conduction) terms with the Alternating Direction Implicit algorithm*
 // I initialize the diffusion time, since it is nedded before the diffusion starts;
 double t_diff = 0;
 
+#if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
+  // Temperature, to make it available outside (by means of a function)
+  static double **T_old;
+#endif
+
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static int first_call=1;
   int i,j,k, l;
@@ -28,7 +33,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     static double **dUres;
   #endif
   #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
-    static double **T_new, **T_old, **T;
+    static double **T_new;
     static double **dEdT;
     double v[NVAR]; /*[Ema] I hope that NVAR as dimension is fine!*/
     // double rhoe_old, rhoe_new;
@@ -92,12 +97,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
     #if THERMAL_CONDUCTION == ALTERNATING_DIRECTION_IMPLICIT
       T_new = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      T = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       T_old = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       dEdT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       TOT_LOOP (k,j,i) {
         T_new[j][i] = 0.0;
-        T[j][i] = 0.0;
       }
     #endif
 
@@ -137,10 +140,10 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       #if EOS==PVTE_LAW
         DOM_LOOP(k,j,i) {
           for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
-          if (GetPV_Temperature(v, &(T[j][i]) )!=0) {
+          if (GetPV_Temperature(v, &(T_old[j][i]) )!=0) {
             print1("ADI:[Ema] Error computing temperature!\n");
           }
-          T_old[j][i] = T[j][i] = T[j][i] / KELVIN;
+          T_old[j][i] = T_old[j][i] / KELVIN;
         }
       #else
         print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
@@ -183,14 +186,14 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
                 for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
 
                 /*I think in this way the update does not conserve the energy*/
-                rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T[j][i]*KELVIN;
+                rhoe_old = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T_old[j][i]*KELVIN;
                 rhoe_old /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
                 rhoe_new = 3/2*CONST_kB*v[RHO]*UNIT_DENSITY/CONST_mp*T_new[j][i]*KELVIN;
                 rhoe_new /= (UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY);
                 Uc[k][j][i][ENG] += rhoe_new-rhoe_old;
 
                 /*I think in this way the update should conserve the energy(23052018)*/
-                // Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T[j][i]);
+                // Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T_old[j][i]);
               #else
                 /*I think in this way the update should conserve the energy*/
                 Uc[k][j][i][ENG] += dEdT[j][i]*(T_new[j][i]-T_old[j][i]);
@@ -329,6 +332,13 @@ void SwapDoublePointers (double ***a, double ***b) {
   temp = *a;
   *a = *b;
   *b = temp;
+}
+
+/* ***********************************************************
+ * Function to get T_old outside this file
+ * ***********************************************************/
+double GetT_old (int j, int i) {
+  return T_old[j][i];
 }
 
 /*******************************************************

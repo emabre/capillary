@@ -227,6 +227,8 @@ void tdm_solver(double *x, double const *diagonal, double *up,
 
 double GetCurrADI();
 
+double GetT_old(int j, int i);
+
 #if THERMAL_CONDUCTION  == ALTERNATING_DIRECTION_IMPLICIT
   void BuildIJ_TC (const Data *d, Grid *grid, Lines *lines, double **Ip, double **Im,
                   double **Jp, double **Jm, double **CI, double **CJ, double **dEdT);
