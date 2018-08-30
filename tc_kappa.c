@@ -45,8 +45,8 @@ void TC_kappa(double *v, double x1, double x2, double x3,
     #endif
 
     #ifdef CONE_LOW_TCKAPPA
-        if (IsOutCone(CONE_LOW_TCKAPPA, x1, x2) && v[RHO] < LOW_RHO_REL_TOLL*g_inputParam[DENS0]/UNIT_DENSITY)
-          k = KAPPA_LOW;
+      if (IsOutCone(CONE_LOW_TCKAPPA, x1, x2) && v[RHO] < LOW_RHO_REL_TOLL*g_inputParam[DENS0]/UNIT_DENSITY)
+        k = KAPPA_LOW;
     #endif
 
     *knor = k;

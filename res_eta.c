@@ -9,7 +9,8 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
 {
   double mu=0.0, z=0.0, T=0.0;
   double res=0.0;
-  double const res_copper = 7.8e-18, res_wall = 1.0e-7;
+  double const res_copper = 7.8e-18; // Roughly: resisitivity of warm copper
+  double const res_wall = 1.0e-7; // Roughly: resistivity of glass at 1000-2000°C
   // double unit_Mfield;
 
   if (g_inputParam[ETAX_GAU] > 0.0) {
