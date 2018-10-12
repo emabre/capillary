@@ -73,11 +73,11 @@
             <Field name="posted" type="bool">false</Field>
         </Object>
         <Object name="Box operator attributes">
-            <Field name="x" type="int">968</Field>
-            <Field name="y" type="int">633</Field>
+            <Field name="x" type="int">734</Field>
+            <Field name="y" type="int">637</Field>
             <Field name="width" type="int">345</Field>
             <Field name="height" type="int">286</Field>
-            <Field name="visible" type="bool">true</Field>
+            <Field name="visible" type="bool">false</Field>
             <Field name="posted" type="bool">false</Field>
         </Object>
         <Object name="Edge operator attributes">
