@@ -45,5 +45,7 @@ Thus I edited the file prototypes.h in the original Source folder, since copying
 ## For restarting simulations (you need the bash script cppsim, saved for instance in ~/bin and sourced from ~/bashrc or similar...)
 Type in terminal:
 ``cppsim N ORIG DEST``
-where N is the number of dbl data dump from which you want to restart, orig is the folder of the simulation you want to restart, DEST is the name you give to the restarted simulation (the folder will be created ex novo, _don't use the name of an existing folder!_).
+where N is the number of dbl data dump from which you want to restart, orig is the folder of the simulation you want to restart, DEST is the name you give to the restarted simulation (the folder will be created ex novo, _don't use the name of an existing folder!_). Remember then to restart the simulation with the usual pluto's command (in terminal):
+``./pluto -restart N``
+and maybe add nohup at the beginning of the line.
 
