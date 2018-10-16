@@ -40,4 +40,10 @@ Thus I edited the file prototypes.h in the original Source folder, since copying
 - in the local_make file, and inside definitions.h define a macro:
 `` #define PROFILE_GPROF   pluto_time_step_where_you_want_to_stop ``
 - then compile and run pluto as usual;
-- then call ``gprof pluto > filename_where_to_store_gprof_output`` 
+- then call ``gprof pluto > filename_where_to_store_gprof_output``
+
+## For restarting simulations (you need the bash script cppsim, saved for instance in ~/bin and sourced from ~/bashrc or similar...)
+Type in terminal:
+``cppsim N ORIG DEST``
+where N is the number of dbl data dump from which you want to restart, orig is the folder of the simulation you want to restart, DEST is the name you give to the restarted simulation (the folder will be created ex novo, _don't use the name of an existing folder!_).
+
