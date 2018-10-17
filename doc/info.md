@@ -49,3 +49,11 @@ where N is the number of dbl data dump from which you want to restart, orig is t
 ``./pluto -restart N``
 and maybe add nohup at the beginning of the line.
 
+## Make a table (e.g. for eta (resistivity) as function of rho, T)
+How pluto makes a table, e.g. for the internal energy:
+You can probably imitate what internal_energy.c/MakeInternalEnergyTable() does, to make a table for the internal energy:
+  - calls: ``InitializeTable2D()`` to initialize the table
+  - fills the internal energy values in the table looping: ``rhoe_tab.f[j][i] = InternalEnergyFunc(v,T);``
+  - it sets something related to later interpolation with: ``rhoe_tab.interpolation = SPLINE1;``
+  - it computes the *cubic spline coefficients*, with some lines of code (I guess I can copy-paste them, mutatis mutandis)
+  - it calls ``FinalizeTable2D()`` which computes the differences between table entries which are adiacent in x or y (I guess it might be useful later either for faster differentiation or for interpolation..)
