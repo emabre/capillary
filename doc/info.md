@@ -56,4 +56,4 @@ You can probably imitate what internal_energy.c/MakeInternalEnergyTable() does, 
   - fills the internal energy values in the table looping: ``rhoe_tab.f[j][i] = InternalEnergyFunc(v,T);``
   - it sets something related to later interpolation with: ``rhoe_tab.interpolation = SPLINE1;``
   - it computes the *cubic spline coefficients*, with some lines of code (I guess I can copy-paste them, mutatis mutandis)
-  - it calls ``FinalizeTable2D()`` which computes the differences between table entries which are adiacent in x or y (I guess it might be useful later either for faster differentiation or for interpolation..)
+  - it calls ``FinalizeTable2D()`` which computes the differences between table entries which are adiacent in x or y (I guess it might be useful later either for faster differentiation or for interpolation..) 
