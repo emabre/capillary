@@ -49,11 +49,20 @@ where N is the number of dbl data dump from which you want to restart, orig is t
 ``./pluto -restart N``
 and maybe add nohup at the beginning of the line.
 
-## Make a table (e.g. for eta (resistivity) as function of rho, T)
-How pluto makes a table, e.g. for the internal energy:
+## Using a table (e.g. for eta (resistivity) as function of rho, T)
+### How pluto makes a table
+E.g. for the internal energy:
 You can probably imitate what internal_energy.c/MakeInternalEnergyTable() does, to make a table for the internal energy:
   - calls: ``InitializeTable2D()`` to initialize the table
   - fills the internal energy values in the table looping: ``rhoe_tab.f[j][i] = InternalEnergyFunc(v,T);``
   - it sets something related to later interpolation with: ``rhoe_tab.interpolation = SPLINE1;``
   - it computes the *cubic spline coefficients*, with some lines of code (I guess I can copy-paste them, mutatis mutandis)
-  - it calls ``FinalizeTable2D()`` which computes the differences between table entries which are adiacent in x or y (I guess it might be useful later either for faster differentiation or for interpolation..) 
+  - it calls ``FinalizeTable2D()`` which computes the differences between table entries which are adiacent in x or y (I guess it might be useful later either for faster differentiation or for interpolation..)
+### How pluto reads the desired values from a table
+E.g. for the internal energy:
+``status = Table2DInterpolate(&rhoe_tab, T, rho, &rhoe);``
+status: 0 if everything works well,
+T: temperature (scalar, double),
+rho: mass density (scalar, double),
+&rhoe: pointer to internal energy (scalar, double*)
+&rhoe_tab: pointer to table (it's defined as: ``static Table2D rhoe_tab;``)
