@@ -56,7 +56,7 @@ You can probably imitate what internal_energy.c/MakeInternalEnergyTable() does, 
   - calls: ``InitializeTable2D()`` to initialize the table
   - fills the internal energy values in the table looping: ``rhoe_tab.f[j][i] = InternalEnergyFunc(v,T);``
   - it sets something related to later interpolation with: ``rhoe_tab.interpolation = SPLINE1;``
-  - it computes the *cubic spline coefficients*, with some lines of code (I guess I can copy-paste them, mutatis mutandis)
+  - it computes the *cubic spline coefficients*, with some lines of code (Actually, I guess I cannnot copy-paste them, mutatis mutandis, since I would need also an analytical expression of the derivative of the quantity I tabulate. But if I use LINEAR interpolation, then I don't need this part (I hope!))
   - it calls ``FinalizeTable2D()`` which computes the differences between table entries which are adiacent in x or y (I guess it might be useful later either for faster differentiation or for interpolation..)
 ### How pluto reads the desired values from a table
 E.g. for the internal energy:

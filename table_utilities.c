@@ -51,7 +51,9 @@ int ReadASCIITableMatrix(const char* table_finame, double **f, int Nx, int Ny) {
 /* For testing purposes */
 void ReprintTable(Table2D *tab, const char *tabname) {
   int i,j;
+  char coltop[11];
 
+  /* I know the way I am printing stuff is quite stupid, but I am quite ignorant and I just want to be quick*/
   print1("\n-----------------------------------------------");
   print1("\nTable '%s' is:", tabname);
 
@@ -61,11 +63,23 @@ void ReprintTable(Table2D *tab, const char *tabname) {
   print1("\nmin rho=%e",pow(10, tab->lnymin));
   print1("\nmax rho=%e",pow(10, tab->lnymax));
   print1("\nN rho=%d",tab->ny);
-
   print1("\n");
-  for(i=0;i<tab->nx;i++) {
-    for (j=0;j<tab->ny;j++) {
-      print1("%g ", tab->f[j][i]);
+  for (j = 0; j <tab->ny; j++){
+    sprintf(coltop, "%d", j );
+    print1("%10s ", coltop);
+  }
+  print1("\n");
+  print1("   "); // 3 spaces (this is stupid, indeed)
+  print1("               "); //some more spaces (this is stupid, indeed)
+  for (j = 0; j <tab->ny; j++){
+    print1(" %10e", tab->y[j]);
+  }
+  print1("\n");
+  for(i=0; i<tab->nx; i++) {
+    print1("%3d ", i);
+    print1("% 10e ", tab->x[i]);
+    for (j=0; j<tab->ny; j++) {
+      print1(" %10e", tab->f[j][i]);
     }
     print1("\n");
   }

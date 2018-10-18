@@ -5,6 +5,8 @@
 #include "transport_tables.h"
 
 #define RESMAX_PLASMA 1.0e-9
+#define ETA_TABLE YES
+
 
 void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double *eta)
 {
@@ -15,10 +17,12 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
   double const res_wall = 1.0e-7; // Roughly: resistivity of glass at 1000-2000°C
   // double unit_Mfield;
 
-  if (res_tab_not_done) {
-    MakeElecResistivityTable();
-    res_tab_not_done = 0;
-  }
+  #if ETA_TABLE
+    if (res_tab_not_done) {
+      MakeElecResistivityTable();
+      res_tab_not_done = 0;
+    }
+  #endif
 
   if (g_inputParam[ETAX_GAU] > 0.0) {
     

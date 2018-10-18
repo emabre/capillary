@@ -30,6 +30,10 @@ void MakeElecResistivityTable() {
   for (j = 0; j < eta_tab.ny; j++)
     for (i = 0; i < eta_tab.nx; i++)
       eta_tab.f[j][i] = f[j][i];
+  
+  eta_tab.interpolation = LINEAR;
+
+  FinalizeTable2D(&eta_tab);
 
   #if REPRINT_ETA_TAB
     ReprintTable(&eta_tab, "testTab.dat");
