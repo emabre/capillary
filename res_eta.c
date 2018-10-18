@@ -5,24 +5,19 @@
 #include "transport_tables.h"
 
 #define RESMAX_PLASMA 1.0e-9
-#define ETA_TABLE YES
-
 
 void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double *eta)
 {
+  #if ETA_TABLE
   static int res_tab_not_done = 1;
-  double mu=0.0, z=0.0, T=0.0;
+  #else
+  double mu=0.0, z=0.0;
+  #endif
+  double T=0.0;
   double res=0.0;
   double const res_copper = 7.8e-18; // Roughly: resisitivity of warm copper
   double const res_wall = 1.0e-7; // Roughly: resistivity of glass at 1000-2000°C
   // double unit_Mfield;
-
-  #if ETA_TABLE
-    if (res_tab_not_done) {
-      MakeElecResistivityTable();
-      res_tab_not_done = 0;
-    }
-  #endif
 
   if (g_inputParam[ETAX_GAU] > 0.0) {
     
@@ -55,25 +50,17 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
     //[Err] end test
 
   } else {
-
-    if (GetPV_Temperature(v, &(T) )!=0) {
-      print1("\nResistive_eta:[Ema] Error computing temperature!");
-    }
-    // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
-    GetMu(T, v[RHO], &mu);
-    z = fmax(1/mu - 1, IONIZMIN);
-
-    // if (g_time>1.65e-1) {
-    //   print1("\n--------\n");
-    //   print1("\nz:%g\n",z);
-    //   print1("\nv[RHO]*UNIT_DENSITY:%g\n",v[RHO]*UNIT_DENSITY);
-    //   print1("\nmu:%g\n",mu);
-    //   print1("\nres:%g\n",res);      
-    // }
-
-    // unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
-    // res = elRes_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
-    res = elRes_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
+    #if ETA_TABLE
+      if (res_tab_not_done) {
+        MakeElecResistivityTable();
+        res_tab_not_done = 0;
+      }
+      res = GetElecResisitivityFromTable(v[RHO], T);
+    #else
+      GetMu(T, v[RHO], &mu);
+      z = fmax(1/mu - 1, IONIZMIN);
+      res = elRes_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
+    #endif
 
     #ifdef RESMAX_PLASMA
       // This is a test limiter
@@ -91,7 +78,7 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
       res = (res_copper + res_wall + res)/3;
   }
 
-  // print1("\nT:%g, z:%g, elRes:%g, eta0:%g", T, z, res, eta0);
+    // print1("\nT:%g, z:%g, elRes:%g, eta0:%g", T, z, res, eta0);
 
   /***************************************************/
   /* [Ema] adimensionalization (it should be correct, I didn't change it)*/

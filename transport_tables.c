@@ -41,3 +41,15 @@ void MakeElecResistivityTable() {
 
   FreeArray2D((void *)f);
 }
+
+double GetElecResisitivityFromTable(double rho, double T) {
+  int    status;
+  double eta;
+
+  status = Table2DInterpolate(&eta_tab, T, rho, &eta);
+  if (status != 0){
+    print ("! GetElecResisitivityFromTable(): table interpolation failure (bound exceeded)\n");
+    QUIT_PLUTO(1);
+  }
+  return eta;
+}

@@ -130,6 +130,11 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
+/* Transport parameters, set whether they are computed from tables */
+#define ETA_TABLE YES
+/* ---------------------------------------------------- */
+
+/* ---------------------------------------------------- */
 /*    CAPILLARY GEOMETRY SETTINGS                      */
 #define RCAP                       0.05
 #define DZCAP                      0.1 /*the electrodes are wide DZCAP cm*/
