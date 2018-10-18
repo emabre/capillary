@@ -2,16 +2,23 @@
 #include "gamma_transp.h"
 #include "current_table.h"
 #include "capillary_wall.h"
+#include "transport_tables.h"
 
 #define RESMAX_PLASMA 1.0e-9
 
 void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double *eta)
 {
+  static int res_tab_not_done = 1;
   double mu=0.0, z=0.0, T=0.0;
   double res=0.0;
   double const res_copper = 7.8e-18; // Roughly: resisitivity of warm copper
   double const res_wall = 1.0e-7; // Roughly: resistivity of glass at 1000-2000°C
   // double unit_Mfield;
+
+  if (res_tab_not_done) {
+    MakeElecResistivityTable();
+    res_tab_not_done = 0;
+  }
 
   if (g_inputParam[ETAX_GAU] > 0.0) {
     
@@ -89,5 +96,4 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
   eta[JDIR] =  res / UNIT_ETA;
   eta[KDIR] =  res / UNIT_ETA;
   /**************************************************/
-
 }
