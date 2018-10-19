@@ -13,10 +13,15 @@ void MakeElecResistivityTable() {
   int N_rho, N_T;
   char table_finame[30] = "eta.dat";
   double **f;
+  int logspacing;
 
-  ReadASCIITableSettings(table_finame,
+  ReadASCIITableSettings(table_finame, &logspacing,
                          &T_min, &T_max, &N_T, 
                          &rho_min, &rho_max, &N_rho);
+  if (logspacing!=10) {
+    print1("\n> MakeElecResistivityTable(): Error! Only logspacing 10 is supported!");
+    QUIT_PLUTO(1);
+  }
 
   print1 ("\n> MakeElecResistivityTable(): Generating table (%d x %d points)\n",
            N_T, N_rho);

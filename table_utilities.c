@@ -2,7 +2,7 @@
 // #include<math.h>
 
 /* Function to read only the first lines (containing settings) of a file containing ascii table of some quantity*/
-int ReadASCIITableSettings(const char* table_finame, double *xmin, double *xmax, int *Nx, double *ymin, double *ymax, int *Ny) {
+int ReadASCIITableSettings(const char* table_finame, int *logspacing, double *xmin, double *xmax, int *Nx, double *ymin, double *ymax, int *Ny) {
   FILE *table;
 
   table = fopen(table_finame, "r");
@@ -12,6 +12,7 @@ int ReadASCIITableSettings(const char* table_finame, double *xmin, double *xmax,
   fscanf(table,"%*[^\n] \n");
 
   // Reading settings
+  fscanf(table, "%d\n", logspacing);
   fscanf(table, "%lf", xmin); // xmax
   fscanf(table, "%lf", xmax); // xmin
   fscanf(table, "%d", Nx); // xmin
@@ -51,7 +52,6 @@ int ReadASCIITableMatrix(const char* table_finame, double **f, int Nx, int Ny) {
 /* For testing purposes */
 void ReprintTable(Table2D *tab, const char *tabname) {
   int i,j;
-  char coltop[11];
 
   print1("\n-----------------------------------------------");
   print1("\nTable '%s' is:", tabname);
