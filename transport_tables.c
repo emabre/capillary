@@ -11,7 +11,7 @@ void MakeElecResistivityTable() {
   int i,j;
   double rho_min, rho_max, T_min, T_max;
   int N_rho, N_T;
-  char table_finame[30] = "testTab.dat";
+  char table_finame[30] = "eta.dat";
   double **f;
 
   ReadASCIITableSettings(table_finame,
@@ -36,7 +36,7 @@ void MakeElecResistivityTable() {
   FinalizeTable2D(&eta_tab);
 
   #if REPRINT_ETA_TAB
-    ReprintTable(&eta_tab, "testTab.dat");
+    ReprintTable(&eta_tab, table_finame);
   #endif
 
   FreeArray2D((void *)f);

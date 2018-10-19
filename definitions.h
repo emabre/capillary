@@ -131,7 +131,7 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 
 /* ---------------------------------------------------- */
 /* Transport parameters, set whether they are computed from tables */
-#define ETA_TABLE YES
+#define ETA_TABLE                  YES
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
