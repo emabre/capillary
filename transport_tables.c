@@ -13,17 +13,22 @@ void MakeElecResistivityTable() {
   double rho_min, rho_max, T_min, T_max;
   int N_rho, N_T;
   char table_finame[30] = "eta.dat";
-  char command[200] = "python3 ";
-  char options[100] = " 800.0 30000.0 6 2.5e-11 2.7e-5 4";
+  char command[300];
+  // char options[100] = " 800.0 30000.0 6 2.5e-11 2.7e-5 4";
   double **f;
   int logspacing;
 
   // I make the table with a python3 script
-  strcat(command, ETA_TAB_SCRIPT);
-  strcat(command, options);
-  strcat(command, " ");
-  strcat(command, table_finame);
-  print1("%s", command);
+  // strcat(command, ETA_TAB_SCRIPT);
+  // strcat(command, options);
+  // strcat(command, " ");
+  // strcat(command, table_finame);
+  // print1("%s", command);
+
+  sprintf(command, "python3 %s %e %e %d %e %e %d %s", ETA_TAB_SCRIPT,
+          (double)(T_TAB_MIN), (double)(T_TAB_MAX), (int) N_TAB_T,
+          (double)(RHO_TAB_MIN), (double)(RHO_TAB_MAX), (int)(N_TAB_RHO),
+          table_finame);
   system(command);
 
   // Now I read the just made table
