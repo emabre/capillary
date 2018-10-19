@@ -2,6 +2,7 @@
 #include "table_utilities.h"
 
 #define REPRINT_ETA_TAB YES
+#define ETA_TAB_SCRIPT "transport_tables_scripts/EtaTable_4pluto.py"
 
 static Table2D eta_tab; /**< A 2D table containing pre-computed values of 
                               electr. resistivity stored at equally spaced node 
@@ -15,6 +16,10 @@ void MakeElecResistivityTable() {
   double **f;
   int logspacing;
 
+  // I make the table with a python3 script
+  system("python3 transport_tables_scripts/EtaTable_4pluto.py 800.0 30000.0 6 2.5e-11 2.7e-5 4 eta.dat");
+
+  // Now I read the just made table
   ReadASCIITableSettings(table_finame, &logspacing,
                          &T_min, &T_max, &N_T, 
                          &rho_min, &rho_max, &N_rho);
@@ -23,7 +28,7 @@ void MakeElecResistivityTable() {
     QUIT_PLUTO(1);
   }
 
-  print1 ("\n> MakeElecResistivityTable(): Generating table (%d x %d points)\n",
+  print1 ("\n> MakeElecResistivityTable(): Generating table (%d x %d points)",
            N_T, N_rho);
   InitializeTable2D(&eta_tab,
                     T_min, T_max, N_T, 

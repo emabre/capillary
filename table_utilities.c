@@ -33,7 +33,7 @@ int ReadASCIITableMatrix(const char* table_finame, double **f, int Nx, int Ny) {
   table = fopen(table_finame, "r");
 
   // Skip settings part
-  for (i=0;i<8;i++) {
+  for (i=0;i<9;i++) {
     fscanf(table, "%*[^\n]\n");
     // fscanf(table, "%[^\n]\n", headers);
   }
@@ -41,7 +41,7 @@ int ReadASCIITableMatrix(const char* table_finame, double **f, int Nx, int Ny) {
   for (i=0; i<Nx; i++) {
     for (j=0; j<Ny; j++) {
       fscanf(table, "%lf", &(f[j][i]));
-      // printf("\nJust read: %g", f[i][j]);
+      // printf("\nJust read: %g", f[j][i]);
     }
   }
 

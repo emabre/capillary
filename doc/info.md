@@ -66,3 +66,10 @@ T: temperature (scalar, double),
 rho: mass density (scalar, double),
 &rhoe: pointer to internal energy (scalar, double*)
 &rhoe_tab: pointer to table (it's defined as: ``static Table2D rhoe_tab;``)
+
+### How to make a table using Python
+If you go with the terminal inside the folder *transport_tables_scripts* and type (for instance):
+``python3 EtaTable_4pluto.py 800.0 30000.0 6 2.5e-11 2.7e-5 4 eta.dat``
+You build an ASCII file containing a table (and its required header) suitable to be read from PLUTO, named *eta.tab*, for:
++ $T \in [800, 30000]$, with 6 log-spaced points,
++ $\rho \in [2.5e-11,2.5e-5]\mathrm{g/cm}^3$, with 4 log-spaced points,
