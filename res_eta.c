@@ -50,12 +50,15 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
     //[Err] end test
 
   } else {
+    if (GetPV_Temperature(v, &(T) )!=0) {
+      print1("\nResistive_eta:[Ema] Error computing temperature!");
+    }
     #if ETA_TABLE
       if (res_tab_not_done) {
         MakeElecResistivityTable();
         res_tab_not_done = 0;
       }
-      res = GetElecResisitivityFromTable(v[RHO], T);
+      res = GetElecResisitivityFromTable(v[RHO]*UNIT_DENSITY, T);
     #else
       GetMu(T, v[RHO], &mu);
       z = fmax(1/mu - 1, IONIZMIN);

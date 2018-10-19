@@ -2,7 +2,7 @@
 // #include<math.h>
 
 /* Function to read only the first lines (containing settings) of a file containing ascii table of some quantity*/
-int ReadASCIITableSettings(const char* table_finame, double *xmax, double *xmin, int *Nx, double *ymax, double *ymin, int *Ny) {
+int ReadASCIITableSettings(const char* table_finame, double *xmin, double *xmax, int *Nx, double *ymin, double *ymax, int *Ny) {
   FILE *table;
 
   table = fopen(table_finame, "r");
@@ -15,8 +15,8 @@ int ReadASCIITableSettings(const char* table_finame, double *xmax, double *xmin,
   fscanf(table, "%lf", xmin); // xmax
   fscanf(table, "%lf", xmax); // xmin
   fscanf(table, "%d", Nx); // xmin
-  fscanf(table, "%lf", ymax); // xmin
   fscanf(table, "%lf", ymin); // xmin
+  fscanf(table, "%lf", ymax); // xmin
   fscanf(table, "%d", Ny); // xmin
 
   fclose(table);

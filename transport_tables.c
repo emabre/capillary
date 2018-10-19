@@ -15,8 +15,8 @@ void MakeElecResistivityTable() {
   double **f;
 
   ReadASCIITableSettings(table_finame,
-                         &T_max, &T_min, &N_T, 
-                         &rho_max, &rho_min, &N_rho);
+                         &T_min, &T_max, &N_T, 
+                         &rho_min, &rho_max, &N_rho);
 
   print1 ("\n> MakeElecResistivityTable(): Generating table (%d x %d points)\n",
            N_T, N_rho);
