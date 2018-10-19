@@ -13,11 +13,18 @@ void MakeElecResistivityTable() {
   double rho_min, rho_max, T_min, T_max;
   int N_rho, N_T;
   char table_finame[30] = "eta.dat";
+  char command[200] = "python3 ";
+  char options[100] = " 800.0 30000.0 6 2.5e-11 2.7e-5 4";
   double **f;
   int logspacing;
 
   // I make the table with a python3 script
-  system("python3 transport_tables_scripts/EtaTable_4pluto.py 800.0 30000.0 6 2.5e-11 2.7e-5 4 eta.dat");
+  strcat(command, ETA_TAB_SCRIPT);
+  strcat(command, options);
+  strcat(command, " ");
+  strcat(command, table_finame);
+  print1("%s", command);
+  system(command);
 
   // Now I read the just made table
   ReadASCIITableSettings(table_finame, &logspacing,
