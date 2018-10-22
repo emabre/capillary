@@ -147,6 +147,10 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 #define ZCAP                       1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 /* ---------------------------------------------------- */
 
+/* ---------------------------------------------------- */
+#define MAX_LOGSIZE_MIB            4000.0
+/* ---------------------------------------------------- */
+
 /*------------------------------------------------------*/
 /*     FOR DEBUG    */
 // #define DEBUG_EMA
