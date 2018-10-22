@@ -35,7 +35,7 @@ void ComputeUserVar (const Data *d, Grid *grid)
     #elif EOS==PVTE_LAW
       for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
       if (GetPV_Temperature(v, &(T[k][j][i]) )!=0) {
-        print1("ComputeUserVar:[Ema] Error computing temperature!");
+        print1("ComputeUserVar:[Ema]Err.comp.temp");
       }
       GetMu(T[k][j][i], v[RHO], &(mu[k][j][i]));
       ioniz[k][j][i] = 1/mu[k][j][i] - 1;

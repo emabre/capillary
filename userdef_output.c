@@ -110,7 +110,7 @@ void ComputeUserVar (const Data *d, Grid *grid)
       DOM_LOOP (k,j,i) {
         for (nv=NVAR; nv--;) v[nv] = d_corrected_r->Vc[nv][k][j][i];
         if (GetPV_Temperature(v, &(T_c_r[k][j][i]) )!=0) {
-          print1("ComputeUserVar:[Ema] Error computing temperature!");
+          print1("ComputeUserVar:[Ema]Err.comp.temp");
         }
       }
     }
@@ -120,7 +120,7 @@ void ComputeUserVar (const Data *d, Grid *grid)
       DOM_LOOP (k,j,i) {
         for (nv=NVAR; nv--;) v[nv] = d_corrected_z->Vc[nv][k][j][i];
         if (GetPV_Temperature(v, &(T_c_z[k][j][i]) )!=0) {
-          print1("ComputeUserVar:[Ema] Error computing temperature!");
+          print1("ComputeUserVar:[Ema]Err.comp.temp");
         }
       }
     }
@@ -206,7 +206,7 @@ void ComputeUserVar (const Data *d, Grid *grid)
       #elif EOS==PVTE_LAW
         for (nv=NVAR; nv--;) v[nv] = d->Vc[nv][k][j][i];
         if (GetPV_Temperature(v, &(T[k][j][i]) )!=0) {
-          print1("ComputeUserVar:[Ema] Error computing temperature!");
+          print1("ComputeUserVar:[Ema]Err.comp.temp");
         }
         // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
         GetMu(T[k][j][i], v[RHO], &mu);

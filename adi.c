@@ -141,12 +141,12 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         DOM_LOOP(k,j,i) {
           for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
           if (GetPV_Temperature(v, &(T_old[j][i]) )!=0) {
-            print1("ADI:[Ema] Error computing temperature!\n");
+            print1("ADI:[Ema]Err.comp.temp\n");
           }
           T_old[j][i] = T_old[j][i] / KELVIN;
         }
       #else
-        print1("ADI:[Ema] Error computing temperature, this EOS not implemented!")
+        print1("ADI:[Ema]Err.comp.temp, this EOS not implemented!")
       #endif
 
       /* ---- Avdance T with ADI ---- */

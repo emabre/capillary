@@ -14,7 +14,7 @@ void TC_kappa(double *v, double x1, double x2, double x3,
   // double unit_Mfield;
 
   if (GetPV_Temperature(v, &(T) )!=0) {
-    print1("\nTC_kappa:[Ema] Error computing temperature!");
+    print1("\nTC_kappa:[Ema]Err.comp.temp");
   }
   // print1("\nI just assigned %g to T[%d][%d][%d] for output",T[k][j][i], k,j,i);
   GetMu(T, v[RHO], &mu);

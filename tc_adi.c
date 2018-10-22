@@ -165,7 +165,7 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
         HeatCapacity_test(v, r[i], z[j], theta[k], &(dEdT[j][i]) );
       #else
         if (GetPV_Temperature(v, &(T) )!=0) {
-          print1("\nTC_kappa:[Ema] Error computing temperature!");
+          print1("\nTC_kappa:[Ema]Err.comp.temp");
         }
         HeatCapacity(v, T, &(dEdT[j][i]) );
       #endif
