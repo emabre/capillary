@@ -1,3 +1,4 @@
+#!/home/konrad/anaconda3/bin//python3
 # To plot pluto's grid written in the usual pluto's file grid.out
 
 import numpy as np
@@ -6,7 +7,7 @@ import os
 
 # <codecell>
 # Options
-plt.ion()
+# plt.ion()
 plt.close("all")
 output_dir = "out"
 grid_fi = os.path.join(output_dir, "grid.out")
@@ -113,4 +114,5 @@ ax_r.plot(ratio_x1, label=r'$\Delta x1_i/\Delta x1_{i+1}$')
 ax_r.plot(ratio_x2, label=r'$\Delta x2_i/\Delta x2_{i+1}$')
 ax_r.legend()
 
+plt.ioff()
 plt.show()
