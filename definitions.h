@@ -126,7 +126,7 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 #define ACCURATE_BCS               YES
 #define EN_CONS_CHECK              YES
 #define RUNTIMESET_CALL            AFTER_SETOUTPUT
-#define CONE_LOW_TCKAPPA           (CONST_PI/4)
+// #define CONE_LOW_TCKAPPA           (CONST_PI/4)
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
