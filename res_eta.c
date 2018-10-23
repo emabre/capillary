@@ -20,35 +20,9 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
   // double unit_Mfield;
 
   if (g_inputParam[ETAX_GAU] > 0.0) {
-    
     // Fixed value from pluto.ini
     res = g_inputParam[ETAX_GAU];
-
-    //[Err] delete next test if lines
-    // if (x2 >= zcap_real-0.5*dzcap_real && x2 <= zcap_real)
-    //   res = g_inputParam[ETAX_GAU] * (1 + 100*(x2-(zcap_real-0.5*dzcap_real))/(0.5*dzcap_real));
-    // else if (x2 > zcap_real)
-    //   res = g_inputParam[ETAX_GAU] * 100;
-    // else if (x2 < zcap_real-0.5*dzcap_real)
-    //   res = g_inputParam[ETAX_GAU];
-    // else {
-    //   print1("[Resistive eta]Something wrong!");
-    //   QUIT_PLUTO(1);
-    // }
-
-    //[Err] delete next test if lines
-    // if (x2 >= zcap_real && x2 <= zcap_real+0.5*dzcap_real)
-    //   res = g_inputParam[ETAX_GAU] * (1 + 100*(x2-zcap_real)/(0.5*dzcap_real));
-    // else if (x2 > zcap_real+0.5*dzcap_real)
-    //   res = g_inputParam[ETAX_GAU] * 100;
-    // else if (x2 < zcap_real)
-    //   res = g_inputParam[ETAX_GAU];
-    // else {
-    //   print1("[Resistive eta]Something wrong!");
-    //   QUIT_PLUTO(1);
-    // }
-    //[Err] end test
-
+    
   } else {
     if (GetPV_Temperature(v, &(T) )!=0) {
       print1("\nResistive_eta:[Ema]Err.comp.temp");

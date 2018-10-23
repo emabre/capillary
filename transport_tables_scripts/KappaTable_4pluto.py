@@ -33,7 +33,7 @@ kT = T*gau.kB
 ioniz_min = 1e-10
 
 # I compute eta
-eta_Dev = np.zeros((N_T, N_rho))
+kappa_Dev = np.zeros((N_T, N_rho))
 x = np.zeros((N_T, N_rho))
 y = np.zeros((N_T, N_rho))
 for rr in range(N_rho):
@@ -42,14 +42,16 @@ for rr in range(N_rho):
         x,y = iz.ionizDissSaha(rho[rr], kT[tt])
         # I put a lower limit on ys
         y = max(ioniz_min, y)
-        eta_Dev[tt,rr] = ppdv.elRes_norm(y, rho[rr], kT[tt])
+        # For the moment I use only the traslative thermal cond., but I think
+        # I should include also the reactive thermal cond.
+        kappa_Dev[tt,rr] = ppdv.thermCond_norm(y, rho[rr], kT[tt])
 
 # <codecell>
 # Print eta table to ASCII file
 if (wa.write_ASCIITable_4pluto(tab_fi, 10,
                               T_min, T_max, N_T,
                               rho_min, rho_max, N_rho,
-                              eta_Dev) == 0):
-    print('Eta table successfully created!')
+                              kappa_Dev) == 0):
+    print('Kappa table successfully created!')
 else:
-    raise ValueError('Eta table successfully created!')
+    raise ValueError('Kappa table NOT successfully created!')

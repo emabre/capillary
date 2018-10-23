@@ -2,10 +2,15 @@
 #include "table_utilities.h"
 
 #define REPRINT_ETA_TAB YES
+#define REPRINT_KAPPA_TAB YES
 #define ETA_TAB_SCRIPT "transport_tables_scripts/EtaTable_4pluto.py"
+#define KAPPA_TAB_SCRIPT "transport_tables_scripts/KappaTable_4pluto.py"
 
-static Table2D eta_tab; /**< A 2D table containing pre-computed values of 
+static Table2D eta_tab; /*    A 2D table containing pre-computed values of 
                               electr. resistivity stored at equally spaced node 
+                              values of Log(T) and Log(rho) .*/
+static Table2D kappa_tab; /*    A 2D table containing pre-computed values of 
+                              therm. conductivity stored at equally spaced node 
                               values of Log(T) and Log(rho) .*/
 
 void MakeElecResistivityTable() {
@@ -17,13 +22,6 @@ void MakeElecResistivityTable() {
   // char options[100] = " 800.0 30000.0 6 2.5e-11 2.7e-5 4";
   double **f;
   int logspacing;
-
-  // I make the table with a python3 script
-  // strcat(command, ETA_TAB_SCRIPT);
-  // strcat(command, options);
-  // strcat(command, " ");
-  // strcat(command, table_finame);
-  // print1("%s", command);
 
   sprintf(command, "python3 %s %e %e %d %e %e %d %s", ETA_TAB_SCRIPT,
           (double)(T_TAB_MIN), (double)(T_TAB_MAX), (int) N_TAB_T,
@@ -74,4 +72,64 @@ double GetElecResisitivityFromTable(double rho, double T) {
     QUIT_PLUTO(1);
   }
   return eta;
+}
+
+void MakeThermConductivityTable() {
+  int i,j;
+  double rho_min, rho_max, T_min, T_max;
+  int N_rho, N_T;
+  char table_finame[30] = "kappa.dat";
+  char command[300];
+  double **f;
+  int logspacing;
+
+  sprintf(command, "python3 %s %e %e %d %e %e %d %s", KAPPA_TAB_SCRIPT,
+          (double)(T_TAB_MIN), (double)(T_TAB_MAX), (int) N_TAB_T,
+          (double)(RHO_TAB_MIN), (double)(RHO_TAB_MAX), (int)(N_TAB_RHO),
+          table_finame);
+  system(command);
+
+  // Now I read the just made table
+  ReadASCIITableSettings(table_finame, &logspacing,
+                         &T_min, &T_max, &N_T, 
+                         &rho_min, &rho_max, &N_rho);
+  if (logspacing!=10) {
+    print1("\n> MakeThermConductivityTable(): Error! Only logspacing 10 is supported!");
+    QUIT_PLUTO(1);
+  }
+
+  print1 ("\n> MakeThermConductivityTable(): Generating table (%d x %d points)",
+           N_T, N_rho);
+  InitializeTable2D(&kappa_tab,
+                    T_min, T_max, N_T, 
+                    rho_min, rho_max, N_rho);
+  
+  f = ARRAY_2D(N_rho, N_T, double);
+  ReadASCIITableMatrix(table_finame, f, N_T, N_rho);
+
+  for (j = 0; j < kappa_tab.ny; j++)
+    for (i = 0; i < kappa_tab.nx; i++)
+      kappa_tab.f[j][i] = f[j][i];
+  
+  kappa_tab.interpolation = LINEAR;
+
+  FinalizeTable2D(&kappa_tab);
+
+  #if REPRINT_ETA_TAB
+    ReprintTable(&kappa_tab, table_finame);
+  #endif
+
+  FreeArray2D((void *)f);
+}
+
+double GetThermConductivityFromTable(double rho, double T) {
+  int    status;
+  double kappa;
+
+  status = Table2DInterpolate(&kappa_tab, T, rho, &kappa);
+  if (status != 0){
+    print ("! GetThermConductivityFromTable(): table interpolation failure (bound exceeded)\n");
+    QUIT_PLUTO(1);
+  }
+  return kappa;
 }

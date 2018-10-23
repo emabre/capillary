@@ -132,10 +132,11 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* ---------------------------------------------------- */
 /* Transport parameters, settings for computing them from tables*/
 #define ETA_TABLE                  YES
+#define KAPPA_TABLE                YES
 #define RHO_TAB_MIN                2.5e-10
 #define RHO_TAB_MAX                2.5e-4
 #define N_TAB_RHO                  30
-#define T_TAB_MIN                  T_CUT_RHOE
+#define T_TAB_MIN                  (0.8*T_CUT_RHOE)
 #define T_TAB_MAX                  5e4
 #define N_TAB_T                    100
 /* ---------------------------------------------------- */

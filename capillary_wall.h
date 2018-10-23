@@ -69,4 +69,6 @@ void ReflectiveBoundCap (double ****q, int nv, int s, int side, int vpos);
 void ZeroBoundCap (double ****q, int nv, int s, int side, int vpos);
 void SetNotEvolvedVar (int nv);
 
+int IsOutCone(double angle, double r, double z);
+
 #endif
