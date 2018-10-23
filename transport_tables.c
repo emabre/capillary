@@ -13,6 +13,9 @@ static Table2D kappa_tab; /*    A 2D table containing pre-computed values of
                               therm. conductivity stored at equally spaced node 
                               values of Log(T) and Log(rho) .*/
 
+/*****************************************************************************/
+/* Function to build a table of electrical resistivity using a python script*/
+/*****************************************************************************/
 void MakeElecResistivityTable() {
   int i,j;
   double rho_min, rho_max, T_min, T_max;
@@ -62,6 +65,9 @@ void MakeElecResistivityTable() {
   FreeArray2D((void *)f);
 }
 
+/*************************************************************/
+/* Function to get the Electrical res. from table            */
+/*************************************************************/
 double GetElecResisitivityFromTable(double rho, double T) {
   int    status;
   double eta;
@@ -74,6 +80,9 @@ double GetElecResisitivityFromTable(double rho, double T) {
   return eta;
 }
 
+/*****************************************************************************/
+/* Function to build a table of thermal conductivity using a python script   */
+/*****************************************************************************/
 void MakeThermConductivityTable() {
   int i,j;
   double rho_min, rho_max, T_min, T_max;
@@ -122,6 +131,9 @@ void MakeThermConductivityTable() {
   FreeArray2D((void *)f);
 }
 
+/*************************************************************/
+/* Function to get the thermal cond. from table              */
+/*************************************************************/
 double GetThermConductivityFromTable(double rho, double T) {
   int    status;
   double kappa;
