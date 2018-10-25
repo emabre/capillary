@@ -742,7 +742,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
   v_new_save = v_new;
 
   print1("\nI apply a Peaceman-Rachford scheme for diff=%d (BDIFF=%d,TDIFF=%d)\n", diff, BDIFF, TDIFF);
-  print1(" -> I do %d calls to ImplicitUpdate() and %d calls to ExplicitUpdate()", 2*M,2*M);
+  print1(" -> I do %d calls to ImplicitUpdate() and %d calls to ExplicitUpdate()\n", 2*M,2*M);
 
   /*****************************************
   * ---------------------------------------
@@ -937,7 +937,6 @@ void DouglasRachford (double **v_new, double **v_old,
                       double dt, double t0, int M) {
 
   static double **v_aux, **v_hat, **v_old_aux; // auxiliary solution vector
-  double **v_new_save; // To save the actual address of v_new
   static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
   static int first_call = 1;
   double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
@@ -1014,12 +1013,10 @@ void DouglasRachford (double **v_new, double **v_old,
 
   // I copy v_old inside v_old_aux, as I cannot use directly v_old in the cycle, it will be modified!
   LINES_LOOP(lines[IDIR], l, j, i)
-      v_new[j][i] = v_old[j][i];
-  
-  v_new_save = v_new;
+    v_old_aux[j][i] = v_old[j][i];
 
   print1("\nI apply a Douglas-Rachford scheme for diff=%d (BDIFF=%d,TDIFF=%d)\n", diff, BDIFF, TDIFF);
-  print1(" -> I do %d calls to ImplicitUpdate() and %d calls to ExplicitUpdate()", 2*M,2*M);
+  print1(" -> I do %d calls to ImplicitUpdate() and %d calls to ExplicitUpdate()\n", 2*M,2*M);
 
   /*****************************************
   * ---------------------------------------
@@ -1034,8 +1031,6 @@ void DouglasRachford (double **v_new, double **v_old,
   MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
 
   for (s=0; s<M; s++) {
-    /* ---- Swap pointers to be ready for next cycle ---*/
-    SwapDoublePointers (&v_old_aux, &v_new);
     
     ApplyBCs(lines, d, grid, t_now, dir1);
     /**********************************
@@ -1107,7 +1102,7 @@ void DouglasRachford (double **v_new, double **v_old,
      (b.2) Implicit update sweeping DIR1
     **********************************/
     ApplyBCs (lines, d, grid, t_now + dts, dir1);
-    ImplicitUpdate (v_new, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
+    ImplicitUpdate (v_old_aux, v_aux, NULL, H1p, H1m, C1, &lines[dir1],
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff],
                     (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
                     dts, dir1);
@@ -1115,16 +1110,16 @@ void DouglasRachford (double **v_new, double **v_old,
       printf("\nafter impl dir1:\n");
       printf("\nv_aux(input)\n");
       printmat(v_aux, NX2_TOT, NX1_TOT);
-      printf("\nv_new(result)\n");
-      printmat(v_new, NX2_TOT, NX1_TOT);
+      printf("\nv_old_aux(result)\n");
+      printmat(v_old_aux, NX2_TOT, NX1_TOT);
     #endif
     #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
-        ApplyBCsonGhosts (v_new, &lines[dir2],
+        ApplyBCsonGhosts (v_old_aux, &lines[dir2],
                           lines[dir2].lbound[diff], lines[dir2].rbound[diff],
                           dir2);
 
-        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_new, v_hat, grid, &lines[dir2],
+        ResEnergyIncreaseDR(dUres_aux, H2p, H2m, v_old_aux, v_hat, grid, &lines[dir2],
                             dts, dir2);
         #ifdef DEBUG_EMA
           printf("\nafter ResEnergyIncrease dir1");
@@ -1134,7 +1129,7 @@ void DouglasRachford (double **v_new, double **v_old,
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] = dUres_aux[j][i];
 
-        ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
+        ResEnergyIncrease(dUres_aux, H1p, H1m, v_old_aux, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
                           dts, dir1);
 
@@ -1154,16 +1149,8 @@ void DouglasRachford (double **v_new, double **v_old,
     t_now += dts;
   }
 
-  /* If necessary, I copy the final result to the correct memory address,
-    to get it available outside.
-    THe reason why I have to do this is that I mixed up the addresses calling:
-    "SwapDoublePointers (&v_old_aux, &v_new);", but this exchange of addresses
-    cannot be seen from outside the functin, as in C parameters are passed 
-    to functinos by value!*/
-  if (v_new_save != v_new) {
-    LINES_LOOP(lines[IDIR], l, j, i)
-      v_new_save[j][i] = v_new[j][i];
-  }
+  LINES_LOOP(lines[IDIR], l, j, i)
+    v_new[j][i] = v_old_aux[j][i];
   
   if (fabs((t_now-t0) - dt)/dt > 1e-10) {
     print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
@@ -1251,7 +1238,7 @@ void Strang(double **v_new, double **v_old,
       break;
   }
 
-  print1("I apply a Strang scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()",
+  print1("I apply a Strang scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()\n",
          diff, BDIFF, TDIFF, 2*M+1);
 
   /*****************************************
@@ -1628,7 +1615,7 @@ void SplitImplicit(double **v_new, double **v_old,
       break;
   }
 
-  print1("I apply a Lie scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()",
+  print1("I apply a Lie scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()\n",
           diff, BDIFF, TDIFF, 2*M);
 
   /*****************************************

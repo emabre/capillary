@@ -1,0 +1,47 @@
+Studio effetto strano (righe di T nella mappa bidimensionale) vicino ad elettrodo (DZCAP... proprio sopra a DZCAP.. pare sia così):
+Caso 1:
+    -no resistenza
+    -si conduzione
+    -fluido in moto
+procede bene (fino a circa 500ns, quando lo ho bloccato intenzionalmente)
+Caso 2:
+    -si resitenza
+    -si conduzione
+    -fluido in moto
+    -courant parameter abbassato (da 0.5 a 0.1)
+procede male (righe al primo dump (1ns))
+Caso 3:
+    -si resistenza
+    -si conduzione
+    -fluido bloccato (tra l'altro pare che sia davvero bloccato! Bene!)
+procede male, al primo dump ho righe (1ns).. notare che compaiono prima che l'output dica:
+"error computing temperature", quindi il problema non è (credo) un problema legato al calcolo di T dall'energia totale (ovvero non c'è energia cinetica troppo grande..!).
+
+
+DA FARE:
+- output per J fatto bene (jx e jy... magari come vettore??)
+- calcolo di gamma per il caso pvte_law nella funzione dove era calcolato male
+
+
+ALTRE INFO:
+le scrivo qui perchè non so se sono generali:
+Pare che DOM_LOOP faccia un ciclo partendo dall'indice 2 fino all'indice 2+dimX,
+dove dimX (variabile inventata da me ora) è il numero di celle di mesh in direzione X (X=i,j,k)
+Immagino quindi che lasci due spazi per le ghost cells presso tutti i bordi (i alto e basso, j alto e basso
+k alto e basso).
+
+FORSE È MEGLIO NON USARE GetCurrent() PER FARE OUTPUT? perchè chissà cosa fa.. forse tocca anche delle variabili globali,
+e poi tanto la densità di corrente che calcolo io non sarà mai uguale a quella usata nel codice,
+tanto vale fare una funzinoe apposita per l'output, e magari stamparmi la corrente calcolata
+all'interno del codice solo per fare debugging
+
+FORSE E' MEGLIO CAMBIARE LA FILOSOFIA DEL SETTING DELLE CONDIZIONI AL CONTORNO:
+UNA VOLTA TROVATI GLI INDICI PIÙ VICINI AI PUNTI DI INTERESSI (FINE CAPILLARE, INIZIO ELETTRODO..)
+SI RIDEFINISCONO I VALORI DI QUELLE POSIZIONI IN MODO DA FARLE COINCIDERE CON I CENTRI DELLE celle
+CORRISPONDENTI A QUEGLI INDICI APPENA TROVATI. NON È BANALE DA FARE PERCHÈ BISOGNA CONTROLLARE
+CHE NON SUCCEDA CHE POI CALCOLANDO DELLE DIFFERENZE (CON LA CONFICURAZIONE ATTUALE) NON SI INCAPPI IN
+QUALCHE ZERO (E DIVISIONE PER 0)
+
+Verifica valore di densità di corrente:
+Jz: nel mezzo del capillare pare che Jz sia calcolata bene,
+    tuttavia nelle celle in asse e in quelle subito vicino c'è un problema. Per esempio, se il vaore corretto di J sarebbe -1.9e13, in asse ho -1.27e13, e nella cella subito vicino all'asse c'è -2.07e13. Tuttavia Jz1D pare essere sempre corretto...
