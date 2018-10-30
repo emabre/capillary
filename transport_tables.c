@@ -5,6 +5,8 @@
 #define REPRINT_KAPPA_TAB YES
 #define ETA_TAB_SCRIPT "transport_tables_scripts/EtaTable_4pluto.py"
 #define KAPPA_TAB_SCRIPT "transport_tables_scripts/KappaTable_4pluto.py"
+#define ETA_TAB_FILE_NAME "eta.dat"
+#define KAPPA_TAB_FILE_NAME "kappa.dat"
 
 static Table2D eta_tab; /*    A 2D table containing pre-computed values of 
                               electr. resistivity stored at equally spaced node 
@@ -20,17 +22,19 @@ void MakeElecResistivityTable() {
   int i,j;
   double rho_min, rho_max, T_min, T_max;
   int N_rho, N_T;
-  char table_finame[30] = "eta.dat";
+  char table_finame[30] = ETA_TAB_FILE_NAME;
   char command[300];
   // char options[100] = " 800.0 30000.0 6 2.5e-11 2.7e-5 4";
   double **f;
   int logspacing;
 
-  sprintf(command, "python3 %s %e %e %d %e %e %d %s", ETA_TAB_SCRIPT,
-          (double)(T_TAB_MIN), (double)(T_TAB_MAX), (int) N_TAB_T,
-          (double)(RHO_TAB_MIN), (double)(RHO_TAB_MAX), (int)(N_TAB_RHO),
-          table_finame);
-  system(command);
+  #if MAKE_ETA_TAB_FILE
+    sprintf(command, "python3 %s %e %e %d %e %e %d %s", ETA_TAB_SCRIPT,
+            (double)(T_TAB_MIN), (double)(T_TAB_MAX), (int) N_TAB_T,
+            (double)(RHO_TAB_MIN), (double)(RHO_TAB_MAX), (int)(N_TAB_RHO),
+            table_finame);
+    system(command);
+  #endif
 
   // Now I read the just made table
   ReadASCIITableSettings(table_finame, &logspacing,
@@ -87,16 +91,18 @@ void MakeThermConductivityTable() {
   int i,j;
   double rho_min, rho_max, T_min, T_max;
   int N_rho, N_T;
-  char table_finame[30] = "kappa.dat";
+  char table_finame[30] = KAPPA_TAB_FILE_NAME;
   char command[300];
   double **f;
   int logspacing;
 
-  sprintf(command, "python3 %s %e %e %d %e %e %d %s", KAPPA_TAB_SCRIPT,
-          (double)(T_TAB_MIN), (double)(T_TAB_MAX), (int) N_TAB_T,
-          (double)(RHO_TAB_MIN), (double)(RHO_TAB_MAX), (int)(N_TAB_RHO),
-          table_finame);
-  system(command);
+  #if MAKE_KAPPA_TAB_FILE
+    sprintf(command, "python3 %s %e %e %d %e %e %d %s", KAPPA_TAB_SCRIPT,
+            (double)(T_TAB_MIN), (double)(T_TAB_MAX), (int) N_TAB_T,
+            (double)(RHO_TAB_MIN), (double)(RHO_TAB_MAX), (int)(N_TAB_RHO),
+            table_finame);
+    system(command);
+  #endif
 
   // Now I read the just made table
   ReadASCIITableSettings(table_finame, &logspacing,

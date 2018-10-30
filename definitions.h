@@ -133,6 +133,8 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* Transport parameters, settings for computing them from tables*/
 #define ETA_TABLE                  YES
 #define KAPPA_TABLE                YES
+#define MAKE_ETA_TAB_FILE          YES /* If YES, the ascii table file will be made with python script, */
+#define MAKE_KAPPA_TAB_FILE        YES /* instead, if NO it is assumed that the file is already present*/
 #define RHO_TAB_MIN                2.5e-10
 #define RHO_TAB_MAX                2.5e-4
 #define N_TAB_RHO                  30

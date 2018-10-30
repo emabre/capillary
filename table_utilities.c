@@ -6,6 +6,10 @@ int ReadASCIITableSettings(const char* table_finame, int *logspacing, double *xm
   FILE *table;
 
   table = fopen(table_finame, "r");
+  if (table == NULL) {
+    print1("ReadASCIITableSettings: Error while opening table file %s", table_finame);
+    QUIT_PLUTO(1);
+  }
 
   // Read the first 2 comment lines
   fscanf(table,"%*[^\n] \n");
