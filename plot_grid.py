@@ -1,4 +1,4 @@
-#!/home/konrad/anaconda3/bin//python3
+#!/usr/bin/env python3
 # To plot pluto's grid written in the usual pluto's file grid.out
 
 import numpy as np
