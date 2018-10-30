@@ -108,9 +108,9 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 */
 #define FIRST_JDIR_THEN_IDIR       NO
 // #define  TEST_ADI
-#define JOULE_EFFECT_AND_MAG_ENG   (NO &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
+#define JOULE_EFFECT_AND_MAG_ENG   (YES &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
 //Keep it YES for now. If YES: power flux is computed inside adi schemes (if NO, outside)
-#define POW_INSIDE_ADI             YES
+#define POW_INSIDE_ADI             NO
 
 /*--------------------------------------------------------------------------*/
 /* Other settings                                                           */

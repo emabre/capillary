@@ -950,9 +950,6 @@ void DouglasRachford (double **v_new, double **v_old,
   #if (JOULE_EFFECT_AND_MAG_ENG)
     static double **dUres_aux; // auxiliary vector containing a contribution to ohmic heating
   #endif
-  #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
-    static double **Br_avg, **dUres_aux1;
-  #endif
 
   /*
   print1("\nAttenzione al calcolo dell'energia che entra dai bordi per conduzione/elettromagnetica:\n");
@@ -964,10 +961,6 @@ void DouglasRachford (double **v_new, double **v_old,
     v_old_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #if (JOULE_EFFECT_AND_MAG_ENG)
       dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    #endif
-    #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
-      Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-      dUres_aux1 = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #endif
     Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -1141,9 +1134,6 @@ void DouglasRachford (double **v_new, double **v_old,
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
       }
-    #endif
-    #if (JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI)
-      #error "!POW_INSIDE_ADI" is not implemented in DouglasRachford
     #endif
 
     t_now += dts;

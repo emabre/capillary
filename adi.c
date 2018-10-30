@@ -123,6 +123,24 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     }
   #endif
 
+  #if JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI
+    #ifdef SPLIT_DIFF_ADV_ADV_DIFF
+    if ((g_stepNumber%2) == 0) {
+    #else
+    #error You should think carefully how to do this when SPLIT_DIFF_ADV_ADV_DIFF is not def.
+    /* Reason for this error: the B source (eta J²) computation should be done, maybe just before (after)
+       the first (second) advection in the Strang splitting, thus when you are out of this function!*/
+    // if ((g_stepNumber%2) == 1) {
+    #endif
+
+      COMPUTE POWER SOURCE TERM AND ADD IT TO Uc (you d better defining a function, copy it from parts of DouglasRachford)
+
+      ConsToPrimLines (Uc, Vc, d->flag, lines);
+      //[Err] Remove next line
+      Boundary(d, ALL_DIR, grid);
+    }
+  #endif
+
   t_start_sub = g_time; /*g_time è: "The current integration time."(dalla docuementazione in Doxigen)*/
   dt_reduced = dt/adi_steps;
 
@@ -264,6 +282,26 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     Boundary(d, ALL_DIR, grid);
 
   }
+
+  #if JOULE_EFFECT_AND_MAG_ENG && !POW_INSIDE_ADI
+    #ifdef SPLIT_DIFF_ADV_ADV_DIFF
+    if ((g_stepNumber%2) == 1) {
+    #else
+    #error You should think carefully how to do this when SPLIT_DIFF_ADV_ADV_DIFF is not def.
+    /* Reason for this error: the B source (eta J²) computation should be done, maybe just before (after)
+        the first (second) advection in the Strang splitting, thus when you are out of this function!*/
+    // if ((g_stepNumber%2) == 0) {
+    #endif
+
+      COMPUTE POWER SOURCE TERM AND ADD IT TO Uc (you d better defining a function, copy it from parts of DouglasRachford)
+
+      ConsToPrimLines (Uc, Vc, d->flag, lines);
+      //[Err] Remove next line
+      Boundary(d, ALL_DIR, grid);
+    }
+  #endif
+
+
   // Update the time where the diffusion process has arrived
   t_diff = t_start_sub;
 }
