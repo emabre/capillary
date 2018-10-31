@@ -113,8 +113,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       contains Vc as well as Uc (for future improvements).
       [Ema] (Comment copied from sts.c)
     --------------------------------------------------------------------------- */
-  //[Err] Remove next line
-  Boundary(d, ALL_DIR, grid);
   PrimToConsLines (Vc, Uc, lines);
 
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
@@ -131,8 +129,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       printf("\nNstep:%ld",g_stepNumber);
       printf("\ns:%d\n", s);
     #endif
-    // [Err] Test, decomment later
-    // Boundary(d, ALL_DIR, grid);
+    Boundary(d, ALL_DIR, grid);
 
     /* ---- Build temperature vector ---- */
     // I must re-buil the temperature at every step as it depends on U[][][][ENG]
@@ -245,7 +242,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
           Uc[k][j][i][BX3] = Br_new[j][i]*r_1[i];
 
           #if (JOULE_EFFECT_AND_MAG_ENG)
-            // [Err] Decomment next line
             Uc[k][j][i][ENG] += dUres[j][i];
           #endif
         }
@@ -260,9 +256,6 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
     ConsToPrimLines (Uc, Vc, d->flag, lines);
 
     t_start_sub += dt_reduced;
-    //[Err] Remove next line
-    Boundary(d, ALL_DIR, grid);
-
   }
 
   // Update the time where the diffusion process has arrived
