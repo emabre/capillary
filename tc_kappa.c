@@ -27,7 +27,9 @@ void TC_kappa(double *v, double x1, double x2, double x3,
 
   } else {
     if (GetPV_Temperature(v, &(T) )!=0) {
-      print1("\nTC_kappa:[Ema]Err.comp.temp");
+      #if WARN_ERR_COMP_TEMP
+        print1("\nTC_kappa:[Ema]Err.comp.temp");
+      #endif
     }
     #if KAPPA_TABLE
       if (tc_tab_not_done) {

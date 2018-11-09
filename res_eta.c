@@ -28,7 +28,9 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
     
   } else {
     if (GetPV_Temperature(v, &(T) )!=0) {
-      print1("\nResistive_eta:[Ema]Err.comp.temp");
+      #if WARN_ERR_COMP_TEMP
+        print1("\nResistive_eta:[Ema]Err.comp.temp");
+      #endif
     }
     #if ETA_TABLE
       if (res_tab_not_done) {

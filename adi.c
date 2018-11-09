@@ -138,7 +138,9 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         DOM_LOOP(k,j,i) {
           for (nv=NVAR; nv--;) v[nv] = Vc[nv][k][j][i];
           if (GetPV_Temperature(v, &(T_old[j][i]) )!=0) {
-            print1("ADI:[Ema]Err.comp.temp\n");
+            #if WARN_ERR_COMP_TEMP
+              print1("ADI:[Ema]Err.comp.temp\n");
+            #endif
           }
           T_old[j][i] = T_old[j][i] / KELVIN;
         }

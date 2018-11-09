@@ -165,3 +165,4 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 // #define DEBUG_BUILDIJ
 #define DEBUG_TNEGATIVE
 #define WARN_CTP_FAIL  NO
+#define WARN_ERR_COMP_TEMP NO
