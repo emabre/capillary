@@ -20,8 +20,8 @@
   // and also, how do you compute the BCs of time steps where you did not use the bcs to advance the solution??
   #error Did you check carefully that you can do this? (e.g.: is the averaging of the bcs/ghost cells.. ok? And the fact that power is computed ad start or end of adi methods??)
 #endif
-#if (POW_INSIDE_ADI == NO) && (METHOD_RES==DOUGLAS_RACHFORD)
-  #error Even for METHOD_RES==DOUGLAS_RACHFORD, POW_INSIDE_ADI==NO is not ready!
+#if (POW_INSIDE_ADI == YES) && (MAG_PS_OUTSIDE_SSTEP == YES)
+  #error Power computation cannot be inside adi (POW_INSIDE_ADI) if all magnetic power is outside strang step (MAG_PS_OUTSIDE_CYCLE)
 #endif
 
 #ifdef PRESUBS_RES

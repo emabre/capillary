@@ -111,6 +111,10 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 #define JOULE_EFFECT_AND_MAG_ENG   (YES &&  RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT)
 //Keep it YES for now. If YES: power flux is computed inside adi schemes (if NO, outside)
 #define POW_INSIDE_ADI             YES
+/* If YES: magnetic field related power sources (joule effect, div(B x (B x v))) are not
+   computed inside diffusion/advection steps, but outisde, before and after the general
+   Strang-splitted step. */
+#define MAG_PS_OUTSIDE_SSTEP       NO
 
 /*--------------------------------------------------------------------------*/
 /* Other settings                                                           */
@@ -160,3 +164,4 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 // #define DEBUG_ACCURATE_BCS
 // #define DEBUG_BUILDIJ
 #define DEBUG_TNEGATIVE
+#define WARN_CTP_FAIL  NO

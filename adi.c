@@ -241,7 +241,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         LINES_LOOP(lines[IDIR], l, j, i) {
           Uc[k][j][i][BX3] = Br_new[j][i]*r_1[i];
 
-          #if (JOULE_EFFECT_AND_MAG_ENG)
+          #if (JOULE_EFFECT_AND_MAG_ENG && (!MAG_PS_OUTSIDE_SSTEP))
             Uc[k][j][i][ENG] += dUres[j][i];
           #endif
         }
