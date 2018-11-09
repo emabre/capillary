@@ -25,7 +25,9 @@ int extern i_cap_inter_end, j_cap_inter_end, j_elec_start;
                 through the boundary)
   en_tc_in : energy gained by conduction through boundary
   en_adv_in: energy gained by advection of the total energy rhough boundary*/
-double extern en_tc_in, en_adv_in, en_res_in;
+#if EN_CONS_CHECK
+  double extern en_tc_in, en_adv_in, en_res_in;
+#endif
 
 /* ********************************************************************* */
 /*! [Ema]The Corr structure contains the correction to the solution 3D array

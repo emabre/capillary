@@ -5,6 +5,7 @@
 #include "transport_tables.h"
 
 #define RESMAX_PLASMA 1.0e-9
+#define REALISTIC_WALL_ETA NO
 
 void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double *eta)
 {
@@ -46,13 +47,15 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
       }
     #endif
 
-    // I check if I am on the wall or electrode (or in an intermediate region where I smooth the res)
-    if (x2>zcap_real-dzcap_real+dzcap_real*0.1 && x2<=zcap_real && x1>=rcap_real)
-      res = 0.5*(res_copper+res);
-    else if (x2<zcap_real-dzcap_real-dzcap_real*0.1 && x1>=rcap_real)
-      res = 0.5*(res_wall+res);
-    else if (x2>=zcap_real-dzcap_real-dzcap_real*0.1 && x2<=zcap_real-dzcap_real+dzcap_real*0.1 && x1>=rcap_real)
-      res = (res_copper + res_wall + res)/3;
+    #if REALISTIC_WALL_ETA
+      // I check if I am on the wall or electrode (or in an intermediate region where I smooth the res)
+      if (x2>zcap_real-dzcap_real+dzcap_real*0.1 && x2<=zcap_real && x1>=rcap_real)
+        res = 0.5*(res_copper+res);
+      else if (x2<zcap_real-dzcap_real-dzcap_real*0.1 && x1>=rcap_real)
+        res = 0.5*(res_wall+res);
+      else if (x2>=zcap_real-dzcap_real-dzcap_real*0.1 && x2<=zcap_real-dzcap_real+dzcap_real*0.1 && x1>=rcap_real)
+        res = (res_copper + res_wall + res)/3;
+    #endif
   }
 
     // print1("\nT:%g, z:%g, elRes:%g, eta0:%g", T, z, res, eta0);
