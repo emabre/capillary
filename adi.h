@@ -18,7 +18,7 @@
   // POW_INSIDE_ADI != YES is not allowed now since I would involve a correct averaging of the bcs between timesteps
   // Note that averaging the bcs correctly is complicated.. how do you treat the internal corner cell(which represents 2 bcs!)?
   // and also, how do you compute the BCs of time steps where you did not use the bcs to advance the solution??
-  #error Did you check carefully that you can do this? (e.g.: is the averaging of the bcs/ghost cells.. ok? And the fact that power is computed ad start or end of adi methods??)
+  #error Did you check carefully that you can do this? (e.g.: is the averaging of the bcs/ghost cells.. ok? And the fact that power is computed ad start or end of adi methods?)
 #endif
 #if (POW_INSIDE_ADI == YES) && (MAG_PS_OUTSIDE_SSTEP == YES)
   #error Power computation cannot be inside adi (POW_INSIDE_ADI) if all magnetic power is outside strang step (MAG_PS_OUTSIDE_CYCLE)
