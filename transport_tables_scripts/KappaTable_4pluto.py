@@ -42,9 +42,9 @@ for rr in range(N_rho):
         x,y = iz.ionizDissSaha(rho[rr], kT[tt])
         # I put a lower limit on ys
         y = max(ioniz_min, y)
-        # For the moment I use only the traslative thermal cond., but I think
-        # I should include also the reactive thermal cond.
-        kappa_Dev[tt,rr] = ppdv.thermCond_norm(y, rho[rr], kT[tt])
+        # Hydrogen thermal conductivity (traslative + reactive, no internal)
+        # assuming full dissociation and partial ionization. No B field.
+        kappa_Dev[tt,rr] = ppdv.thermCond_tot_norm(y, rho[rr], kT[tt])
 
 # <codecell>
 # Print eta table to ASCII file

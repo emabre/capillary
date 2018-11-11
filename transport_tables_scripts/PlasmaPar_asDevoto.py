@@ -2,6 +2,7 @@ import numpy as np
 import constantsGAU_ema as gau
 import ionization as iz
 import itertools as it
+from scipy.special import factorial as fact
 
 # <codecell>
 
@@ -156,6 +157,12 @@ def elRes_norm_3(z,rho,kT):
     
     return 1/sigma
 
+def thermCond_tot_norm(z, rho, kT, corr=True, B=0.0):
+    ''' Total thermal conductivity (reactive + traslative, no internal)
+        for a fully dissociated and partially ionized Hydrogen gas (H,H+,e-).
+    '''
+    return thermCond_norm(z, rho, kT) + thermCond_r_norm(z, rho, kT)
+
 def thermCond_e_norm(z, rho, kT, corr=True, B=0.0):
     ''' Translational thermal conductivity of electrons, as computed by Devoto in "Simplified expressions
         for the transport properties of ionized monatomic gases"(1967).
@@ -233,8 +240,8 @@ def thermCond_norm(z, rho, kT):
     return addend+lprime
 
 def thermCond_r_norm(z, rho, kT):
-    ''' Reactive thermal conductivity (for hydrogen gas) as in Devoto, "Transport properties of ionized
-        monatomic gases"(1966) (see eq. (17))
+    ''' Reactive thermal conductivity (for hydrogen gas) as in Jesper Janssen's PhD Thesis, pag 97,98.
+        For now I assume complete dissociation (not accurate at low T, around 3000,4000K)
     '''
     T = kT/gau.kB
     ne = iz.elec_dens(rho,z)
@@ -245,15 +252,60 @@ def thermCond_r_norm(z, rho, kT):
     n = np.array([ne, ne, n_p-ne])
     m = np.array([gau.me, gau.mp, gau.me+gau.mp])
     
-    # THIS IS PROBABLY WRONG, MAYBE IT SHOULD BE A BIT HIGHER!
-    dh = 13.6*1.6e-12  # Entalpy difference in erg
+    # Omega_i,j^(l,s)
+    Om, mu = Q2Om(Q, kT, m, ret_redmass=True)
     
-    DA, DAT = diffuAmbANDthermDiffuAmb(kT, rho, n, m, Q)
+    p = n.sum()*kT
+    Dkl = 3/16*(kT**2)/(p*mu*Om[0,0,:,:])
     
-    lambda_r = dh * (n.sum()*gau.mp/(2*rho*kT*T)*(n[0]*n[2])/(n[0]+n[2])*dh*DA \
-                     + DAT/(gau.mp+T))
+    # Stochiometric coefficients
+    R = np.array([+1,+1,-1])
+    
+    # I build the A quantity (it's just one real number, instead, if I had considered
+    # also the dissociation reaction, it would have been a 2x2 matrix)
+    A = 0
+    # Molar fractions
+    x = n/n.sum()
+    for kk in range(0,len(R)-1): # species are 3, so 3-1=2 (last kk will be 1)
+        for ll in range(kk+1,len(R)): # Species are 3 (last ll will be 2)
+            A += kT/(Dkl[kk,ll]*p) * x[kk]*x[ll] * (R[kk]/x[kk]-R[ll]/x[ll])**2
+    
+    # Entalpy difference (in reaction e- + H+ <-> H) per particle, in erg
+    # Original
+    DH = 13.6*1.6e-12
+    # Test, I am not sure it is ok!
+    DH += 5/2*kT  # See the reason for this at page 50 of Ema's INFN book (Q3)
+    # print("WARNING: I did a test, I computed DH using ionization energy + 5/2*kB*T")
+    # test, multiply by factor (delete later)
+#    DH = DH * 1.25
+    
+    lambda_r = 1/(kT*T)*DH**2/A
     
     return lambda_r
+
+# I am not sure this is correct! (maybe dh is not correct but check also the rest)
+#def thermCond_r_norm_Dev(z, rho, kT):
+#    ''' Reactive thermal conductivity (for hydrogen gas) as in Devoto,
+#        "Transport coefficients of partially ionized argon"(1966) (see eq. (17))
+#    '''
+#    T = kT/gau.kB
+#    ne = iz.elec_dens(rho,z)
+#    Q = makeQ(kT, ne)
+#    # Total number density of free particles in gas (ne + nH+ + nH), assuming 
+#    # complete dissociation:
+#    n_p = rho/(gau.me+gau.mp)
+#    n = np.array([ne, ne, n_p-ne])
+#    m = np.array([gau.me, gau.mp, gau.me+gau.mp])
+#    
+#    # THIS IS PROBABLY WRONG, MAYBE IT SHOULD BE A BIT HIGHER!
+#    dh = 13.6*1.6e-12  # Entalpy difference in erg
+#    
+#    DA, DAT = diffuAmbANDthermDiffuAmb(kT, rho, n, m, Q)
+#    
+#    lambda_r = dh * (n.sum()*gau.mp/(2*rho*kT*T)*(n[0]*n[2])/(n[0]+n[2])*dh*DA \
+#                     + DAT/(gau.mp+T))
+#    
+#    return lambda_r
 
 def diffu_ee(kT, rho, n, Q):
     ''' Ordinary diffusion coefficient for electrons,
@@ -543,6 +595,22 @@ def q_mp_complete(m, p, n_i, m_i, Q):
                                                     +80*m_i[jj]*m3*Q[1,3,ii,idx])))
     
     return q
+
+def Q2Om(Q, kT, m, ret_redmass=False):
+    '''Computes the paramters Omega_i,j^(l,s) as in Janssen's PhD page 93
+       (see also hirschfelder page 526 and Ema's INFN book, page 29 left),
+       [Q2Om means: "convert Q to Omega"]'''
+    Om = np.zeros(Q.shape)
+    mu = np.zeros(Q.shape[2:4])
+    for ll,ss in it.product(range(Q.shape[0]), range(Q.shape[1])):
+        for ii,jj in it.product(range(Q.shape[2]), range(Q.shape[3])):
+            l = ll+1
+            s = ss+1
+            mu[ii,jj] = m[ii]*m[jj]/(m[ii]+m[jj]) # reduced mass
+            Om[ll,ss,ii,jj] = Q[ll,ss,ii,jj]* 0.5*fact(s+1)*(1-0.5*(1+(-1)**l)/(1+l)) / np.sqrt(2*np.pi*mu[ii,jj]/kT)
+    if ret_redmass:
+        return Om, mu
+    return Om
 
 def makeQ(kT, ne):
     ''' To fill the required collision integrals for a mixture of
