@@ -214,7 +214,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
 void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
                        double **Hp, double **Hm, double **C,
                        Lines *lines,
-                       int compute_inflow, double *inflow,
+                       int compute_inflow, double *inflow, Grid *grid,
                        double dt, int dir);
 void ApplyBCsonGhosts(double **v, Lines *lines,
                       Bcs *lbound, Bcs *rbound,

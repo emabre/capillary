@@ -451,11 +451,12 @@ for instance for ResEnergyIncrease())
 void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
                        double **Hp, double **Hm, double **C,
                        Lines *lines,
-                       int compute_inflow, double *inflow,
+                       int compute_inflow, double *inflow, Grid *grid,
                        double dt, int dir) {
   int i,j,l;
   int ridx, lidx;
   int Nlines = lines->N;
+  double *dz, *rR, *rL;
   static double **rhs;
   static int first_call = 1;
 
@@ -464,14 +465,12 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
     first_call = 0;
   }
 
-  if (compute_inflow) {
-    print1("\nin ExplicitUpdateDR the inflow is not currently computed!");
-  }
-
   if (dir == IDIR) {
     /********************
     * Case direction IDIR
     *********************/
+    dz = grid[JDIR].dx_glob;
+
     for (l = 0; l < Nlines; l++) {
       j = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
@@ -489,6 +488,12 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
           rhs[j][i] = b[j][i];
       }
 
+      if (compute_inflow) {
+        /*--- I compute the inflow ---*/
+        *inflow += (b_der[j][lidx-1]-b_der[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
+        *inflow += (b_der[j][ridx+1]-b_der[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
+      }
+
       /*--- Actual update ---*/
       for (i = lidx; i <= ridx; i++)
         v[j][i] = rhs[j][i] + dt/C[j][i] * (b_der[j][i+1]*Hp[j][i] - b_der[j][i]*(Hp[j][i]+Hm[j][i]) + b_der[j][i-1]*Hm[j][i]);
@@ -497,6 +502,9 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
     /********************
     * Case direction JDIR
     *********************/
+    rR = grid[IDIR].xr_glob;
+    rL = grid[IDIR].xl_glob;
+
     for (l = 0; l < Nlines; l++) {
       i = lines->dom_line_idx[l];
       lidx = lines->lidx[l];
@@ -512,6 +520,12 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
         at the next call of this function I will write over the memory of the old b*/
         for (j = lidx; j <= ridx; j++)
           rhs[j][i] = b[j][i];
+      }
+
+      if (compute_inflow) {
+        /*--- I compute the inflow ---*/
+        *inflow += (b_der[lidx-1][i]-b_der[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        *inflow += (b_der[ridx+1][i]-b_der[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
       }
 
       /*--- Actual update ---*/
@@ -1082,7 +1096,7 @@ void DouglasRachford (double **v_new, double **v_old,
     // I compute phi~ (and save it in v_aux)
     // Note: I have already set the BCs on v_old_aux in dir2!
     ExplicitUpdateDR (v_aux, v_old_aux, v_hat, NULL, H2p, H2m, C2, &lines[dir2],
-                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in,
+                      (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
                       dts, dir2);
     #ifdef DEBUG_EMA
       printf("\nafter expl(DR) dir2:\n");
