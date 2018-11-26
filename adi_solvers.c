@@ -13,6 +13,9 @@ and thermal conduction) terms with the Alternating Direction Implicit algorithm*
 #include <time.h>
 #include <stdlib.h>
 
+/*Relative tollerance for checking that at each call of an ADI scheme, the algorithm advances for all the reqired total time*/
+#define   DT_REL_TOLL  1e-8
+
 /****************************************************************************
 Performs an implicit update of a diffusive problem (either for B or for T).
 It also applies the bcs on the ghost cells of the output matrix (**v) (useful later
@@ -913,7 +916,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       v_new_save[j][i] = v_new[j][i];
   }
   
-  if (fabs((t_now-t0) - dt)/dt > 1e-10) {
+  if (fabs((t_now-t0) - dt)/dt > DT_REL_TOLL) {
     print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
   }
 }
@@ -1142,7 +1145,7 @@ void DouglasRachford (double **v_new, double **v_old,
   LINES_LOOP(lines[IDIR], l, j, i)
     v_new[j][i] = v_old_aux[j][i];
   
-  if (fabs((t_now-t0) - dt)/dt > 1e-10) {
+  if (fabs((t_now-t0) - dt)/dt > DT_REL_TOLL) {
     print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
   }
 }
@@ -1314,7 +1317,7 @@ void Strang(double **v_new, double **v_old,
     t_now += dt_now;
   }
 
-  if (fabs((t_now-t0) - dt)/dt > 1e-10) {
+  if (fabs((t_now-t0) - dt)/dt > DT_REL_TOLL) {
     print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
   }
 }
@@ -1685,7 +1688,7 @@ void SplitImplicit(double **v_new, double **v_old,
     t_now += dts;
   }
 
-  if (fabs((t_now-t0) - dt)/dt > 1e-10) {
+  if (fabs((t_now-t0) - dt)/dt > DT_REL_TOLL) {
     print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
   }
 }
