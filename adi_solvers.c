@@ -42,6 +42,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
    don't need to reallocate at every domain line that I update */
   static double *diagonal, *upper, *lower, *rhs, *x;
   double *dz, *rR, *rL;
+  double vol_lidx, vol_ridx;
 
   if (first_call) {
     diagonal = ARRAY_1D(MAX(NX1_TOT, NX2_TOT), double);
@@ -114,7 +115,11 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[j][lidx-1] = 2*lbound[l].values[0] - b[j][lidx];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (v[j][lidx-1]-v[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
+          // Original
+          // *inflow += (v[j][lidx-1]-v[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
+          // Modified 28/11/2018
+          vol_lidx = CONST_PI*(rR[lidx]*rR[lidx] - rL[lidx]*rL[lidx])*dz[j];
+          *inflow += (v[j][lidx-1]-v[j][lidx]) * Hm[j][lidx] * dt/C[j][lidx] * vol_lidx;
         }
 
       } else if (lbound[l].kind == NEUMANN_HOM) {
@@ -135,7 +140,11 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[j][ridx+1] = 2*rbound[l].values[0] - v[j][ridx];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (v[j][ridx+1]-v[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
+          // Original
+          // *inflow += (v[j][ridx+1]-v[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
+          // Modified 28/11/2018
+          vol_ridx = CONST_PI*(rR[ridx]*rR[ridx] - rL[ridx]*rL[ridx])*dz[j];
+          *inflow += (v[j][ridx+1]-v[j][ridx]) * Hp[j][ridx] * dt/C[j][ridx] * vol_ridx;
         }
 
       } else if (rbound[l].kind == NEUMANN_HOM) {
@@ -213,7 +222,11 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[lidx-1][i] = 2*lbound[l].values[0] - v[lidx][i];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (v[lidx-1][i]-v[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+          // Original
+          // *inflow += (v[lidx-1][i]-v[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+          // Modified 28/11/2018
+          vol_lidx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[lidx];
+          *inflow += (v[lidx-1][i]-v[lidx][i]) * Hm[lidx][i] * dt/C[lidx][i] * vol_lidx;
         }
 
       } else if (lbound[l].kind == NEUMANN_HOM) {
@@ -233,7 +246,11 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[ridx+1][i] = 2*rbound[l].values[0] - v[ridx][i];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (v[ridx+1][i]-v[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+          // Original
+          // *inflow += (v[ridx+1][i]-v[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+          // Modified 28/11/2018
+          vol_ridx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[ridx];
+          *inflow += (v[ridx+1][i]-v[ridx][i]) * Hp[ridx][i] * dt/C[ridx][i] * vol_ridx;
         }
         
       } else if (rbound[l].kind == NEUMANN_HOM) {
@@ -270,7 +287,9 @@ void ExplicitUpdate (double **v, double **b, double **source,
   int i,j,l;
   int ridx, lidx;
   int Nlines = lines->N;
-  double *dz, *rR, *rL;
+  double *rR, *rL;
+  double *dz;
+  double vol_lidx, vol_ridx;
   static double **rhs;
   static int first_call = 1;
 
@@ -312,7 +331,11 @@ void ExplicitUpdate (double **v, double **b, double **source,
         // b[j][lidx-1] = 1/3*b[j][lidx+1] + 8/3*lbound[l].values[0] - 2*b[j][lidx];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (b[j][lidx-1]-b[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
+          // Original
+          // *inflow += (b[j][lidx-1]-b[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
+          // Modified 28/11/2018
+          vol_lidx = CONST_PI*(rR[lidx]*rR[lidx] - rL[lidx]*rL[lidx])*dz[j];
+          *inflow += dt/C[j][lidx] * (b[j][lidx-1]-b[j][lidx]) * Hm[j][lidx] * vol_lidx;
         }
 
       } else if (lbound[l].kind == NEUMANN_HOM) {
@@ -335,7 +358,11 @@ void ExplicitUpdate (double **v, double **b, double **source,
         // b[j][ridx+1] = 1/3*b[j][ridx-1] + 8/3*rbound[l].values[0] - 2*b[j][ridx];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (b[j][ridx+1]-b[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
+          // Original
+          // *inflow += (b[j][ridx+1]-b[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
+          // Modified 28/11/2018
+          vol_ridx = CONST_PI*(rR[ridx]*rR[ridx] - rL[ridx]*rL[ridx])*dz[j];
+          *inflow += dt/C[j][ridx] * (b[j][ridx+1]-b[j][ridx]) * Hp[j][ridx] * vol_ridx;
         }
 
       } else if (rbound[l].kind == NEUMANN_HOM) {
@@ -388,7 +415,11 @@ void ExplicitUpdate (double **v, double **b, double **source,
         // b[lidx-1][i] = 1/3*b[lidx+1][i] + 8/3*lbound[l].values[0] - 2*b[lidx][i];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (b[lidx-1][i]-b[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+          // Original
+          // *inflow += (b[lidx-1][i]-b[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+          // Modified 28/11/2018
+          vol_lidx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[lidx];
+          *inflow += dt/C[lidx][i] * (b[lidx-1][i]-b[lidx][i]) * Hm[lidx][i] * vol_lidx;
         }
       
       } else if (lbound[l].kind == NEUMANN_HOM) {
@@ -411,7 +442,11 @@ void ExplicitUpdate (double **v, double **b, double **source,
         // b[ridx+1][i] = 1/3*b[ridx-1][i] + 8/3*rbound[l].values[0] - 2*b[ridx][i];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          *inflow += (b[ridx+1][i]-b[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+          // Original
+          // *inflow += (b[ridx+1][i]-b[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+          // Modified 28/11/2018
+          vol_ridx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[ridx];
+          *inflow += dt/C[ridx][i] * (b[ridx+1][i]-b[ridx][i]) * Hp[ridx][i] * vol_ridx;
         }
 
       } else if (rbound[l].kind == NEUMANN_HOM) {
@@ -433,7 +468,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
       }
     }
   } else {
-    print1("[ImplicitUpdate] Unimplemented choice for 'dir'!");
+    print1("[ExplicitUpdate] Unimplemented choice for 'dir'!");
     QUIT_PLUTO(1);
   }
 }
@@ -456,9 +491,11 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
   int i,j,l;
   int ridx, lidx;
   int Nlines = lines->N;
-  double *dz, *rR, *rL;
+  double *rR, *rL;
+  double *dz;
   static double **rhs;
   static int first_call = 1;
+  double vol_lidx, vol_ridx;
 
   if (first_call) {
     rhs = ARRAY_2D(NX2_TOT, NX1_TOT, double);
@@ -490,8 +527,14 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
 
       if (compute_inflow) {
         /*--- I compute the inflow ---*/
-        *inflow += (b_der[j][lidx-1]-b_der[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
-        *inflow += (b_der[j][ridx+1]-b_der[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
+        // Original
+        // *inflow += (b_der[j][lidx-1]-b_der[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
+        // *inflow += (b_der[j][ridx+1]-b_der[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
+        // Modified 28/11/2018
+        vol_lidx = CONST_PI*(rR[lidx]*rR[lidx] - rL[lidx]*rL[lidx])*dz[j];
+        vol_ridx = CONST_PI*(rR[ridx]*rR[ridx] - rL[ridx]*rL[ridx])*dz[j];
+        *inflow += (b_der[j][lidx-1]-b_der[j][lidx]) * Hm[j][lidx] * dt/C[j][lidx] * vol_lidx;
+        *inflow += (b_der[j][ridx+1]-b_der[j][ridx]) * Hp[j][ridx] * dt/C[j][ridx] * vol_ridx;
       }
 
       /*--- Actual update ---*/
@@ -502,8 +545,8 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
     /********************
     * Case direction JDIR
     *********************/
-    rR = grid[IDIR].xr_glob;
-    rL = grid[IDIR].xl_glob;
+    // rR = grid[IDIR].xr_glob;
+    // rL = grid[IDIR].xl_glob;
 
     for (l = 0; l < Nlines; l++) {
       i = lines->dom_line_idx[l];
@@ -524,8 +567,14 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
 
       if (compute_inflow) {
         /*--- I compute the inflow ---*/
-        *inflow += (b_der[lidx-1][i]-b_der[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
-        *inflow += (b_der[ridx+1][i]-b_der[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        // Original
+        // *inflow += (b_der[lidx-1][i]-b_der[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        // *inflow += (b_der[ridx+1][i]-b_der[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        // Modified 28/11/2018
+        vol_lidx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[lidx];
+        vol_ridx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[ridx];
+        *inflow += (b_der[lidx-1][i]-b_der[lidx][i]) * Hm[lidx][i] * dt/C[lidx][j] * vol_lidx;
+        *inflow += (b_der[ridx+1][i]-b_der[ridx][i]) * Hp[ridx][i] * dt/C[ridx][j] * vol_ridx;
       }
 
       /*--- Actual update ---*/
@@ -535,7 +584,7 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
       }
     }
   } else {
-    print1("[ImplicitUpdate] Unimplemented choice for 'dir'!");
+    print1("[ExplicitUpdateDR] Unimplemented choice for 'dir'!");
     QUIT_PLUTO(1);
   }
 }
@@ -572,7 +621,7 @@ void ApplyBCsonGhosts(double **v, Lines *lines,
         /* I assign the ghost value (needed by ResEnergyIncrease and maybe others..).*/
         v[j][lidx-1] = v[j][lidx];
       } else {
-        print1("\n[ExplicitUpdate]Error setting left bc (in dir i), not known bc kind!");
+        print1("\n[ApplyBCsonGhosts]Error setting left bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
       }
       // Cells near right boundary
@@ -584,7 +633,7 @@ void ApplyBCsonGhosts(double **v, Lines *lines,
       } else if (rbound[l].kind == NEUMANN_HOM) {
         v[j][ridx+1] = v[j][ridx];
       } else {
-        print1("\n[ExplicitUpdate]Error setting right bc (in dir i), not known bc kind!");
+        print1("\n[ApplyBCsonGhosts]Error setting right bc (in dir i), not known bc kind!");
         QUIT_PLUTO(1);
       }
     }
@@ -607,7 +656,7 @@ void ApplyBCsonGhosts(double **v, Lines *lines,
       } else if (lbound[l].kind == NEUMANN_HOM) {
         v[lidx-1][i] = v[lidx][i];
       } else {
-        print1("\n[ExplicitUpdate]Error setting left bc (in dir j), not known bc kind!");
+        print1("\n[ApplyBCsonGhosts]Error setting left bc (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
       // Cells near right boundary
@@ -619,12 +668,12 @@ void ApplyBCsonGhosts(double **v, Lines *lines,
       } else if (rbound[l].kind == NEUMANN_HOM) {
         v[ridx+1][i] = v[ridx][i];
       } else {
-        print1("\n[ExplicitUpdate]Error setting right bc (in dir j), not known bc kind!");
+        print1("\n[ApplyBCsonGhosts]Error setting right bc (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
       }
     }
   } else {
-    print1("[ImplicitUpdate] Unimplemented choice for 'dir'!");
+    print1("[ApplyBCsonGhosts] Unimplemented choice for 'dir'!");
     QUIT_PLUTO(1);
   }
 }

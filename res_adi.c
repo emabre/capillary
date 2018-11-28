@@ -236,6 +236,7 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   double *dV, *inv_dz, *r_1, *r;
   double *rL, *rR;
   Bcs *rbound, *lbound;
+  double vol_lidx, vol_ridx;
 
   /*[Opt] Maybe I could do that it allocates static arrays with size NMAX_POINT (=max(NX1_TOT,NX2_TOT)) ?*/
   if (first_call) {
@@ -287,8 +288,14 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
 
       if (compute_inflow) {
         /* --- I compute the inflow (energy entering from boundary) ---*/
-        *inflow += F[j][lidx-1] * 2*CONST_PI*rL[lidx]*dz[j] * dt;
-        *inflow += -F[j][ridx] * 2*CONST_PI*rR[ridx]*dz[j] * dt;
+        // Old
+        // *inflow += F[j][lidx-1] * 2*CONST_PI*rL[lidx]*dz[j] * dt;
+        // *inflow += -F[j][ridx] * 2*CONST_PI*rR[ridx]*dz[j] * dt;
+        // Modified 27/11/2018
+        vol_lidx = CONST_PI*(rR[lidx]*rR[lidx] - rL[lidx]*rL[lidx])*dz[j];
+        vol_ridx = CONST_PI*(rR[ridx]*rR[ridx] - rL[ridx]*rL[ridx])*dz[j];
+        *inflow += rL[lidx]*F[j][lidx-1]*dt/dV[lidx] * vol_lidx;
+        *inflow += -rR[ridx]*F[j][ridx]*dt/dV[ridx] * vol_ridx;
       }
     }
 
@@ -311,8 +318,14 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
       
       if (compute_inflow) {
         /* --- I compute the inflow (energy entering from boundary) ---*/
-        *inflow += F[lidx-1][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
-        *inflow += -F[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        // Old
+        // *inflow += F[lidx-1][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        // *inflow += -F[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        // Modified 27/11/2018
+        vol_lidx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[lidx];
+        vol_ridx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[ridx];
+        *inflow += F[lidx-1][i]*dt*inv_dz[lidx] * vol_lidx;
+        *inflow += -F[ridx][i]*dt*inv_dz[ridx] * vol_ridx;
       }
     }
   }
