@@ -257,11 +257,15 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   rbound = lines->rbound[BDIFF];
   dr = grid[IDIR].dx;
   r_1 = grid[IDIR].r_1;
-  dz = grid[JDIR].dx;
+  dz = grid[JDIR].dx_glob;
   rR = grid[IDIR].xr_glob;
   rL = grid[IDIR].xl_glob;
 
   if (dir == IDIR) {
+    /********************
+    * Case direction IDIR
+    *********************/
+
     dV = grid[IDIR].dV;
     r = grid[IDIR].x_glob;
 
@@ -300,6 +304,10 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
     }
 
   } else if (dir == JDIR) {
+    /********************
+    * Case direction JDIR
+    *********************/
+
     inv_dz = grid[JDIR].inv_dx;
 
     for (l = 0; l<Nlines; l++) {

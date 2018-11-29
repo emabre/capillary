@@ -508,7 +508,7 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
 
   rR = grid[IDIR].xr_glob;
   rL = grid[IDIR].xl_glob;
-  dz = grid[JDIR].dx_glob;
+  dz = grid[JDIR].dx_glob; // it is equal to grid[JDIR].xr_glob - grid[JDIR].xl_glob
 
   if (dir == IDIR) {
     /********************
