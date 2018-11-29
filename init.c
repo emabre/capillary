@@ -11,6 +11,10 @@
 
 #define AS_DIFF 3
 
+/*For defining how the mass density transition from inside to outside of capillary is done*/
+#define COS2 1
+#define SHARP 2
+
 /*Auxiliary function to set the temperature*/
 void setT(const Data *d, double T, int i, int j, int k);
 
@@ -34,10 +38,11 @@ void Init (double *us, double x1, double x2, double x3)
   #else
     double rho_red_vac = 0.001; // Fraction of rho inside capillary, used to emumate vacuum
   #endif
-  double decay_z, decay_r; // Decay lenths in r and z, for setting density
-
-  decay_r = 0.1/UNIT_LENGTH;
-  decay_z = 0.5/UNIT_LENGTH;
+  #if SMOOTH_DENS == COS2
+    // Decay lenths in r and z, for setting density
+    double decay_r = 0.1/UNIT_LENGTH;
+    double decay_z = 0.5/UNIT_LENGTH;
+  #endif
 
   // Just a check that the geometrical settings makes sense:
   if (DZCAP > ZCAP){
@@ -104,11 +109,17 @@ void Init (double *us, double x1, double x2, double x3)
   if (x2 > zcap && x1 <= rcap) {
     // No field outside capillary
     us[iBPHI] = 0.0;
-    if (x2 < zcap+decay_z) {
-      us[RHO] = (1-rho_red_vac)*dens0;
-      us[RHO] *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
-      us[RHO] += rho_red_vac*dens0;
-    }
+    #if SMOOTH_DENS == COS2
+      if (x2 < zcap+decay_z) {
+        us[RHO] = (1-rho_red_vac)*dens0;
+        us[RHO] *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
+        us[RHO] += rho_red_vac*dens0;
+      }
+    #elif SMOOTH_DENS == SHARP
+      // Do nothing rho is already set outside 
+    #else
+      #error Choice for SMOOTH_DENS not understood
+    #endif
   }
   /* ------------------------------------------------------
       Outside capillary, above capillary  (not in internal boundary)
@@ -116,12 +127,18 @@ void Init (double *us, double x1, double x2, double x3)
   if (x2 > zcap && x1 > rcap) {
     // No field outside capillary
     us[iBPHI] = 0.0;
-    if (x1 < rcap+decay_r && x2 < zcap+decay_z) {
-      us[RHO] = (1-rho_red_vac)*dens0;
-      us[RHO] *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
-      us[RHO] *= cos(0.5*CONST_PI*(x1-rcap)/decay_r)*cos(0.5*CONST_PI*(x1-rcap)/decay_r);
-      us[RHO] += rho_red_vac*dens0;
-    }
+    #if SMOOTH_DENS == COS2
+      if (x1 < rcap+decay_r && x2 < zcap+decay_z) {
+        us[RHO] = (1-rho_red_vac)*dens0;
+        us[RHO] *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
+        us[RHO] *= cos(0.5*CONST_PI*(x1-rcap)/decay_r)*cos(0.5*CONST_PI*(x1-rcap)/decay_r);
+        us[RHO] += rho_red_vac*dens0;
+      }
+     #elif SMOOTH_DENS == SHARP
+      // Do nothing rho is already set outside 
+    #else
+      #error Choice for SMOOTH_DENS not understood
+    #endif
   }
   /* -----------------------------------------------------
       Everywhere
