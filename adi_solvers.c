@@ -52,11 +52,14 @@ void ImplicitUpdate (double **v, double **b, double **source,
     x = ARRAY_1D(MAX(NX1_TOT, NX2_TOT), double);
   }
 
+  rR = grid[IDIR].xr_glob;
+  rL = grid[IDIR].xl_glob;
+  dz = grid[JDIR].dx_glob;
+
   if (dir == IDIR) {
   /********************
   * Case direction IDIR
   *********************/
-    dz = grid[JDIR].dx_glob;
 
     for (l = 0; l < Nlines; l++) {
       j = lines->dom_line_idx[l];
@@ -163,8 +166,6 @@ void ImplicitUpdate (double **v, double **b, double **source,
     /********************
     * Case direction JDIR
     *********************/
-    rR = grid[IDIR].xr_glob;
-    rL = grid[IDIR].xl_glob;
 
     for (l = 0; l < Nlines; l++) {
       i = lines->dom_line_idx[l];
@@ -298,11 +299,14 @@ void ExplicitUpdate (double **v, double **b, double **source,
     first_call = 0;
   }
 
+  rR = grid[IDIR].xr_glob;
+  rL = grid[IDIR].xl_glob;
+  dz = grid[JDIR].dx_glob;
+
   if (dir == IDIR) {
     /********************
     * Case direction IDIR
     *********************/
-    dz = grid[JDIR].dx_glob;
 
     for (l = 0; l < Nlines; l++) {
       j = lines->dom_line_idx[l];
@@ -502,11 +506,14 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
     first_call = 0;
   }
 
+  rR = grid[IDIR].xr_glob;
+  rL = grid[IDIR].xl_glob;
+  dz = grid[JDIR].dx_glob;
+
   if (dir == IDIR) {
     /********************
     * Case direction IDIR
     *********************/
-    dz = grid[JDIR].dx_glob;
 
     for (l = 0; l < Nlines; l++) {
       j = lines->dom_line_idx[l];
@@ -545,8 +552,6 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
     /********************
     * Case direction JDIR
     *********************/
-    // rR = grid[IDIR].xr_glob;
-    // rL = grid[IDIR].xl_glob;
 
     for (l = 0; l < Nlines; l++) {
       i = lines->dom_line_idx[l];

@@ -258,8 +258,8 @@ void ResEnergyIncrease(double **dUres, double** Hp_B, double** Hm_B, double **Br
   dr = grid[IDIR].dx;
   r_1 = grid[IDIR].r_1;
   dz = grid[JDIR].dx;
-  rR = grid[IDIR].xr;
-  rL = grid[IDIR].xl;
+  rR = grid[IDIR].xr_glob;
+  rL = grid[IDIR].xl_glob;
 
   if (dir == IDIR) {
     dV = grid[IDIR].dV;
