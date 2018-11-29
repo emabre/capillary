@@ -173,7 +173,7 @@ void Analysis (const Data *d, Grid *grid)
         #if GEOMETRY == CYLINDRICAL
         /* Note that I could use instead some element (like dV) of the grid itself,
           I don't do that to make this chunk of code compatible for both the 2015 and 2018 version of PLUTO */
-          dV = CONST_PI*(rR[i]*rR[i]- rL[i]*rL[i])*dz[j];
+          dV = CONST_PI*(rR[i]*rR[i]- rL[i]*rL[i])*dz[j]*UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
         #else
           #error Only cyl. geom. is implemented for energy conservation computation
         #endif
