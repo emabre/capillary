@@ -145,6 +145,7 @@ void Analysis (const Data *d, Grid *grid)
   #if EN_CONS_CHECK
     static int ncall_an = -1;
     double etot=0, Vtot=0;
+    double Mtot=0;
     double current = GetCurrADI();
     double en_adv_in_gau, en_tc_in_gau, en_res_in_gau;
     int i, j, k;
@@ -179,12 +180,14 @@ void Analysis (const Data *d, Grid *grid)
         #endif
         etot += dV*Uc[k][j][i][ENG];
         Vtot += dV;
+        Mtot += dV*Uc[k][j][i][RHO];
       }
     }
 
-    // I convert etot to physical units
+    // I convert values to physical units
     etot *= unit_en;
     Vtot *= UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
+    Mtot *= UNIT_DENSITY*UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
     en_adv_in_gau = en_adv_in*unit_en;
     en_tc_in_gau = en_tc_in*unit_en;
     en_res_in_gau = en_res_in*unit_en;
@@ -201,7 +204,7 @@ void Analysis (const Data *d, Grid *grid)
       if (g_stepNumber == 0) { /* Open for writing only when we’re starting */
         fp = fopen(fname,"w"); /* from beginning */
         fprintf (fp,"# Energy conservation table. Advice: read with R: read.table()\n");
-        fprintf (fp,"%2s %12s %12s %12s %12s %12s %12s %12s %12s\n", "", "t", "dt", "volume",
+        fprintf (fp,"%2s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", "", "t", "dt", "volume", "mass",
                  "current", "Etot", "E_adv_in", "E_tc_in", "E_res_in");
       } else {
         /* Append if this is not step 0 */
@@ -219,8 +222,8 @@ void Analysis (const Data *d, Grid *grid)
       }
       if (g_time > tpos){
       /* Write if current time if > tpos */
-      fprintf (fp, "%6d %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e\n", 
-               ncall_an, g_time, g_dt, Vtot, current, etot,
+      fprintf (fp, "%6d %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e\n", 
+               ncall_an, g_time, g_dt, Vtot, Mtot, current, etot,
                en_adv_in_gau, en_tc_in_gau, en_res_in_gau);
       }
       fclose(fp);
