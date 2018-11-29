@@ -155,6 +155,13 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
+/* CAPILLARY FILLIG SETTINGS */
+/* 'SMOOTH_DENS' Available: COS2 (cos² smothing ouside capillary),
+                            SHARP (sharp transition with vacuum)*/
+#define SMOOTH_DENS                SHARP
+/* ---------------------------------------------------- */
+
+/* ---------------------------------------------------- */
 #define MAX_LOGSIZE_MIB            4000.0
 /* ---------------------------------------------------- */
 
