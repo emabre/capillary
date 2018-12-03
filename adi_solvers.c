@@ -1094,6 +1094,13 @@ void DouglasRachford (double **v_new, double **v_old,
   ApplyBCs(lines, d, grid, t_now, dir2);
   MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
 
+  #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
+      if (diff == BDIFF) {
+        LINES_LOOP(lines[IDIR], l, j, i)
+          dUres[j][i] = 0.0;
+      }
+  #endif
+
   for (s=0; s<M; s++) {
     
     ApplyBCs(lines, d, grid, t_now, dir1);
@@ -1191,7 +1198,7 @@ void DouglasRachford (double **v_new, double **v_old,
           printmat(dUres_aux, NX2_TOT, NX1_TOT);
         #endif
         LINES_LOOP(lines[IDIR], l, j, i)
-          dUres[j][i] = dUres_aux[j][i];
+          dUres[j][i] += dUres_aux[j][i];
 
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_old_aux, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,

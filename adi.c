@@ -84,11 +84,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
       // Br_avg = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       dUres = ARRAY_2D(NX2_TOT, NX1_TOT, double);
       
-      // This is just for debug purposes
-      TOT_LOOP (k,j,i) {
-        Br_new[j][i] = 0.0;
-        dUres[j][i] = 0.0;
-      }
+      // // This is just for debug purposes
+      // TOT_LOOP (k,j,i) {
+      //   Br_new[j][i] = 0.0;
+      //   dUres[j][i] = 0.0;
+      // }
       #if FIRST_JDIR_THEN_IDIR == AVERAGE
         Br_new_other_order = ARRAY_2D(NX2_TOT, NX1_TOT, double);
         dUres_other_order = ARRAY_2D(NX2_TOT, NX1_TOT, double);
