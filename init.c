@@ -165,6 +165,7 @@ void Analysis (const Data *d, Grid *grid)
     double Mtot=0;
     double current = GetCurrADI();
     double en_adv_in_gau, en_tc_in_gau, en_res_in_gau;
+    double t, dt;
     int i, j, k;
     // int nv;
     // double v[NVAR];
@@ -208,6 +209,8 @@ void Analysis (const Data *d, Grid *grid)
     en_adv_in_gau = en_adv_in*unit_en;
     en_tc_in_gau = en_tc_in*unit_en;
     en_res_in_gau = en_res_in*unit_en;
+    t = g_time*(UNIT_LENGTH/UNIT_VELOCITY);
+    dt = g_dt*(UNIT_LENGTH/UNIT_VELOCITY);
 
     /* Write to file (remember: prank is the processor rank (0 in serial mode),
       so this chunk of code should work also in parallel mode!).
@@ -240,7 +243,7 @@ void Analysis (const Data *d, Grid *grid)
       if (g_time > tpos){
       /* Write if current time if > tpos */
       fprintf (fp, "%6d %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e %12.6e\n", 
-               ncall_an, g_time, g_dt, Vtot, Mtot, current, etot,
+               ncall_an, t, dt, Vtot, Mtot, current, etot,
                en_adv_in_gau, en_tc_in_gau, en_res_in_gau);
       }
       fclose(fp);
