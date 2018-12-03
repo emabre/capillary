@@ -52,7 +52,6 @@ and maybe add nohup at the beginning of the line.
 ## Using a table (e.g. for eta (resistivity) as function of rho, T)
 ### How pluto makes a table
 E.g. for the internal energy:
-You can probably imitate what internal_energy.c/MakeInternalEnergyTable() does, to make a table for the internal energy:
   - calls: ``InitializeTable2D()`` to initialize the table
   - fills the internal energy values in the table looping: ``rhoe_tab.f[j][i] = InternalEnergyFunc(v,T);``
   - it sets something related to later interpolation with: ``rhoe_tab.interpolation = SPLINE1;``
@@ -73,3 +72,16 @@ If you go with the terminal inside the folder *transport_tables_scripts* and typ
 You build an ASCII file containing a table (and its required header) suitable to be read from PLUTO, named *eta.tab*, for:
 + $T \in [800, 30000]$, with 6 log-spaced points,
 + $\rho \in [2.5e-11,2.5e-5]\mathrm{g/cm}^3$, with 4 log-spaced points,
+
+## Doing tests on this simulation environment:
+You can test that the plasma heating due to ohmic dissipation is correct by checking the temperature change of the plasma.
++ Set the thermal diffusion off (or set a very low thermal conductivity, e.g. 1e2 in gaussian units);
++ Set the advection off (``#define FREEZE_FLUID`` in __definitions.h__);
++ Set the current to a fixed value (e.g. 100A);
++ Set the initial temperature of the gas not close to any non linearity due to ionization (be careful that non linearity in heat capacity due to ionization starts very early, roughly 5000K; also be careful with dissociation, if you implement it).
++ Run the simulation for the time you want
++ Compare the temperature increase with the one you foresee theoretically.
+To foresee the temperature increase __for a case where the hydrogen is fully dissociated but no ioniation is present__ use this formula:
+$$ \Delta T = 7.3546\cdot 10^9 \frac{\eta I_\mathrm{A}^2 t}{R^4 \rho} $$,
+where all the quantities are in cgs gaussian units, except for the current which is in Ampere.
+For instance, for the case: $\eta=10^{-14}\mathrm{s}$, $I_\mathrm{A}=100\mathrm{A}$, $t=1\mathrm{ns}$, $R=0.05\mathrm{cm}$, $\rho=2.5\cdot10^{-7}\mathrm{g}/\mathrm{cm}^3$, you get $\Delta T = 470.69\mathrm{K}$.
