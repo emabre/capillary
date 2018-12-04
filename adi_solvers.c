@@ -118,11 +118,8 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[j][lidx-1] = 2*lbound[l].values[0] - b[j][lidx];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          // Original
-          // *inflow += (v[j][lidx-1]-v[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
-          // Modified 28/11/2018
-          vol_lidx = CONST_PI*(rR[lidx]*rR[lidx] - rL[lidx]*rL[lidx])*dz[j];
-          *inflow += (v[j][lidx-1]-v[j][lidx]) * Hm[j][lidx] * dt/C[j][lidx] * vol_lidx;
+          // I am not sure this "2" in front of pi is ok
+          *inflow += (v[j][lidx-1]-v[j][lidx]) * Hm[j][lidx] * 2*CONST_PI*dz[j] * dt;
         }
 
       } else if (lbound[l].kind == NEUMANN_HOM) {
@@ -143,11 +140,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[j][ridx+1] = 2*rbound[l].values[0] - v[j][ridx];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          // Original
-          // *inflow += (v[j][ridx+1]-v[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
-          // Modified 28/11/2018
-          vol_ridx = CONST_PI*(rR[ridx]*rR[ridx] - rL[ridx]*rL[ridx])*dz[j];
-          *inflow += (v[j][ridx+1]-v[j][ridx]) * Hp[j][ridx] * dt/C[j][ridx] * vol_ridx;
+          *inflow += (v[j][ridx+1]-v[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
         }
 
       } else if (rbound[l].kind == NEUMANN_HOM) {
@@ -223,11 +216,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[lidx-1][i] = 2*lbound[l].values[0] - v[lidx][i];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          // Original
-          // *inflow += (v[lidx-1][i]-v[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
-          // Modified 28/11/2018
-          vol_lidx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[lidx];
-          *inflow += (v[lidx-1][i]-v[lidx][i]) * Hm[lidx][i] * dt/C[lidx][i] * vol_lidx;
+          *inflow += (v[lidx-1][i]-v[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
         }
 
       } else if (lbound[l].kind == NEUMANN_HOM) {
@@ -247,11 +236,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
         v[ridx+1][i] = 2*rbound[l].values[0] - v[ridx][i];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          // Original
-          // *inflow += (v[ridx+1][i]-v[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
-          // Modified 28/11/2018
-          vol_ridx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[ridx];
-          *inflow += (v[ridx+1][i]-v[ridx][i]) * Hp[ridx][i] * dt/C[ridx][i] * vol_ridx;
+          *inflow += (v[ridx+1][i]-v[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
         }
         
       } else if (rbound[l].kind == NEUMANN_HOM) {
@@ -335,11 +320,8 @@ void ExplicitUpdate (double **v, double **b, double **source,
         // b[j][lidx-1] = 1/3*b[j][lidx+1] + 8/3*lbound[l].values[0] - 2*b[j][lidx];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          // Original
-          // *inflow += (b[j][lidx-1]-b[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
-          // Modified 28/11/2018
-          vol_lidx = CONST_PI*(rR[lidx]*rR[lidx] - rL[lidx]*rL[lidx])*dz[j];
-          *inflow += dt/C[j][lidx] * (b[j][lidx-1]-b[j][lidx]) * Hm[j][lidx] * vol_lidx;
+          // I am not sure this "2" in front of pi is ok
+          *inflow += (b[j][lidx-1]-b[j][lidx]) * Hm[j][lidx] * 2*CONST_PI*dz[j] * dt;
         }
 
       } else if (lbound[l].kind == NEUMANN_HOM) {
@@ -362,11 +344,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
         // b[j][ridx+1] = 1/3*b[j][ridx-1] + 8/3*rbound[l].values[0] - 2*b[j][ridx];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          // Original
-          // *inflow += (b[j][ridx+1]-b[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
-          // Modified 28/11/2018
-          vol_ridx = CONST_PI*(rR[ridx]*rR[ridx] - rL[ridx]*rL[ridx])*dz[j];
-          *inflow += dt/C[j][ridx] * (b[j][ridx+1]-b[j][ridx]) * Hp[j][ridx] * vol_ridx;
+          *inflow += (b[j][ridx+1]-b[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
         }
 
       } else if (rbound[l].kind == NEUMANN_HOM) {
@@ -419,11 +397,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
         // b[lidx-1][i] = 1/3*b[lidx+1][i] + 8/3*lbound[l].values[0] - 2*b[lidx][i];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          // Original
-          // *inflow += (b[lidx-1][i]-b[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
-          // Modified 28/11/2018
-          vol_lidx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[lidx];
-          *inflow += dt/C[lidx][i] * (b[lidx-1][i]-b[lidx][i]) * Hm[lidx][i] * vol_lidx;
+          *inflow += (b[lidx-1][i]-b[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
         }
       
       } else if (lbound[l].kind == NEUMANN_HOM) {
@@ -446,11 +420,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
         // b[ridx+1][i] = 1/3*b[ridx-1][i] + 8/3*rbound[l].values[0] - 2*b[ridx][i];
         if (compute_inflow) {
           /*--- I compute the inflow ---*/
-          // Original
-          // *inflow += (b[ridx+1][i]-b[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
-          // Modified 28/11/2018
-          vol_ridx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[ridx];
-          *inflow += dt/C[ridx][i] * (b[ridx+1][i]-b[ridx][i]) * Hp[ridx][i] * vol_ridx;
+          *inflow += (b[ridx+1][i]-b[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
         }
 
       } else if (rbound[l].kind == NEUMANN_HOM) {
@@ -534,14 +504,10 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
 
       if (compute_inflow) {
         /*--- I compute the inflow ---*/
-        // Original
-        // *inflow += (b_der[j][lidx-1]-b_der[j][lidx]) * Hm[j][lidx] * CONST_PI*dz[j] * dt;
-        // *inflow += (b_der[j][ridx+1]-b_der[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
-        // Modified 28/11/2018
-        vol_lidx = CONST_PI*(rR[lidx]*rR[lidx] - rL[lidx]*rL[lidx])*dz[j];
-        vol_ridx = CONST_PI*(rR[ridx]*rR[ridx] - rL[ridx]*rL[ridx])*dz[j];
-        *inflow += (b_der[j][lidx-1]-b_der[j][lidx]) * Hm[j][lidx] * dt/C[j][lidx] * vol_lidx;
-        *inflow += (b_der[j][ridx+1]-b_der[j][ridx]) * Hp[j][ridx] * dt/C[j][ridx] * vol_ridx;
+        // I am not sure this "2" in front of pi is ok
+        *inflow += (b_der[j][lidx-1]-b_der[j][lidx]) * Hm[j][lidx] * 2*CONST_PI*dz[j] * dt;
+        // Here the "2" in front of pi is ok
+        *inflow += (b_der[j][ridx+1]-b_der[j][ridx]) * Hp[j][ridx] * 2*CONST_PI*dz[j] * dt;
       }
 
       /*--- Actual update ---*/
@@ -572,14 +538,9 @@ void ExplicitUpdateDR (double **v, double **b, double **b_der, double **source,
 
       if (compute_inflow) {
         /*--- I compute the inflow ---*/
-        // Original
-        // *inflow += (b_der[lidx-1][i]-b_der[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
-        // *inflow += (b_der[ridx+1][i]-b_der[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
-        // Modified 28/11/2018
-        vol_lidx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[lidx];
-        vol_ridx = CONST_PI*(rR[i]*rR[i] - rL[i]*rL[i])*dz[ridx];
-        *inflow += (b_der[lidx-1][i]-b_der[lidx][i]) * Hm[lidx][i] * dt/C[lidx][j] * vol_lidx;
-        *inflow += (b_der[ridx+1][i]-b_der[ridx][i]) * Hp[ridx][i] * dt/C[ridx][j] * vol_ridx;
+        // Modified again 4/12/2018
+        *inflow += (b_der[lidx-1][i]-b_der[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
+        *inflow += (b_der[ridx+1][i]-b_der[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
       }
 
       /*--- Actual update ---*/
@@ -1109,7 +1070,7 @@ void DouglasRachford (double **v_new, double **v_old,
     **********************************/
     ExplicitUpdate (v_aux, v_old_aux, NULL, H1p, H1m, C1, &lines[dir1],
                     lines[dir1].lbound[diff], lines[dir1].rbound[diff],
-                    (diff == TDIFF) && EN_CONS_CHECK, &en_tc_in, grid,
+                    0, NULL, grid,
                     dts, dir1);
     // [Err] decomment next lines
     // I apply the BCs at t0 for later (if I do it later, I will need to call ApplyBCs() once more) 
@@ -1141,7 +1102,7 @@ void DouglasRachford (double **v_new, double **v_old,
     // I compute phi^ (and save it in v_hat)
     ImplicitUpdate (v_hat, v_aux, NULL, H2p, H2m, C2, &lines[dir2],
                     lines[dir2].lbound[diff], lines[dir2].rbound[diff],
-                    0, &en_tc_in, grid,
+                    0, NULL, grid,
                     dts, dir2);
     #ifdef DEBUG_EMA
       printf("\nafter impl dir2:\n");
