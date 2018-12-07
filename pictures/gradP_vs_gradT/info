@@ -1,0 +1,1 @@
+immagini fatte con versione di disch_outcap da commit 9237460ff392a90e7c6ecb28bc2c37b4e0b60e85 (più una piccola modifica sulla resistività ai bordi per evitare/ridurre l'insorgere di instabilità vicino ai bordi). La cartella della simulazione è /home/konrad/simulazioni/sims_pluto/I90/rho2.5-etawall/out
