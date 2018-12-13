@@ -75,7 +75,7 @@ void MakeElecResistivityTable() {
 int GetElecResisitivityFromTable(double rho, double T, double *eta) {
   int    status;
 
-  status = Table2DInterpolate(&eta_tab, T, rho, &eta);
+  status = Table2DInterpolate(&eta_tab, T, rho, eta);
   if (status != 0){
     return status;
   }
