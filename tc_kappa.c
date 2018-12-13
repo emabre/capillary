@@ -36,7 +36,15 @@ void TC_kappa(double *v, double x1, double x2, double x3,
         MakeThermConductivityTable();
         tc_tab_not_done = 0;
       }
-      k = GetThermConductivityFromTable(v[RHO]*UNIT_DENSITY, T);
+      if (GetThermConductivityFromTable(v[RHO]*UNIT_DENSITY, T, &k)!=0) {
+        print1("[TC_kappa] Error getting kappa from table\n");
+        print1("x1=%g, x2=%g, x3=%g\n", x1, x2, x3);
+        print1("rho=%g, prs=%g, T=%g",
+               v[RHO]*UNIT_DENSITY,
+               v[PRS]*UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY,
+               T);
+        QUIT_PLUTO(1);
+      }
     #else
       GetMu(T, v[RHO], &mu);
       z = fmax(1/mu - 1, IONIZMIN);

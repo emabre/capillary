@@ -2,8 +2,8 @@
 #define TRANSPORT_TABLES_H
 
 void MakeElecResistivityTable();
-double GetElecResisitivityFromTable(double rho, double T);
+int GetElecResisitivityFromTable(double rho, double T, double *eta);
 void MakeThermConductivityTable();
-double GetThermConductivityFromTable(double rho, double T);
+int GetThermConductivityFromTable(double rho, double T, double *kappa);
 
 #endif

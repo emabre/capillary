@@ -72,16 +72,14 @@ void MakeElecResistivityTable() {
 /*************************************************************/
 /* Function to get the Electrical res. from table            */
 /*************************************************************/
-double GetElecResisitivityFromTable(double rho, double T) {
+int GetElecResisitivityFromTable(double rho, double T, double *eta) {
   int    status;
-  double eta;
 
   status = Table2DInterpolate(&eta_tab, T, rho, &eta);
   if (status != 0){
-    print ("! GetElecResisitivityFromTable(): table interpolation failure (bound exceeded)\n");
-    QUIT_PLUTO(1);
+    return status;
   }
-  return eta;
+  return 0;
 }
 
 /*****************************************************************************/
@@ -140,14 +138,12 @@ void MakeThermConductivityTable() {
 /*************************************************************/
 /* Function to get the thermal cond. from table              */
 /*************************************************************/
-double GetThermConductivityFromTable(double rho, double T) {
+int GetThermConductivityFromTable(double rho, double T, double *kappa) {
   int    status;
-  double kappa;
 
-  status = Table2DInterpolate(&kappa_tab, T, rho, &kappa);
+  status = Table2DInterpolate(&kappa_tab, T, rho, kappa);
   if (status != 0){
-    print ("! GetThermConductivityFromTable(): table interpolation failure (bound exceeded)\n");
-    QUIT_PLUTO(1);
+    return status;
   }
-  return kappa;
+  return 0;
 }

@@ -37,7 +37,15 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
         MakeElecResistivityTable();
         res_tab_not_done = 0;
       }
-      res = GetElecResisitivityFromTable(v[RHO]*UNIT_DENSITY, T);
+      if (GetElecResisitivityFromTable(v[RHO]*UNIT_DENSITY, T, &res)!=0) {
+        print1("[Resistive_eta] Error getting eta from table\n");
+        print1("x1=%g, x2=%g, x3=%g\n", x1, x2, x3);
+        print1("rho=%g, prs=%g, T=%g",
+               v[RHO]*UNIT_DENSITY,
+               v[PRS]*UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY,
+               T);
+        QUIT_PLUTO(1);
+      }
     #else
       GetMu(T, v[RHO], &mu);
       z = fmax(1/mu - 1, IONIZMIN);
