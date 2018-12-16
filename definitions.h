@@ -128,10 +128,15 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* To set to 0 the mag field in a region outside capillary*/
 // #define FLATTEN_B_OUTCAP
 #define ACCURATE_BCS               YES
-#define EN_CONS_CHECK              YES
 #define RUNTIMESET_CALL            AFTER_SETOUTPUT
 // #define CONE_LOW_TCKAPPA           (CONST_PI/4)
 /* ---------------------------------------------------- */
+
+/*---------------------------------------------------------------------------*/
+/* Online analysis (Analysis() function)*/
+#define EN_CONS_CHECK              YES
+#define PRINT_TIME_INFO            YES
+/*---------------------------------------------------------------------------*/
 
 /* ---------------------------------------------------- */
 /* Transport parameters, settings for computing them from tables*/

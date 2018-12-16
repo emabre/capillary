@@ -158,14 +158,20 @@ void Analysis (const Data *d, Grid *grid)
 /*
  *
  *********************************************************************** */
-{ 
+{ static double first_call = 1;
+  static int ncall_an = -1;  // Number of calls to this function
+
+  ncall_an++;
+
+  #if (EN_CONS_CHECK || PRINT_TIME_INFO)
+    double t = g_time*(UNIT_LENGTH/UNIT_VELOCITY);
+    double dt = g_dt*(UNIT_LENGTH/UNIT_VELOCITY);
+  #endif
   #if EN_CONS_CHECK
-    static int ncall_an = -1;
     double etot=0, Vtot=0;
     double Mtot=0;
     double current = GetCurrADI();
     double en_adv_in_gau, en_tc_in_gau, en_res_in_gau;
-    double t, dt;
     int i, j, k;
     // int nv;
     // double v[NVAR];
@@ -174,8 +180,6 @@ void Analysis (const Data *d, Grid *grid)
     double unit_en = UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY*UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
     double *rR, *rL, *dz;
     RBox *box = GetRBox(DOM, CENTER);
-
-    ncall_an++;
 
     rR = grid[IDIR].xr_glob;
     rL = grid[IDIR].xl_glob;
@@ -208,9 +212,7 @@ void Analysis (const Data *d, Grid *grid)
     Mtot *= UNIT_DENSITY*UNIT_LENGTH*UNIT_LENGTH*UNIT_LENGTH;
     en_adv_in_gau = en_adv_in*unit_en;
     en_tc_in_gau = en_tc_in*unit_en;
-    en_res_in_gau = en_res_in*unit_en;
-    t = g_time*(UNIT_LENGTH/UNIT_VELOCITY);
-    dt = g_dt*(UNIT_LENGTH/UNIT_VELOCITY);
+    en_res_in_gau = en_res_in*unit_en;    
 
     /* Write to file (remember: prank is the processor rank (0 in serial mode),
       so this chunk of code should work also in parallel mode!).
@@ -224,7 +226,7 @@ void Analysis (const Data *d, Grid *grid)
       if (g_stepNumber == 0) { /* Open for writing only when we’re starting */
         fp = fopen(fname,"w"); /* from beginning */
         fprintf (fp,"# Energy conservation table. Advice: read with R: read.table()\n");
-        fprintf (fp,"%2s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", "", "t", "dt", "volume", "mass",
+        fprintf (fp,"%6s %12s %12s %12s %12s %12s %12s %12s %12s %12s\n", "", "t", "dt", "volume", "mass",
                  "current", "Etot", "E_adv_in", "E_tc_in", "E_res_in");
       } else {
         /* Append if this is not step 0 */
@@ -249,6 +251,55 @@ void Analysis (const Data *d, Grid *grid)
       fclose(fp);
     }
   #endif
+  
+  #if PRINT_TIME_INFO
+    static time_t tstart;
+    time_t tnow;
+    double elapsed_time;
+
+    // I compute the time at the first call (approximately at start or restart of pluto)
+    if (first_call) {
+      time(&tstart);
+    }
+
+    time(&tnow);
+    elapsed_time = difftime(tnow, tstart);
+
+    if (prank == 0) {
+      char fname[512];
+      static double tpos = -1.0;
+      FILE *fp;
+
+      sprintf (fname, "%s/times.dat",RuntimeGet()->output_dir);
+      if (g_stepNumber == 0) { /* Open for writing only when we’re starting */
+        fp = fopen(fname,"w"); /* from beginning */
+        fprintf (fp,"# Timing table. Advice: read with R: read.table()\n");
+        fprintf (fp,"%6s %12s %12s %12s\n", "", "t", "dt", "elapsed_time");
+      } else {
+        /* Append if this is not step 0 */
+        if (tpos < 0.0) { /* Obtain time coordinate of to last written row */
+          char sline[512];
+          if ((fp = fopen(fname,"r")) != NULL) {
+            while (fgets(sline, 512, fp)) {} /* read as many lines as you can, to reach the file end*/
+            sscanf(sline, "%*d %lf %*e %*e\n",&tpos); /* read tpos (time of the last written row) from sline */
+            fclose(fp);
+          } else {
+            print1("\n[Analysis] I could not open file %s", fname);
+          }
+        }
+        fp = fopen(fname,"a");
+      }
+      if (g_time > tpos){
+      /* Write if current time if > tpos */
+      fprintf (fp, "%6d %12.6e %12.6e %12.6e\n", 
+               ncall_an, t, dt, elapsed_time);
+      }
+      fclose(fp);
+    }
+
+  #endif
+
+  first_call = 0;
 }
 
 /* ********************************************************************* */
