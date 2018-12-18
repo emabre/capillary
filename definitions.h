@@ -160,10 +160,11 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
-/* CAPILLARY FILLIG SETTINGS */
-/* 'SMOOTH_DENS' Available: COS2 (cos² smothing ouside capillary),
-                            SHARP (sharp transition with vacuum)*/
-#define SMOOTH_DENS                SHARP
+/* CAPILLARY FILLING SETTINGS (initial condition) */
+/* 'DENS_INITIAL' Available: SMOOTH_COS2 (cos² smothing ouside capillary),
+                            UNIFORM_FILL (sharp transition with vacuum),
+                            FROM_FILE    (from a bin file + grid file, named:  rho_ic.flt, grid_ic.out)*/
+#define DENS_INITIAL               FROM_FILE 
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */

@@ -12,11 +12,14 @@
 #define AS_DIFF 3
 
 /*For defining how the mass density transition from inside to outside of capillary is done*/
-#define COS2 1
-#define SHARP 2
+#define SMOOTH_COS2 1
+#define UNIFORM_FILL 2
+#define FROM_FILE 3
 
 /*Auxiliary function to set the temperature*/
 void setT(const Data *d, double T, int i, int j, int k);
+/*Function to set the initial mass density according to few choices*/
+void SetRhoAnalytic(double *rho, double x1, double x2, double x3, int mode);
 
 // [Err] Decomment the fucntion
 /* ********************************************************************* */
@@ -24,25 +27,15 @@ void Init (double *us, double x1, double x2, double x3)
 /*
  *
  *********************************************************************** */
-{
+{ 
+  static int first_call = 1;
   double mu;/*Temperature in K and mean particle weight*/
   double curr, Bwall, B_ghostwall; //Bwall, B_ghostwall in code units
   double unit_Mfield;
   double csi = x1/rcap;
   double alpha = g_inputParam[ALPHA_J]; //ratio between delta current density wall-axis and current density on axis
   double T0_K = g_inputParam[T0];
-  double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
   double vz0 = g_inputParam[VZ0]/UNIT_VELOCITY;
-  #ifdef DEBUG_EMA
-    double rho_red_vac = 1;
-  #else
-    double rho_red_vac = 0.001; // Fraction of rho inside capillary, used to emumate vacuum
-  #endif
-  #if SMOOTH_DENS == COS2
-    // Decay lenths in r and z, for setting density
-    double decay_r = 0.1/UNIT_LENGTH;
-    double decay_z = 0.5/UNIT_LENGTH;
-  #endif
 
   // Just a check that the geometrical settings makes sense:
   if (DZCAP > ZCAP){
@@ -68,17 +61,55 @@ void Init (double *us, double x1, double x2, double x3)
 
   //Remember: in cyl coords x1 is r, x2 is z
 
+  /* ******************************************************** */
+  /* ******************************************************** */
+  /* Setting rho                                              */
+  /* ******************************************************** */
+  /* ******************************************************** */
+  #if (DENS_INITIAL == SMOOTH_COS2 || DENS_INITIAL == UNIFORM_FILL)
+    /******************************************/
+    /* rho from analytical function           */
+    /******************************************/
+    SetRhoAnalytic(&(us[RHO]), x1, x2, x3, DENS_INITIAL);
+
+  #elif (DENS_INITIAL == FROM_FILE)
+    /******************************************/
+    /* rho interpolated from file             */
+    /******************************************/
+    // for explanatin see page 47 of userguide
+    if (first_call) {
+      int input_rho[2];
+
+      if (g_inputParam[DENS0] > 0.0) {
+        print1("\nIf rho is from file set DENS0 to a negative value!");
+        QUIT_PLUTO(1);
+      }
+
+      input_rho[0] = RHO;
+      input_rho[1] = -1;
+      InputDataSet("grid_ic.out", input_rho);
+      InputDataRead("rho_ic.flt", "big");
+    }
+    InputDataInterpolate(us, x1, x2, x3);
+
+  #else
+    #error choice for DENS_INITIAL not understood
+  #endif
+
+  /* ******************************************************** */
+  /* ******************************************************** */
+  /* Setting all the quantities but rho                       */
+  /* ******************************************************** */
+  /* ******************************************************** */
   /* -----------------------------------------------------
       Zones not covered in the next lines (except for zone "Everywhere")
     ----------------------------------------------------- */
-  us[RHO] = rho_red_vac*dens0;
   us[iVZ] = 0.0;
   /* -----------------------------------------------------
       Inside capillary, excluded near-electrode zone
      ----------------------------------------------------- */
   if (x2 < zcap-dzcap && x1 <= rcap) {
     us[iBPHI] = B_ghostwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi));
-    us[RHO] = dens0;
     us[iVZ] = vz0;
   }
   /* -----------------------------------------------------
@@ -88,7 +119,6 @@ void Init (double *us, double x1, double x2, double x3)
     /* the B field linearly decreses in z direction
     (this is provisory, better electrode have to be implemented) */
     us[iBPHI] = (B_ghostwall/(1-0.5*alpha) * csi * (1 - alpha*(1 - 0.5*csi*csi))) * ( 1 - (x2 - (zcap-dzcap))/dzcap );
-    us[RHO] = dens0;
     us[iVZ] = vz0;
   }
   /* ------------------------------------------------------
@@ -109,17 +139,6 @@ void Init (double *us, double x1, double x2, double x3)
   if (x2 > zcap && x1 <= rcap) {
     // No field outside capillary
     us[iBPHI] = 0.0;
-    #if SMOOTH_DENS == COS2
-      if (x2 < zcap+decay_z) {
-        us[RHO] = (1-rho_red_vac)*dens0;
-        us[RHO] *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
-        us[RHO] += rho_red_vac*dens0;
-      }
-    #elif SMOOTH_DENS == SHARP
-      // Do nothing rho is already set outside 
-    #else
-      #error Choice for SMOOTH_DENS not understood
-    #endif
   }
   /* ------------------------------------------------------
       Outside capillary, above capillary  (not in internal boundary)
@@ -127,18 +146,6 @@ void Init (double *us, double x1, double x2, double x3)
   if (x2 > zcap && x1 > rcap) {
     // No field outside capillary
     us[iBPHI] = 0.0;
-    #if SMOOTH_DENS == COS2
-      if (x1 < rcap+decay_r && x2 < zcap+decay_z) {
-        us[RHO] = (1-rho_red_vac)*dens0;
-        us[RHO] *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
-        us[RHO] *= cos(0.5*CONST_PI*(x1-rcap)/decay_r)*cos(0.5*CONST_PI*(x1-rcap)/decay_r);
-        us[RHO] += rho_red_vac*dens0;
-      }
-     #elif SMOOTH_DENS == SHARP
-      // Do nothing rho is already set outside 
-    #else
-      #error Choice for SMOOTH_DENS not understood
-    #endif
   }
   /* -----------------------------------------------------
       Everywhere
@@ -151,6 +158,8 @@ void Init (double *us, double x1, double x2, double x3)
       GetMu(T0_K, us[RHO], &mu); // GetMu takes T in Kelvin, no need to adim. T
   #endif
   us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
+
+  first_call = 0;
 }
 
 /* ********************************************************************* */
@@ -744,3 +753,155 @@ void setT(const Data *d, double T, int i, int j, int k) {
   // print("\nmu:%g",mu);
   d->Vc[PRS][k][j][i] = d->Vc[RHO][k][j][i]*T / (KELVIN*mu);
 }
+
+/*---------------------------------------------------------------------------------------------*/
+/* Auxiliary function to set the mass density in the domain, according to few options          */
+/*---------------------------------------------------------------------------------------------*/
+void SetRhoAnalytic(double *rho, double x1, double x2, double x3, int mode) {
+
+  if (mode == SMOOTH_COS2) {
+    /****************************/
+    /* cos² smoothing case      */
+    /****************************/
+    
+    double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
+    // Decay lenths in r and z, for setting density
+    double decay_r = 0.1/UNIT_LENGTH;
+    double decay_z = 0.5/UNIT_LENGTH;
+    #ifdef DEBUG_EMA
+      double rho_red_vac = 1;
+    #else
+      double rho_red_vac = 0.001; // Fraction of rho inside capillary, used to emumate vacuum
+    #endif
+
+    /* -----------------------------------------------------
+        Zones not covered in the next lines (except for zone "Everywhere")
+      ----------------------------------------------------- */
+    *rho = rho_red_vac*dens0;
+    /* -----------------------------------------------------
+        Inside capillary, excluded near-electrode zone
+      ----------------------------------------------------- */
+    if (x2 < zcap-dzcap && x1 <= rcap) {
+      *rho = dens0;
+    }
+    /* -----------------------------------------------------
+        Inside capillary, in near-electrode zone
+      ----------------------------------------------------- */
+    if (zcap-dzcap <= x2 && x2 < zcap && x1 < rcap) {
+      *rho = dens0;
+    }
+    /* ------------------------------------------------------
+        Outside capillary, aligned with capillary (not in internal boundary)
+      ------------------------------------------------------ */
+    if (x2 > zcap && x1 <= rcap) {
+      if (x2 < zcap+decay_z) {
+        *rho = (1-rho_red_vac)*dens0;
+        *rho *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
+        *rho += rho_red_vac*dens0;
+      }
+    }
+    /* ------------------------------------------------------
+        Outside capillary, above capillary  (not in internal boundary)
+      ------------------------------------------------------ */
+    if (x2 > zcap && x1 > rcap) {
+      if (x1 < rcap+decay_r && x2 < zcap+decay_z) {
+        *rho = (1-rho_red_vac)*dens0;
+        *rho *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
+        *rho *= cos(0.5*CONST_PI*(x1-rcap)/decay_r)*cos(0.5*CONST_PI*(x1-rcap)/decay_r);
+        *rho += rho_red_vac*dens0;
+      }
+    }
+
+  } else if (mode == UNIFORM_FILL) {
+    /******************************************/
+    /* uniform filling case (with sharp edge) */
+    /******************************************/
+
+    double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
+    #ifdef DEBUG_EMA
+      double rho_red_vac = 1;
+    #else
+      double rho_red_vac = 0.001; // Fraction of rho inside capillary, used to emumate vacuum
+    #endif
+    /* -----------------------------------------------------
+        Everywhere except inside capillary
+      ----------------------------------------------------- */
+    *rho = rho_red_vac*dens0;
+    /* -----------------------------------------------------
+        Inside capillary
+      ----------------------------------------------------- */
+    if (x2 < zcap && x1 <= rcap) {
+      *rho = dens0;
+    }
+  }
+}
+
+// Disaster-case copy
+// /*---------------------------------------------------------------------------------------------*/
+// /* Auxiliary function to set the mass density in the domain, according to few options          */
+// /*---------------------------------------------------------------------------------------------*/
+// void SetRho(double *rho, double x1, double x2, double x3, int mode) {
+//   double dens0 = g_inputParam[DENS0]/UNIT_DENSITY;
+
+//   #ifdef DEBUG_EMA
+//     double rho_red_vac = 1;
+//   #else
+//     double rho_red_vac = 0.001; // Fraction of rho inside capillary, used to emumate vacuum
+//   #endif
+//   #if DENS_INITIAL == SMOOTH_COS2
+//     // Decay lenths in r and z, for setting density
+//     double decay_r = 0.1/UNIT_LENGTH;
+//     double decay_z = 0.5/UNIT_LENGTH;
+//   #endif
+
+//   /* -----------------------------------------------------
+//       Zones not covered in the next lines (except for zone "Everywhere")
+//     ----------------------------------------------------- */
+//   *rho = rho_red_vac*dens0;
+//   /* -----------------------------------------------------
+//       Inside capillary, excluded near-electrode zone
+//      ----------------------------------------------------- */
+//   if (x2 < zcap-dzcap && x1 <= rcap) {
+//     *rho = dens0;
+//   }
+//   /* -----------------------------------------------------
+//       Inside capillary, in near-electrode zone
+//      ----------------------------------------------------- */
+//   if (zcap-dzcap <= x2 && x2 < zcap && x1 < rcap) {
+//     *rho = dens0;
+//   }
+//   /* ------------------------------------------------------
+//       Outside capillary, aligned with capillary (not in internal boundary)
+//      ------------------------------------------------------ */
+//   if (x2 > zcap && x1 <= rcap) {
+//     #if DENS_INITIAL == SMOOTH_COS2
+//       if (x2 < zcap+decay_z) {
+//         *rho = (1-rho_red_vac)*dens0;
+//         *rho *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
+//         *rho += rho_red_vac*dens0;
+//       }
+//     #elif DENS_INITIAL == UNIFORM_FILL
+//       // Do nothing rho is already set outside 
+//     #else
+//       #error Choice for DENS_INITIAL not understood
+//     #endif
+//   }
+//   /* ------------------------------------------------------
+//       Outside capillary, above capillary  (not in internal boundary)
+//      ------------------------------------------------------ */
+//   if (x2 > zcap && x1 > rcap) {
+//     // No field outside capillary
+//     #if DENS_INITIAL == SMOOTH_COS2
+//       if (x1 < rcap+decay_r && x2 < zcap+decay_z) {
+//         *rho = (1-rho_red_vac)*dens0;
+//         *rho *= cos(0.5*CONST_PI*(x2-zcap)/decay_z)*cos(0.5*CONST_PI*(x2-zcap)/decay_z);
+//         *rho *= cos(0.5*CONST_PI*(x1-rcap)/decay_r)*cos(0.5*CONST_PI*(x1-rcap)/decay_r);
+//         *rho += rho_red_vac*dens0;
+//       }
+//      #elif DENS_INITIAL == UNIFORM_FILL
+//       // Do nothing rho is already set outside 
+//     #else
+//       #error Choice for DENS_INITIAL not understood
+//     #endif
+//   }
+// }
