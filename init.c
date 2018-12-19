@@ -8,6 +8,7 @@
 #include "current_table.h"
 #include "adi.h"
 #include "debug_utilities.h"
+#include "rho_from_raw.h"
 
 #define AS_DIFF 3
 
@@ -79,16 +80,21 @@ void Init (double *us, double x1, double x2, double x3)
     // for explanatin see page 47 of userguide
     if (first_call) {
       int input_rho[2];
+      char grid_rho_ic_fi[30] = "grid_ic.out";
+      char rho_ic_fi[30] = "rho_ic.flt";
 
       if (g_inputParam[DENS0] > 0.0) {
         print1("\nIf rho is from file set DENS0 to a negative value!");
         QUIT_PLUTO(1);
       }
 
+      // Make rho data starting from p, and T in raw ASCII format (not structured points)
+      WriteRhoGridFromRaw(rho_ic_fi, grid_rho_ic_fi);
+
       input_rho[0] = RHO;
       input_rho[1] = -1;
-      InputDataSet("grid_ic.out", input_rho);
-      InputDataRead("rho_ic.flt", "big");
+      InputDataSet(grid_rho_ic_fi, input_rho);
+      InputDataRead(rho_ic_fi, "big");
     }
     InputDataInterpolate(us, x1, x2, x3);
 

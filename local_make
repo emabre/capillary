@@ -2,9 +2,11 @@ OBJ += gamma_transp.o capillary_wall.o current_table.o freeze_fluid.o adi.o adi_
 OBJ += tc_kappa.o res_eta.o tc_adi.o res_adi.o
 OBJ += debug_utilities.o mappersLines.o
 OBJ += table_utilities.o transport_tables.o
+OBJ += rho_from_raw.o
 HEADERS += gamma_transp.h capillary_wall.h current_table.h freeze_fluid.h adi.h debug_utilities.h
 HEADERS += pvte_law_heat_capacity.h
 HEADERS += table_utilities.h transport_tables.h
+HEADERS += rho_from_raw.h
 
 # [Ema] Added by Ema for gprof
 # CFLAGS += -pg
