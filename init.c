@@ -93,8 +93,8 @@ void Init (double *us, double x1, double x2, double x3)
     InputDataInterpolate(us, x1, x2, x3);
 
     // Put the minimum rho on the rigid capillary wall
-    // if (x2 < zcap && x1 > rcap)
-    //   us[RHO] = 2.5E-10 / UNIT_DENSITY;
+    if (x2 < zcap && x1 > rcap)
+      us[RHO] = (RHO_TAB_MIN)*1.001 / UNIT_DENSITY;
 
   #else
     #error choice for DENS_INITIAL not understood

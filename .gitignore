@@ -17,3 +17,5 @@ profiled*
 .Rproj.user
 transport_tables_scripts/__pycache__
 workspace_config.code-workspace
+rho_ic.flt
+rho_ic_test.flt
