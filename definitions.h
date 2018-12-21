@@ -165,6 +165,10 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
                             UNIFORM_FILL (sharp transition with vacuum),
                             FROM_FILE    (from a bin file + grid file, named:  rho_ic.flt, grid_ic.out)*/
 #define DENS_INITIAL               FROM_FILE
+/* Useful only in case of DENS_INITIAL==FROM_FILE;
+   if 1 replot from python the p and rho interpolated,
+   if 0 it does nothing (keep 0 as default) */
+#define REPLOT_P_RHO               1
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */

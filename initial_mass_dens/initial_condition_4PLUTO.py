@@ -125,6 +125,8 @@ if replot_p_rho:
     plt.xlabel("z / cm")
     plt.ylabel("r / cm")
     plt.colorbar()
+    plt.ioff()
+    plt.show()
 
 
 # <codecell>

@@ -21,7 +21,7 @@ void WriteRhoGridFromRaw(char rho_ic_fi[], char grid_rho_ic_fi[]){
           (double)(UNIT_LENGTH*(g_domBeg[JDIR] - 0.001*fabs(g_domBeg[JDIR]))),
           (double)(UNIT_LENGTH*(g_domEnd[JDIR] + 0.001*fabs(g_domEnd[JDIR]))),
           (double)((RHO_TAB_MIN)*1.002),
-          0,
+          (int) REPLOT_P_RHO,
           (char*)(rho_ic_fi), (char*)(grid_rho_ic_fi) );
   system(command);
 }
