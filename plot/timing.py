@@ -43,8 +43,8 @@ else:
 fig, ax = plt.subplots(nrows=2, ncols=2)
 
 ax[0,0].plot(el_time_h, t_sim, '.-')
-ax[0,0].set_ylabel('elapsed time / h')
-ax[0,0].set_xlabel('simulated time / s')
+ax[0,0].set_xlabel('elapsed time / h')
+ax[0,0].set_ylabel('simulated time / s')
 ax[0,0].grid()
 
 ax[1,0].plot(an_calls, dt_sim, '.-')
