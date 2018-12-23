@@ -8,5 +8,6 @@ Penso sia compatibile, solo che vanno aggiustati alcuni dettagli.
 
 Come implementare all'atto pratico:
 + Devo capire bene quali sono le equazioni che vengono risolte e come si normalizzano, perchè poi devo normalizzare la viscisità correnttamente. Comunque la viscisità deve avere dimensioni $\rho \times \mathrm{length}^2/\mathrm{time}$, vedi pag 73 della guida. Ricorda che per gas monoatomici $\nu_2=0$ (vedi la def. di $\nu_2$ sulla guida).
+**Vedi il libro di Landau-Lifschitz(soprattutto pag 49), la guida di Pluto, l'NRL2016, Fundamentals of Gas Dynamics (in /home/ema/Dottorato/literature/teoria/gasdinamica/)**
 + Trovare e implementare un caso test per verificare che la viscosità funzioni bene.
-+ Prima provare con una viscosità che sia realistica per l'idrogeno ma non accurata, se no rischio di perdere tempo con il coefficiente di visc. quando magari il codice è instabile o il limite sul dt per avanzamento STS è proibitivo. 
++ Prima provare con una viscosità che sia realistica per l'idrogeno ma non accurata, se no rischio di perdere tempo con il coefficiente di visc. quando magari il codice è instabile o il limite sul dt per avanzamento STS è proibitivo.
