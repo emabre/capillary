@@ -6,7 +6,7 @@
 
 #define KAPPAMAX 1e7
 #define KAPPA_LOW 1e3
-#define LOW_RHO_REL_TOLL 1e-2
+#define LOW_RHO (2.5e-9) 
 
 void TC_kappa(double *v, double x1, double x2, double x3,
               double *kpar, double *knor, double *phi)
@@ -67,7 +67,7 @@ void TC_kappa(double *v, double x1, double x2, double x3,
     #endif
 
     #ifdef CONE_LOW_TCKAPPA
-      if (IsOutCone(CONE_LOW_TCKAPPA, x1, x2) && v[RHO] < LOW_RHO_REL_TOLL*g_inputParam[DENS0]/UNIT_DENSITY)
+      if (IsOutCone(CONE_LOW_TCKAPPA, x1, x2) && v[RHO]*UNIT_DENSITY < LOW_RHO)
         k = KAPPA_LOW;
     #endif
 
