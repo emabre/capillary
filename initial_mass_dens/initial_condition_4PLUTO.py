@@ -23,7 +23,7 @@ grid_rend = float(sys.argv[6])
 grid_zbeg = float(sys.argv[7])
 grid_zend = float(sys.argv[8])
 min_rho_cgs = float(sys.argv[9])
-replot_p_rho = bool(sys.argv[10])
+replot_p_rho = bool(int(sys.argv[10]))  # convert to int and then to bool otherwise it will always become True
 rho_fi = str(sys.argv[11])
 grid_finame = str(sys.argv[12])
 

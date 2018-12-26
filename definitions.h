@@ -144,11 +144,11 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 #define KAPPA_TABLE                YES
 #define MAKE_ETA_TAB_FILE          YES /* If YES, the ascii table file will be made with python script, */
 #define MAKE_KAPPA_TAB_FILE        YES /* instead, if NO it is assumed that the file is already present*/
-#define RHO_TAB_MIN                2.5e-11
-#define RHO_TAB_MAX                2.5e-4
-#define N_TAB_RHO                  30
+#define RHO_TAB_MIN                (2.5e-14)  /* You should never go below UNIT_DENSITY*1e-7 */
+#define RHO_TAB_MAX                (2.5e-6)  /* You should never go hiher than UNIT_DENSITY*1e7 */
+#define N_TAB_RHO                  50
 #define T_TAB_MIN                  (0.8*T_CUT_RHOE)
-#define T_TAB_MAX                  5e4
+#define T_TAB_MAX                  8e4
 #define N_TAB_T                    100
 /* ---------------------------------------------------- */
 
@@ -160,6 +160,10 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
+#define RHO_VACUUM                 2.5e-11  /* You should never go below UNIT_DENSITY*1e-7 */
+/* ---------------------------------------------------- */
+
+/* ---------------------------------------------------- */
 /* CAPILLARY FILLING SETTINGS (initial condition) */
 /* 'DENS_INITIAL' Available: SMOOTH_COS2 (cos² smothing ouside capillary),
                             UNIFORM_FILL (sharp transition with vacuum),
@@ -168,7 +172,7 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* Useful only in case of DENS_INITIAL==FROM_FILE;
    if 1 replot from python the p and rho interpolated,
    if 0 it does nothing (keep 0 as default) */
-#define REPLOT_P_RHO               1
+#define REPLOT_P_RHO               0
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */

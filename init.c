@@ -60,6 +60,12 @@ void Init (double *us, double x1, double x2, double x3)
    #error physics not valid
   #endif
 
+  // Maybe this is not the best place to do this check, but I have no idea where else I could put it
+  if (RHO_VACUUM>RHO_TAB_MAX || RHO_VACUUM<RHO_TAB_MIN) {
+    print1("RHO_VACUUM must be between RHO_TAB_MIN and RHO_TAB_MAX");
+    QUIT_PLUTO(1);
+  }
+
   //Remember: in cyl coords x1 is r, x2 is z
 
   /* ******************************************************** */
@@ -100,7 +106,7 @@ void Init (double *us, double x1, double x2, double x3)
 
     // Put the minimum rho on the rigid capillary wall
     if (x2 < zcap && x1 > rcap)
-      us[RHO] = (RHO_TAB_MIN)*1.001 / UNIT_DENSITY;
+      us[RHO] = 0.5*(UNIT_DENSITY + RHO_VACUUM)/UNIT_DENSITY;
 
   #else
     #error choice for DENS_INITIAL not understood
@@ -781,12 +787,16 @@ void SetRhoAnalytic(double *rho, double x1, double x2, double x3, int mode) {
     #ifdef DEBUG_EMA
       double rho_red_vac = 1;
     #else
-      double rho_red_vac = 0.001; // Fraction of rho inside capillary, used to emumate vacuum
+      double rho_red_vac = RHO_VACUUM/g_inputParam[DENS0]; // Fraction of rho inside capillary, used to emulate vacuum
     #endif
 
     /* -----------------------------------------------------
         Zones not covered in the next lines (except for zone "Everywhere")
       ----------------------------------------------------- */
+    if (RHO_VACUUM > g_inputParam[DENS0]){
+      print1("\nRHO_VACUUM higher than non-vacuum density (g_inputParam[DENS0])");
+      QUIT_PLUTO(1);
+    }
     *rho = rho_red_vac*dens0;
     /* -----------------------------------------------------
         Inside capillary, excluded near-electrode zone
