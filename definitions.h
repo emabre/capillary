@@ -35,7 +35,7 @@
 
 /* [Beg] user-defined constants (do not change this line) */
 
-#define  UNIT_DENSITY            1.67382e-6
+#define  UNIT_DENSITY            1.67382e-8
 #define  UNIT_LENGTH             1.0e-3
 #define  UNIT_VELOCITY           1.0e6
 #define  TC_SATURATED_FLUX       NO
