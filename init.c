@@ -175,6 +175,11 @@ void Init (double *us, double x1, double x2, double x3)
   #endif
   us[PRS] = us[RHO]*T0_K / (KELVIN*mu); /*for the usage of macro "KELVIN" see page 45 of the manual*/
 
+  // // [Err] just a test
+  // if (x1<40 && x1>30 && x2<800 && x2>750)
+  //   GetMu(T_MAX_HARD_RESET*1.1, us[RHO], &mu);
+  //   us[PRS] = us[RHO]*T_MAX_HARD_RESET*1.1 / (KELVIN*mu); // T_MAX_HARD_RESET
+
   first_call = 0;
 }
 

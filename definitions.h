@@ -148,7 +148,7 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 #define RHO_TAB_MAX                (2.5e-6)  /* You should never go hiher than UNIT_DENSITY*1e7 */
 #define N_TAB_RHO                  50
 #define T_TAB_MIN                  (0.8*T_CUT_RHOE)
-#define T_TAB_MAX                  8e4
+#define T_TAB_MAX                  15.e4
 #define N_TAB_T                    100
 /* ---------------------------------------------------- */
 
@@ -160,7 +160,12 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
+/* Parameters for hard/brute-force solutions for certain numerical problems 
+- if rho is below RHO_VACUUM than the k is reduced a bit (see tc_kappa.c)
+- if T is higher than T_MAX_HARD_RESET than it is put back to T_MAX_HARD_RESET
+*/
 #define RHO_VACUUM                 2.5e-11  /* You should never go below UNIT_DENSITY*1e-7 */
+#define T_MAX_HARD_RESET           (T_TAB_MAX*0.9)  /* It must be below T_TAB_MAX and all other tabulated temperatures */
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
