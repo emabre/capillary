@@ -456,7 +456,7 @@ void ZeroBoundCap (double ****q, int nv, int s, int side, int vpos)
  * ***************************************************/
 int IsOutCone(double angle, double r, double z) {
 
-  if (atan((r-rcap_real) / (z-zcap_real)) >= angle && r > rcap_real) {
+  if (atan((r-rcap_real) / (z-zcap_real)) >= angle && r >= rcap_real) {
     return 1;
   } else {
     return 0;
