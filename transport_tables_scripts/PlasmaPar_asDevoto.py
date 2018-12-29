@@ -37,7 +37,7 @@ B[0,3,2,2] = 8*-210; B[0,4,2,2] = 8*90
 ## q13
 #A[1,1,1,3] = 8*63/32; A[1,2,1,3] = 8*-9/2; A[1,3,1,3] = 8*5/2
 #B[0,0,1,3] = -8*525/32; B[0,1,1,3] = -8*-315/4; B[0,2,1,3] = -8*162;
-#B[0,3,1,3] = -8*-160; B[0,4,1,3] =-8*60 
+#B[0,3,1,3] = -8*-160; B[0,4,1,3] =-8*60
 ## q23
 #A[1,1,2,3] = 8*945/128; A[1,2,2,3] = 8*-261/16; A[1,3,2,3] = 8*125/8;
 #A[1,4,2,3] = 8*-15/2
@@ -107,11 +107,11 @@ def elRes_norm(z,rho,kT, ne=0):
         ne = iz.elec_dens(rho,z)
     else:  # Just a reminder
         print("Fix this crap!")
-    
+
     n_p = rho/(gau.me+gau.mp)
     n = np.array([ne, ne, n_p-ne])
     Q = makeQ(kT, ne)
-    # Total number density of free particles in gas (ne + nH+ + nH), assuming 
+    # Total number density of free particles in gas (ne + nH+ + nH), assuming
     # complete dissociation:
     # Ordinary diff coefficient, 3rd approx.
     D = diffu_ee(kT, rho, n, Q)
@@ -125,12 +125,12 @@ def elRes_norm_2(z,rho,kT):
     '''
     ne = iz.elec_dens(rho,z)
     Q = makeQ(kT, ne)
-    # Total number density of free particles in gas (ne + nH+ + nH), assuming 
+    # Total number density of free particles in gas (ne + nH+ + nH), assuming
     # complete dissociation:
     n_p = rho/(gau.me+gau.mp)
     n = np.array([ne, ne, n_p-ne])
     m = np.array([gau.me, gau.mp, gau.mp+gau.me])
-    
+
     D = diffu(kT, rho, n, m, Q)
     Zi = np.array([-1.0,1.0,0.0])
     sigma = gau.qe**2*n.sum()/(rho*kT) * np.sum(n[1:]*m[1:]*Zi[1:]*D[0,1:])
@@ -143,18 +143,18 @@ def elRes_norm_3(z,rho,kT):
     '''
     ne = iz.elec_dens(rho,z)
     Q = makeQ(kT, ne)
-    # Total number density of free particles in gas (ne + nH+ + nH), assuming 
+    # Total number density of free particles in gas (ne + nH+ + nH), assuming
     # complete dissociation:
     n_p = rho/(gau.me+gau.mp)
     n = np.array([ne, ne, n_p-ne])
     m = np.array([gau.me, gau.mp, gau.mp+gau.me])
-    
+
     D = diffu(kT, rho, n, m, Q)
     Zi = np.array([-1.0, 1.0, 0.0])
-    
+
     sigma = n[1]*m[1]*Zi[1]*D[0,1] - Zi[1]*n[0]*m[0]*Zi[0]*D[1,0]
     sigma *= gau.qe**2*n.sum()/(rho*kT)
-    
+
     return 1/sigma
 
 def thermCond_tot_norm(z, rho, kT, corr=True, B=0.0):
@@ -170,17 +170,17 @@ def thermCond_e_norm(z, rho, kT, corr=True, B=0.0):
     '''
     ne = iz.elec_dens(rho,z)
     Q = makeQ(kT, ne)
-    # Total number density of free particles in gas (ne + nH+ + nH), assuming 
+    # Total number density of free particles in gas (ne + nH+ + nH), assuming
     # complete dissociation:
     n_p = rho/(gau.me+gau.mp)
     n = np.array([ne, ne, n_p-ne])
-    
+
     q11 = q_mp_simple(1, 1, n, Q)
     q12 = q_mp_simple(1, 2, n, Q)
     q22 = q_mp_simple(2, 2, n, Q)
-    
+
     k = 75*ne**2*gau.kB/8 * np.sqrt(2*np.pi*kT/gau.me) * (q11-(q12**2)/q22)**-1
-    
+
     return k
 
 def thermCond_h_norm(z, rho, kT, corr=True, B=0.0):
@@ -191,26 +191,26 @@ def thermCond_h_norm(z, rho, kT, corr=True, B=0.0):
     ne = iz.elec_dens(rho,z)
     # I cannot keep all the collision integrals, as I have no e-
     Q = makeQ(kT, ne)[:,:,1:,1:]
-    # Total number density of free particles in gas (ne + nH+ + nH), assuming 
+    # Total number density of free particles in gas (ne + nH+ + nH), assuming
     # complete dissociation:
     n_p = rho/(gau.me+gau.mp)
     # number densities of gas components (H, H+)
     n = np.array([ne, n_p-ne])
     # masses of gas components (H, H+)
     m = np.array([gau.mp, gau.me+gau.mp])
-    
+
     lprime = lambdaPrime(kT, n, m, Q)
-    
+
     D = diffu(kT, rho, n, m, Q)
     E = Eij(D, m)
     DT = thermDiffu(kT, n, m, Q)
-    
+
     addend = 0
     idx = np.arange(len(n))
     for ii,jj in it.product(idx,idx):
         addend += E[ii,jj]*DT[ii]*DT[jj]/(n[ii]*m[ii]*m[jj])
     addend *= rho*gau.kB/n.sum()
-    
+
     return addend+lprime
 
 def thermCond_norm(z, rho, kT):
@@ -219,24 +219,24 @@ def thermCond_norm(z, rho, kT):
     '''
     ne = iz.elec_dens(rho,z)
     Q = makeQ(kT, ne)
-    # Total number density of free particles in gas (ne + nH+ + nH), assuming 
+    # Total number density of free particles in gas (ne + nH+ + nH), assuming
     # complete dissociation:
     n_p = rho/(gau.me+gau.mp)
     n = np.array([ne, ne, n_p-ne])
     m = np.array([gau.me, gau.mp, gau.me+gau.mp])
-    
+
     lprime = lambdaPrime(kT, n, m, Q)
-    
+
     D = diffu(kT, rho, n, m, Q)
     E = Eij(D, m)
     DT = thermDiffu(kT, n, m, Q)
-    
+
     addend = 0
     idx = np.arange(len(n))
     for ii,jj in it.product(idx,idx):
         addend += E[ii,jj]*DT[ii]*DT[jj]/(n[ii]*m[ii]*m[jj])
     addend *= rho*gau.kB/n.sum()
-    
+
     return addend+lprime
 
 def thermCond_r_norm(z, rho, kT):
@@ -246,21 +246,21 @@ def thermCond_r_norm(z, rho, kT):
     T = kT/gau.kB
     ne = iz.elec_dens(rho,z)
     Q = makeQ(kT, ne)
-    # Total number density of free particles in gas (ne + nH+ + nH), assuming 
+    # Total number density of free particles in gas (ne + nH+ + nH), assuming
     # complete dissociation:
     n_p = rho/(gau.me+gau.mp)
     n = np.array([ne, ne, n_p-ne])
     m = np.array([gau.me, gau.mp, gau.me+gau.mp])
-    
+
     # Omega_i,j^(l,s)
     Om, mu = Q2Om(Q, kT, m, ret_redmass=True)
-    
+
     p = n.sum()*kT
     Dkl = 3/16*(kT**2)/(p*mu*Om[0,0,:,:])
-    
+
     # Stochiometric coefficients
     R = np.array([+1,+1,-1])
-    
+
     # I build the A quantity (it's just one real number, instead, if I had considered
     # also the dissociation reaction, it would have been a 2x2 matrix)
     A = 0
@@ -269,7 +269,7 @@ def thermCond_r_norm(z, rho, kT):
     for kk in range(0,len(R)-1): # species are 3, so 3-1=2 (last kk will be 1)
         for ll in range(kk+1,len(R)): # Species are 3 (last ll will be 2)
             A += kT/(Dkl[kk,ll]*p) * x[kk]*x[ll] * (R[kk]/x[kk]-R[ll]/x[ll])**2
-    
+
     # Entalpy difference (in reaction e- + H+ <-> H) per particle, in erg
     # Original
     DH = 13.6*1.6e-12
@@ -278,9 +278,9 @@ def thermCond_r_norm(z, rho, kT):
     # print("WARNING: I did a test, I computed DH using ionization energy + 5/2*kB*T")
     # test, multiply by factor (delete later)
 #    DH = DH * 1.25
-    
+
     lambda_r = 1/(kT*T)*DH**2/A
-    
+
     return lambda_r
 
 # I am not sure this is correct! (maybe dh is not correct but check also the rest)
@@ -291,20 +291,20 @@ def thermCond_r_norm(z, rho, kT):
 #    T = kT/gau.kB
 #    ne = iz.elec_dens(rho,z)
 #    Q = makeQ(kT, ne)
-#    # Total number density of free particles in gas (ne + nH+ + nH), assuming 
+#    # Total number density of free particles in gas (ne + nH+ + nH), assuming
 #    # complete dissociation:
 #    n_p = rho/(gau.me+gau.mp)
 #    n = np.array([ne, ne, n_p-ne])
 #    m = np.array([gau.me, gau.mp, gau.me+gau.mp])
-#    
+#
 #    # THIS IS PROBABLY WRONG, MAYBE IT SHOULD BE A BIT HIGHER!
 #    dh = 13.6*1.6e-12  # Entalpy difference in erg
-#    
+#
 #    DA, DAT = diffuAmbANDthermDiffuAmb(kT, rho, n, m, Q)
-#    
+#
 #    lambda_r = dh * (n.sum()*gau.mp/(2*rho*kT*T)*(n[0]*n[2])/(n[0]+n[2])*dh*DA \
 #                     + DAT/(gau.mp+T))
-#    
+#
 #    return lambda_r
 
 def diffu_ee(kT, rho, n, Q):
@@ -322,7 +322,7 @@ def diffu_ee(kT, rho, n, Q):
     q12 = q_mp_simple(1, 2, n, Q)
     q22 = q_mp_simple(2, 2, n, Q)
     q02 = q_mp_simple(0, 2, n, Q)
-    
+
 #    det_num = q11*q22 - q12**2
 #    det_denom = q00 * (q11*q22 - q12**2) + \
 #                q01 * (q12*q02 - q01*q22) + \
@@ -333,10 +333,10 @@ def diffu_ee(kT, rho, n, Q):
     denom = np.array([[q00, q01, q02],
                       [q01, q11, q12],
                       [q02, q12, q22]])
-    
+
 #    D11 = 3*n[0]*rho/(2*n.sum()*gau.me) * np.sqrt(2*np.pi*kT/gau.me)*det_num/det_denom
     D11 = 3*n[0]*rho/(2*n.sum()*gau.me) * np.sqrt(2*np.pi*kT/gau.me)*np.linalg.det(num)/np.linalg.det(denom)
-    return D11    
+    return D11
 
 def diffu(kT, rho, n, m, Q):
     ''' Ordinary diffusion coefficients matrix (general, for all the species),
@@ -346,13 +346,13 @@ def diffu(kT, rho, n, m, Q):
         m: array with scecies atomic masses (in same order as n)
     '''
     Nspecs = len(n)
-    
+
     denom = denomD_3(n, m, Q)
-    
+
     num = np.zeros((denom.shape[0]+1, denom.shape[1]+1))
     num[0:denom.shape[0],
         0:denom.shape[1]] = denom.copy()
-        
+
     idx = np.arange(Nspecs)
     D = np.zeros((Nspecs,Nspecs))
     for ii,jj in it.product(idx,idx):
@@ -370,13 +370,13 @@ def thermDiffu(kT, n, m, Q):
         n: array with species number density
         m: array with scecies atomic masses (in same order as n)
     '''
-    Nspecs = len(n)    
+    Nspecs = len(n)
     denom = denomD_3(n, m, Q)
-    
+
     num = np.zeros((denom.shape[0]+1, denom.shape[1]+1))
     num[0:denom.shape[0],
         0:denom.shape[1]] = denom.copy()
-        
+
     idx = np.arange(Nspecs)
     DT = np.zeros(Nspecs)
     for ii in idx:
@@ -392,13 +392,13 @@ def lambdaPrime(kT, n, m, Q):
     '''
     Nspecs = len(n)
     denom = denomD_3(n, m, Q)
-    
+
     num = np.zeros((denom.shape[0]+1, denom.shape[1]+1))
     num[-1,Nspecs:2*Nspecs] = n/np.sqrt(m)
     num[Nspecs:2*Nspecs,-1] = n
     num[0:denom.shape[0],
         0:denom.shape[1]] = denom.copy()
-    
+
     lprime = -75*gau.kB/8 * np.sqrt(2*np.pi*kT) \
              * np.linalg.det(num) / np.linalg.det(denom)
     return lprime
@@ -418,13 +418,13 @@ def diffuAmbANDthermDiffuAmb(kT, rho, n, m, Q):
     if not(3==len(n)==len(m)==Q.shape[2]==Q.shape[3]):
         raise ValueError("Some dimensions mismatch! You should have electrons, \
                          1 ion species, 1 neutral species (in this order!) (e.g. hydrogen)")
-    
+
     D = diffu(kT, rho, n, m, Q)
     DT = thermDiffu(kT, n, m, Q)
-    
+
     DA = 2*D[1,2]*(1 - (m[0]*D[1,0])/(m[1]*D[1,2])*(1-D[0,2]/D[0,1]) )
     DAT = DT[1]*(1 + D[1,0]/D[0,1]*(DT[0]/DT[1] - m[0]/m[1]))
-    
+
     return DA, DAT
 
 def Eij(D, m):
@@ -476,12 +476,12 @@ def q_mp_simple(*args):
     if (len(args)!=4 and len(args)!=6):
         raise ValueError("Wrong number of input values!")
     m = args[0]; p = args[1]; n = args[2]; Q = args[3]
-    
+
     # Since q^mp are symmetric (q^mp = q^pm) in the theory, I only define
     # the q^mp values where m >= p
     if (m>p):
         raise ValueError("[q_mp_simple] it must be p>=m, but m={},p={}".format(m,p))
-    
+
     sumAQ = n[0]**2*np.sqrt(2) * np.sum(A[:,:,m,p]*Q[:,:,0,0])
     # [Opt] I could do this in a smarter way
     sumBQ = 0
@@ -490,7 +490,7 @@ def q_mp_simple(*args):
     sumBQ *= n[0]
 
     q_mp = sumAQ + sumBQ
-    
+
 #    # I add effect of magnetic field (see Devoto,PhysFluids 11,448(1968), eq. 6)
 #    if (len(args)==6):
 #        mag_field = args[5]
@@ -499,7 +499,7 @@ def q_mp_simple(*args):
 #        q_mp += -1j*n[0]*omega_el*np.sqrt(2*np.pi*m[0]/kT)*2/np.sqrt(np.pi)*(p+3/2)fattoriale!!!/pfattoriale * delta m,p
     if len(args)==6:
         raise ValueError("Magentic field correction not implemented yet!")
-        
+
     return q_mp
 
 def q_mp_complete(m, p, n_i, m_i, Q):
@@ -507,24 +507,24 @@ def q_mp_complete(m, p, n_i, m_i, Q):
         n_i: must contain species number density
         m_i: must contain species atomic mass(only monatomic scpecies are allowed!)
     '''
-    
+
     if not(len(n_i)==len(m_i)==Q.shape[2]==Q.shape[3]):
         raise ValueError("length of n_i must be same as length of m_i, and Q.shape[2] and Q.shape[3]")
-    
+
     Nspecs = len(n_i)
     idx = np.arange(Nspecs)
     q = np.zeros((Nspecs,Nspecs))
-    
+
     # I define conveniently a difference of Kronecker deltas:
     # ij_m_jl = delta_ij - delta_jl
     # l MUST BE A NUMPY ARRAY
     ij_m_jl = lambda i,j,l: ((i==j)-(j==l).astype(int))
-    
+
     # I define conveniently a sum of Kronecker deltas:
     # ij_m_jl = delta_ij + delta_jl
     # l MUST BE A NUMPY ARRAY
     ij_p_jl = lambda i,j,l: ((i==j)+(j==l).astype(int))
-    
+
     # q^00_ij
     if m==p==0:
         sqm = np.sqrt(m_i)
@@ -593,7 +593,7 @@ def q_mp_complete(m, p, n_i, m_i, Q):
                                 +ij_p_jl(ii,jj,idx)*(7*m_i[jj]*m_i*(4*m2[jj]+7*m2)*Q[1,1,ii,idx]
                                                     -112*m_i[jj]*m3*Q[1,2,ii,idx]
                                                     +80*m_i[jj]*m3*Q[1,3,ii,idx])))
-    
+
     return q
 
 def Q2Om(Q, kT, m, ret_redmass=False):
@@ -620,7 +620,7 @@ def makeQ(kT, ne):
     T = kT/gau.kB
     # since: max(l)=2, max(s)=5, max(i)=max(j)=3, then:
     CollInt = np.zeros((3,5,3,3))
-    
+
     # 'which' is a tuple of tuples containg all the (l,s,i,j) places
     # that must be filled inside Q
 #    # FOR USE WITH SIMPLIFIED TREATEMENT
@@ -683,7 +683,7 @@ def makeQ(kT, ne):
                     CollInt[ll,ss,jj,ii] = CollInt[ll,ss,ii,jj]
                 else:
                     Warning("Collision integral CollInt[{},{},{},{}] is not simmetric!".format(ll,ss,ii,jj))
-    
+
     return CollInt
 
 def Qhat(l, s, i, j, T, ne):
@@ -707,45 +707,41 @@ def Qhat(l, s, i, j, T, ne):
     else:
         raise ValueError("Wrong choice for i,j")
 
-def Q_eHp(l, s, T, ne):
+def Q_eHp(l,s,T,ne):
     ''' Collision integral for e-H+ as in Hahn, Mason, Phys. Fluids 14, 278 (1971),
         (see formula 51 of that paper) (it's the same as used by Bruno, "Transport
         properties...Mars..", ESA STR-256 2010)
     '''
-    
-    kT = T*gau.kB
-    # Electrons Debye length
-    lDeb_el = np.sqrt(kT/(4*np.pi*ne*gau.qe**2))
-    # Ions+Electrons Debye length
-#    lDeb_el = np.sqrt(kT/(4*np.pi*2*ne*gau.qe**2))
-    
-    phi0 = gau.qe**2/lDeb_el
-    
-    Tstar = kT/phi0
+
+    kT = gau.kB*T
+    # lDeb = np.sqrt(kT/(4*np.pi*ne*gau.qe**2))  # Only electrons
+    lDeb = np.sqrt(kT/(4*np.pi*2*ne*gau.qe**2))  # Electrons+ions
+    phi0 = gau.qe**2/lDeb
+    T_star = kT/phi0
+
     Nl = ( 1 - (1+(-1)**l)/(2*(l+1)) )**-1
-    
-    As = 0.0
-    for ss in range(1,s):
-        As += s**-1
-    
-    Cl = 0
-    if (l%2):
-        for ll in range(1, l+1, 2):
-            Cl += ll**-1
-        Cl -= 1/(2*l)
+    # The computation of As and Cl is not optimal,
+    # but it works (it's correct), and I don't need much performance
+    if s == 1:
+        As = 0
+    elif s > 1:
+        As = 0
+        for ss in range(2,s+1):
+            As += 1/(ss-1)
     else:
-        for ll in range(1, l, 2):
-            Cl += ll**-1
-    
-    # I hope this interpretation of the paper by Hahn is correct
-    # (my doubt is: is gamma already the euler_gamma constant?
-    #  or is ln(gamma) the euler_gamma constant, as stated in the paper?)
-    gamma2 = np.exp(2*np.euler_gamma)
-    
-    OmegaStar = (Tstar**-2) * \
-                (l*Nl/(s*(s+1))) * \
-                np.log((4*Tstar/gamma2)*np.exp(As-Cl)+1)
-    Qls = np.pi*lDeb_el**2*OmegaStar
+        raise ValueError("l cannot be smaller than 1")
+    Cl = 0
+    if l%2!=0:  # l is odd
+        for ll in range(1,l+1,2):
+            Cl += 1/ll
+        Cl -= 1/(2*l)
+    else:  # l is even
+        for ll in range(1,l,2):
+            Cl += 1/ll
+
+    Qls_star = T_star**-2 * l*Nl/(s*(s+1))*np.log(4*T_star/np.exp(2*np.euler_gamma)*np.exp(As-Cl) + 1)
+    Qls = Qls_star*np.pi*lDeb**2
+
     return Qls
 
 def Q_ee(l, s, T, ne):
@@ -758,17 +754,17 @@ def Q_eH(l, s, T):
     '''Collision integrals for interaction e-H as in Bruno, Phys. Plasmas
     17, 112315 (2010).
     See eq. 19 and table VI'''
-    
+
     g = g_eH[(l,s)]
     x = np.log(T)
     x1 = (x-g[0])/g[1]
-    
+
     Sigma2OmegaStar = g[2] * x**g[4] * np.exp(x1) / (np.exp(x1)+np.exp(-x1)) + \
                       g[5]*np.exp(-((x-g[6])/g[7])**2) + g[3]
     # Convert to gaussian units
 #   Sigma2OmegaStar *= 1e4 # assuming it was in meters
     Sigma2OmegaStar *= 1e-16 # assuming it was in Angstrom
-    
+
     return Sigma2OmegaStar*np.pi
 
 def Q_HH(l, s, T):
@@ -780,25 +776,25 @@ def Q_HH(l, s, T):
     x = np.log(T)
     x1 = (x-a[2])/a[3]
     x2 = (x-a[5])/a[6]
-    
+
     Sigma2OmegaStar = (a[0]+a[1]*x)*np.exp(x1)/(np.exp(x1) + np.exp(-x1)) + \
                        a[4]*np.exp(x2)/(np.exp(x2) + np.exp(-x2))
     # Convert to gaussian units
 #    Sigma2OmegaStar *= 1e4
     Sigma2OmegaStar *= 1e-16 # assuming it was in Angstrom
-    
+
     return Sigma2OmegaStar*np.pi
 
 def Q_HpH(l, s, T):
     ''' Collision integrals for interaction H+-H in Bruno, Phys. Plasmas
     17, 112315 (2010).
     See eq. 11 and table I'''
-    
+
     a = a_HpH[(l,s)]
     x = np.log(T)
     x1 = (x-a[2])/a[3]
     x2 = (x-a[5])/a[6]
-    
+
     Sigma2OmegaStar = (a[0]+a[1]*x)*np.exp(x1)/(np.exp(x1) + np.exp(-x1)) + \
                       a[4]*np.exp(x2)/(np.exp(x2) + np.exp(-x2))
     # Odd-l therms must include the effect of inelastic collisions.
@@ -814,7 +810,7 @@ def Q_HpH(l, s, T):
     Sigma2OmegaStar *= 1e-16 # assuming it was in Angstrom
 
     return Sigma2OmegaStar*np.pi
-    
+
 
 # <codecell>
 # For testing purposes
@@ -826,11 +822,11 @@ if __name__ == "__main__":
 #    kT = 24000*gau.kB
     z = iz.ionizationSaha(rho, kT)
     prs = (1+z)*rho/(gau.mp+gau.me)*kT
-    
+
     ne = iz.elec_dens(rho,z)
     n_i = np.array([ne, ne, rho/(gau.mp+gau.me)-ne])
     m_i = np.array([gau.me, gau.mp, gau.mp+gau.me])
-    
+
     Q = makeQ(kT, ne)
 #    q00_h = q_mp_complete(0, 0, n_i[1:], m_i[1:], Qh[:,:,1:,1:])
 #    q01_h = q_mp_complete(0, 1, n_i[1:], m_i[1:], Qh[:,:,1:,1:])
@@ -841,24 +837,24 @@ if __name__ == "__main__":
 #    q22_h = q_mp_complete(2, 2, n_i[1:], m_i[1:], Qh[:,:,1:,1:])
 #    q20_h = q_mp_complete(2, 0, n_i[1:], m_i[1:], Qh[:,:,1:,1:])
 #    q02_h = q_mp_complete(0, 2, n_i[1:], m_i[1:], Qh[:,:,1:,1:])
-#    
+#
     q00 = q_mp_simple(0, 0, n_i, Q)
-    
+
     D_heavy = diffu(kT, rho, n_i[1:], m_i[1:], Q[:,:,1:,1:])
     DT_heavy = thermDiffu(kT, n_i[1:], m_i[1:], Q[:,:,1:,1:])
-    
+
     D_all = diffu(kT, rho, n_i, m_i, Q)
     DT_all = thermDiffu(kT, n_i, m_i, Q)
-    
+
     DA, DAT = diffuAmbANDthermDiffuAmb(kT, rho, n_i, m_i, Q)
-    
+
     lprime = lambdaPrime(kT, n_i[1:], m_i[1:], Q[:,:,1:,1:])
-    
+
     k_tot = thermCond_norm(z, kT, rho)
-    
+
     eta2 = elRes_norm_2(z,rho,kT)
     eta3 = elRes_norm_3(z,rho,kT)
-    
+
     print("-------------")
     print("rho={}, T={}, z={}".format(rho, kT/gau.kB, z))
     print("prs={} atm".format(prs/1e6))
@@ -875,11 +871,11 @@ if __name__ == "__main__":
     print("Q^(2,2)_HH={}".format(Q_HH(2, 2, 9000)))
     print("Q^(2,2)_HH={}".format(Q_HH(2, 2, 18000)))
     print("Q^(2,2)_ee={}".format(Q_ee(2, 2, 9000, 1e16)))
-    
+
     # With z=0.935347, rho=3.16116e-7, T=20000, correct kappa is kappa=2.979e5,
     # according to Bruno,"...Jupiter...", Table VIII
     print("k:{:g}".format(thermCond_e_norm(z,rho,kT)))
-    
+
 #    print("q00={}".format(q00))
 #    print("q00_h={}".format(q00_h))
 #    print("q01_h={}".format(q01_h))
@@ -890,16 +886,16 @@ if __name__ == "__main__":
 #    print("q22_h={}".format(q22_h))
 #    print("q02_h={}".format(q02_h))
 #    print("q20_h={}".format(q20_h))
-    
+
     print("D_heavy={}".format(D_heavy))
     print("DT_heavy={}".format(DT_heavy))
     print("D_all={}".format(D_all))
-    
+
     print("lambda'={}".format(lprime))
     print("k_tot={}".format(k_tot))
-    
+
     print("D_all, Bruno's convention:\n{}".format(D_Devoto2Bruno(n_i,m_i,D_all)))
-    
+
     # In Devoto, J Plas Phys 2,4,617-631(1968),Table 7 DA(1atm,20000K)=579cm²/s
     print("DA={}".format(DA))
     print("DATl={}".format(DAT))
