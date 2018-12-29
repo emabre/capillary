@@ -150,11 +150,14 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
 
       /* ---- Avdance T with ADI ---- */
       #if METHOD_TC==SPLIT_IMPLICIT
-        #error SPLIT_IMPLICIT has not yet been tested with thermal conduction
-        if (NSUBS_TC!=1) {
-          print1("\n[ADI] In SPLIT_IMPLICIT method only NSUBS_TC=1 is implemented");
-          QUIT_PLUTO(1);
-        }
+        // [Err] Decomment next, unless you tested SPLIT_IMPLICIT for TC 
+        // #error SPLIT_IMPLICIT has not yet been tested with thermal conduction
+        // if (NSUBS_TC!=1) {
+        //   print1("\n[ADI] In SPLIT_IMPLICIT method only NSUBS_TC=1 is implemented");
+        //   QUIT_PLUTO(1);
+        // }
+        // [Err] End Err part
+        SplitImplicit( T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_TC);
       #elif METHOD_TC==FRACTIONAL_THETA
         if (NSUBS_TC!=1) {
           print1("\n[ADI] In FRACTIONAL_THETA method only NSUBS_TC=1 is implemented");

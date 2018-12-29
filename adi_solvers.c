@@ -108,7 +108,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
       /*[Opt] Is this for a waste of time? maybe I could engineer better the use of tdm_solver function(or the way it is written)*/
       for (i=lidx; i<=ridx; i++)
         v[j][i] = x[i];
-      
+
       /*---------------------------------------------------------------------*/
       /*--- I set the boundary values (ghost cells) in the solution
             [I do it now as I for the NEUMANN conditions I could't do it before solving the tridiag. system] ---*/
@@ -148,7 +148,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
         if (compute_inflow) {
           /*--- I compute the inflow (0!!!)---*/
           *inflow += 0;
-        } 
+        }
 
       } else {
         print1("\n[ImplcitUpdate]Error setting right ghost in solution (in dir i), not known bc kind!");
@@ -238,7 +238,7 @@ void ImplicitUpdate (double **v, double **b, double **source,
           /*--- I compute the inflow ---*/
           *inflow += (v[ridx+1][i]-v[ridx][i]) * Hp[ridx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
         }
-        
+
       } else if (rbound[l].kind == NEUMANN_HOM) {
         v[ridx+1][i] = v[ridx][i];
         if (compute_inflow) {
@@ -362,7 +362,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
       /*--- Actual update ---*/
       for (i = lidx; i <= ridx; i++)
         v[j][i] = rhs[j][i] + dt/C[j][i] * (b[j][i+1]*Hp[j][i] - b[j][i]*(Hp[j][i]+Hm[j][i]) + b[j][i-1]*Hm[j][i]);
-      
+
     }
   } else if (dir == JDIR) {
     /********************
@@ -399,7 +399,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
           /*--- I compute the inflow ---*/
           *inflow += (b[lidx-1][i]-b[lidx][i]) * Hm[lidx][i] * CONST_PI*(rR[i]*rR[i]-rL[i]*rL[i]) * dt;
         }
-      
+
       } else if (lbound[l].kind == NEUMANN_HOM) {
         b[lidx-1][i] = b[lidx][i];
         if (compute_inflow) {
@@ -429,7 +429,7 @@ void ExplicitUpdate (double **v, double **b, double **source,
           /*--- I compute the inflow (0!!!)---*/
           *inflow += 0;
         }
-      
+
       } else {
         print1("\n[ExplicitUpdate]Error setting right bc (in dir j), not known bc kind!");
         QUIT_PLUTO(1);
@@ -681,7 +681,7 @@ void tdm_solver(double *x, double const *diagonal, double *up,
  * actually I use it since I have seen that in improves
  * the stability properties of the diffusion of the magnetic field
  * and computation of dUres).
- * 
+ *
  * input: diff = BDIFF or TDIFF
  *        int order = FIRST_IDIR or FIRST_JDIR: tells whether the order of the directions
  *                     must be IDIR, JDIR (FIRST_IDIR) or JDIR, IDIR (FIRST_JDIR).
@@ -770,7 +770,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
   // I copy v_old inside v_old_aux, as I cannot use directly v_old in the cycle, it will be modified!
   LINES_LOOP(lines[IDIR], l, j, i)
     v_new[j][i] = v_old[j][i];
-  
+
   v_new_save = v_new;
 
   print1("\nI apply a Peaceman-Rachford scheme for diff=%d (BDIFF=%d,TDIFF=%d)\n", diff, BDIFF, TDIFF);
@@ -787,7 +787,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
   ApplyBCs(lines, d, grid, t_now, dir1);
   ApplyBCs(lines, d, grid, t_now, dir2);
   MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
-  
+
   for (s=0; s<M; s++) {
     /* ---- Swap pointers to be ready for next cycle ---*/
     SwapDoublePointers (&v_old_aux, &v_new);
@@ -804,7 +804,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       if (diff == BDIFF) {
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
-        //       instead of doing it a line later 
+        //       instead of doing it a line later
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_old_aux, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
                           fract*dts, dir1);
@@ -813,7 +813,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       }
     #endif
     #ifdef DEBUG_EMA
-      printf("\nafter expl dir1:\n"); 
+      printf("\nafter expl dir1:\n");
       printf("\nv_old_aux\n");
       printmat(v_old_aux, NX2_TOT, NX1_TOT);
       printf("\nv_aux\n");
@@ -863,13 +863,13 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
       if (diff == BDIFF) {
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
             (but in this way it is more readable)*/
-        // [Err] Decomment next line       
+        // [Err] Decomment next line
         ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
                           EN_CONS_CHECK, &en_res_in,
                           fract*dts, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
-      }    
+      }
     #endif
     #ifdef DEBUG_EMA
       printf("\nafter expl dir2:\n");
@@ -938,13 +938,13 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
      to get it available outside.
      THe reason why I have to do this is that I mixed up the addresses calling:
      "SwapDoublePointers (&v_old_aux, &v_new);", but this exchange of addresses
-     cannot be seen from outside the functin, as in C parameters are passed 
+     cannot be seen from outside the functin, as in C parameters are passed
      to functinos by value!*/
   if (v_new_save != v_new) {
     LINES_LOOP(lines[IDIR], l, j, i)
       v_new_save[j][i] = v_new[j][i];
   }
-  
+
   if (fabs((t_now-t0) - dt)/dt > DT_REL_TOLL) {
     print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
   }
@@ -952,7 +952,7 @@ void PeacemanRachfordMod(double **v_new, double **v_old,
 
 /* ***********************************************************
  * Douglas-Rachford ADI method
- * 
+ *
  * input: diff = BDIFF or TDIFF
  *        int order = FIRST_IDIR or FIRST_JDIR: tells whether the order of the directions
  *                     must be IDIR, JDIR (FIRST_IDIR) or JDIR, IDIR (FIRST_JDIR).
@@ -1063,7 +1063,7 @@ void DouglasRachford (double **v_new, double **v_old,
   #endif
 
   for (s=0; s<M; s++) {
-    
+
     ApplyBCs(lines, d, grid, t_now, dir1);
     /**********************************
      (a.1) Explicit update sweeping DIR1
@@ -1073,14 +1073,14 @@ void DouglasRachford (double **v_new, double **v_old,
                     0, NULL, grid,
                     dts, dir1);
     // [Err] decomment next lines
-    // I apply the BCs at t0 for later (if I do it later, I will need to call ApplyBCs() once more) 
+    // I apply the BCs at t0 for later (if I do it later, I will need to call ApplyBCs() once more)
     ApplyBCs(lines, d, grid, t_now, dir2);
     ApplyBCsonGhosts (v_old_aux, &lines[dir2],
                       lines[dir2].lbound[diff], lines[dir2].rbound[diff],
                       dir2);
     #ifdef DEBUG_EMA
       printf("\ns = %d", s);
-      printf("\nafter expl dir1:\n"); 
+      printf("\nafter expl dir1:\n");
       printf("\nv_old_aux(input)\n");
       printmat(v_old_aux, NX2_TOT, NX1_TOT);
 
@@ -1094,7 +1094,7 @@ void DouglasRachford (double **v_new, double **v_old,
       printf("\nv_aux(result)\n");
       printmat(v_aux, NX2_TOT, NX1_TOT);
     #endif
-    
+
     /**********************************
      (a.2) Implicit update sweeping DIR2
     **********************************/
@@ -1111,7 +1111,7 @@ void DouglasRachford (double **v_new, double **v_old,
       printf("\nv_hat(result)\n");
       printmat(v_hat, NX2_TOT, NX1_TOT);
     #endif
-    
+
     /**********************************
      (b.1) Explicit update sweeping DIR2
     **********************************/
@@ -1180,7 +1180,7 @@ void DouglasRachford (double **v_new, double **v_old,
 
   LINES_LOOP(lines[IDIR], l, j, i)
     v_new[j][i] = v_old_aux[j][i];
-  
+
   if (fabs((t_now-t0) - dt)/dt > DT_REL_TOLL) {
     print1("\nInaccurate dt, actual dt performed: %le, desired: %le\n", t_now-t0, dt);
   }
@@ -1282,7 +1282,7 @@ void Strang(double **v_new, double **v_old,
   ApplyBCs(lines, d, grid, t_now, dir1);
   ApplyBCs(lines, d, grid, t_now, dir2);
   MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
-  
+
   LINES_LOOP(lines[IDIR], l, j, i)
     v_new[j][i] = v_old[j][i];
 
@@ -1361,7 +1361,7 @@ void Strang(double **v_new, double **v_old,
 /* ***********************************************************
  * Fractional-Theta (ADI) method
  * (see Glowinski, R.: Splitting methods for the numerical solution of the incompressible Navier-Stokes equations, 1985)
- * 
+ *
  * input: diff = BDIFF or TDIFF
  *        int order = FIRST_IDIR or FIRST_JDIR: tells whether the order of the directions
  *                     must be IDIR, JDIR (FIRST_IDIR) or JDIR, IDIR (FIRST_JDIR).
@@ -1376,7 +1376,7 @@ void FractionalTheta(double **v_new, double **v_old,
                      const Data *d, Grid *grid,
                      Lines *lines, int diff, int order,
                      double dt, double t0, double theta) {
-    
+
     static double **v_aux; // auxiliary solution vector
     static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
     static int first_call = 1;
@@ -1445,7 +1445,7 @@ void FractionalTheta(double **v_new, double **v_old,
     ApplyBCs(lines, d, grid, t0, dir1);
     ApplyBCs(lines, d, grid, t0, dir2);
     MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
-    
+
     /**********************************
      (a.1) Explicit update sweeping DIR1
     **********************************/
@@ -1457,7 +1457,7 @@ void FractionalTheta(double **v_new, double **v_old,
       if (diff == BDIFF) {
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
-        //       instead of doing it a line later 
+        //       instead of doing it a line later
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_old, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
                           theta*dt, dir1);
@@ -1496,13 +1496,13 @@ void FractionalTheta(double **v_new, double **v_old,
       if (diff == BDIFF) {
         /* [Opt]: I could inglobate this call to ResEnergyIncrease in the previous one by using dt_res_reduced instead of 0.5*dt_res_reduced
            (but in this way it is more readable)*/
-        // [Err] Decomment next line       
+        // [Err] Decomment next line
         ResEnergyIncrease(dUres_aux, H2p, H2m, v_new, grid, &lines[dir2],
                           EN_CONS_CHECK, &en_res_in,
                           (1-2*theta)*dt, dir2);
         LINES_LOOP(lines[IDIR], l, j, i)
           dUres[j][i] += dUres_aux[j][i];
-      }    
+      }
     #endif
 
     /**********************************
@@ -1535,7 +1535,7 @@ void FractionalTheta(double **v_new, double **v_old,
       if (diff == BDIFF) {
         // [Err] Decomment next line
         // [Opt] You could modify and make that the ResEnergyEncrease automatically updates a Ures variable,
-        //       instead of doing it a line later 
+        //       instead of doing it a line later
         ResEnergyIncrease(dUres_aux, H1p, H1m, v_new, grid, &lines[dir1],
                           EN_CONS_CHECK, &en_res_in,
                           theta*dt, dir1);
@@ -1566,7 +1566,7 @@ void FractionalTheta(double **v_new, double **v_old,
 
 /* ***********************************************************
  * SplitImplicit method.
- * 
+ *
  * input: diff = BDIFF or TDIFF
  *        int order = FIRST_IDIR or FIRST_JDIR: tells whether the order of the directions
  *                     must be IDIR, JDIR (FIRST_IDIR) or JDIR, IDIR (FIRST_JDIR).
@@ -1644,8 +1644,8 @@ void SplitImplicit(double **v_new, double **v_old,
       break;
   }
 
-  print1("I apply a Lie scheme for diff=%d (BDIFF=%d,TDIFF=%d) -> I do %d calls to ImplicitUpdate()\n",
-          diff, BDIFF, TDIFF, 2*M);
+  print1("I apply a Lie scheme for diff=%d (BDIFF=%d,TDIFF=%d)\n", diff, BDIFF, TDIFF);
+  print1(" -> I do %d calls to ImplicitUpdate()\n", 2*M);
 
   /*****************************************
   * ---------------------------------------
@@ -1662,7 +1662,14 @@ void SplitImplicit(double **v_new, double **v_old,
 
   LINES_LOOP(lines[IDIR], l, j, i)
     v_new[j][i] = v_old[j][i];
-    
+
+  #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
+    if (diff == BDIFF) {
+      LINES_LOOP(lines[IDIR], l, j, i)
+        dUres[j][i] = 0.0;
+      }
+  #endif
+
   for (s=0; s<M; s++) {
 
     /**********************************
@@ -1680,7 +1687,7 @@ void SplitImplicit(double **v_new, double **v_old,
                           EN_CONS_CHECK, &en_res_in,
                           dts, dir1);
         LINES_LOOP(lines[IDIR], l, j, i)
-          dUres[j][i] = dUres_aux[j][i];
+          dUres[j][i] += dUres_aux[j][i];
       }
     #endif
     #ifdef DEBUG_EMA
