@@ -350,32 +350,9 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     double qz,qr,diagonal,sinth,costh;
   #endif
   static int first_call=1;
-  #if (IMPOSE_BWALL==AS_DIFF)
-    double t_diff_sec = t_diff*(UNIT_LENGTH/UNIT_VELOCITY); // time at which the diffusion has arrived! (seconds)
-  #endif
-  #if IMPOSE_TWALL
-    double mu;
-    double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin
-  #endif
-  #if IMPOSE_BWALL
-    double unit_Mfield;
-    double curr, Bwall, B_ghostwall; //Bwall, B_ghostwall in code units,
-  #endif
 
   /*[Ema] g_time è: "The current integration time."(dalla docuementazione in Doxigen) */
   t_sec = g_time*(UNIT_LENGTH/UNIT_VELOCITY);
-
-  #if IMPOSE_BWALL
-    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
-    // print1("\nCurrent from tab: %g", curr);
-  #endif
-  #if IMPOSE_BWALL==YES
-    curr = current_from_time(t_sec);
-    Bwall = BIOTSAV_GAUSS_A_CM(curr, RCAP)/unit_Mfield;
-  #elif IMPOSE_BWALL==AS_DIFF
-    curr = current_from_time(t_diff_sec);
-    Bwall = BIOTSAV_GAUSS_A_CM(curr, RCAP)/unit_Mfield;
-  #endif
 
   #ifdef DEBUG_BCS
     int nv;
@@ -405,12 +382,14 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     first_call = 0;
   }
 
+ if (g_operatorStep==HYPERBOLIC_STEP) {
+
   /**********************************
   ***********************************
-  Actual setting of the boundary conditions
+  Actual setting of the boundary conditions for HYPERBOLIC STEP
   ***********************************
   ***********************************/
- if (g_operatorStep==HYPERBOLIC_STEP) {
+
   /* Maybe additional check for the runtime value of the boundary is useless,
      I keep it here as I want to be sure I can change the bc only by editing the
      pluto.ini file, and avoid editing also this file*/
@@ -433,16 +412,12 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
       ReflectiveBound (d->Vc[iVR], vsign[iVR], X1_END, CENTER);
 
       BOX_LOOP(box,k,j,i){
-      #if IMPOSE_TWALL
-        // Setting T
-        setT( d, Twall_K, i, j, k);
-      #else
         // I reflect pressure, to have no advection of energy through the capillary wall
         ReflectiveBound (d->Vc[PRS], vsign[PRS], X1_END, CENTER);
-      #endif
       }
     } else {
       print1("[Ema]UserDefBoundary: Not setting BCs!!!!\n");
+      QUIT_PLUTO(1);
     }
   } else if (side == 0) {
     /**********************************
@@ -452,7 +427,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     ***********************************/
 
     #if (IMPOSE_BWALL || IMPOSE_TWALL || !defined(ELECTR_B_NEUM))
-      #error IMPOSE_BWALL, IMPOSE_TWALL, not(ELECTR_B_NEUM), are not implemented in the accurate bcs
+      #error IMPOSE_BWALL, IMPOSE_TWALL, not(ELECTR_B_NEUM), are not implemented
     #endif
 
     /***********************
@@ -502,6 +477,7 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     SetNotEvolvedVar(iBZ);
 
     #ifdef DEBUG_BCS
+      printf("\n Hyperbolic step:");
       for (nv=0, nv<NVAR; nv++;) {
         printf("\n var: %d", nv);
         printmat4d(d->Vc, NX2_TOT, NX1_TOT, nv, 0, -1, -1);
@@ -518,9 +494,64 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
             d->Vc[iBPHI][k][j][i] = 0.0;
       }
     #endif
+
   } else if (g_operatorStep==PARABOLIC_STEP) {
-    print1("g_operatorStep==PARABOLIC_STEP Not implemented yet!");
-    QUIT_PLUTO(1);
+
+    /**********************************
+    ***********************************
+    Actual setting of the boundary conditions for PARABOLIC STEP
+    ***********************************
+    ***********************************/
+  
+    #if (!defined(ELECTR_B_NEUM))
+      #error not(ELECTR_B_NEUM), is not implemented
+    #endif
+
+    double t_diff_sec = t_diff*(UNIT_LENGTH/UNIT_VELOCITY); // time at which the diffusion has arrived! (seconds)
+    double mu;
+    double Twall_K = g_inputParam[TWALL]; // Wall temperature in Kelvin
+    double unit_Mfield;
+    double curr, Bwall, B_ghostwall; //Bwall, B_ghostwall in code units,
+
+    unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
+    // print1("\nCurrent from tab: %g", curr);
+    curr = current_from_time(t_diff_sec);
+    Bwall = BIOTSAV_GAUSS_A_CM(curr, RCAP)/unit_Mfield;
+
+    if (side == X1_END && RuntimeGet()->right_bound[IDIR] == USERDEF){
+      print1("\nUser-defined right boundary of direction x1 is not implemented!");
+      QUIT_PLUTO(1);
+    }
+    // [Err] This is just a test, delete next print-info line in the future
+    print1("\n Setting BCs for parabolic step from init.c");
+
+Attenzione: qui devo
+
+/*
+    // Setting T
+    setT( d, Twall_K, iI, jJ, kK);
+
+    // Setting B
+
+    // Setting v_r
+
+    // Setting v_z
+*/
+
+    // Important! I must set to 0 all the corrections to the variables that I don't want to advance!
+    SetNotEvolvedVar(iVPHI);
+    SetNotEvolvedVar(iBR);
+    SetNotEvolvedVar(iBZ);
+
+    #ifdef DEBUG_BCS
+      printf("\n Parabolic step:");
+      for (nv=0, nv<NVAR; nv++;) {
+        printf("\n var: %d", nv);
+        printmat4d(d->Vc, NX2_TOT, NX1_TOT, nv, 0, -1, -1);
+      }
+      printcorr(d_correction[IDIR], "d_correction[IDIR]");
+      printcorr(d_correction[JDIR], "d_correction[JDIR]");
+    #endif
   }
 
     /*********************

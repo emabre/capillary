@@ -462,3 +462,23 @@ int IsOutCone(double angle, double r, double z) {
     return 0;
   }
 }
+
+#if MULTIPLE_GHOSTS == YES
+  /***********************************************
+  * Author :  Ema
+  * date : 03/01/18
+  * Purpose: Apply multiple ghost cells in internal boundary,
+  *          which means overwrite the present Data *d in certain points with
+  *          values which depends on the integration direction
+  *
+  ***********************************************/
+  void ApplyMultipleGhosts(const Data *d, int direction) {
+    int nv, pp, k,j,i;
+    for (pp = 0; pp < d_correction[direction].Npoints; pp++){
+      i = d_correction[direction].i[pp];
+      j = d_correction[direction].j[pp];
+      k = d_correction[direction].k[pp];
+      VAR_LOOP(nv) d->Vc[nv][k][j][i] = d_correction[direction].Vc[nv][pp];
+    }
+  }
+#endif

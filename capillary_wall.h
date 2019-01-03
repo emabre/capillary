@@ -71,4 +71,8 @@ void SetNotEvolvedVar (int nv);
 
 int IsOutCone(double angle, double r, double z);
 
+#if MULTIPLE_GHOSTS == YES
+  void ApplyMultipleGhosts(const Data*, int);
+#endif
+
 #endif

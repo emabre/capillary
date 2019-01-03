@@ -8,7 +8,7 @@
 #define  TIME_STEPPING           RK2
 #define  DIMENSIONAL_SPLITTING   YES
 #define  NTRACER                 0
-#define  USER_DEF_PARAMETERS     9
+#define  USER_DEF_PARAMETERS     10
 
 /* -- physics dependent declarations -- */
 
@@ -16,9 +16,9 @@
 #define  ENTROPY_SWITCH          NO
 #define  DIVB_CONTROL            NO
 #define  BACKGROUND_FIELD        NO
-#define  RESISTIVITY             NO
+#define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
 #define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
-#define  VISCOSITY               NO
+#define  VISCOSITY               SUPER_TIME_STEPPING
 #define  ROTATING_FRAME          NO
 
 /* -- user-defined parameters (labels) -- */
@@ -27,11 +27,12 @@
 #define  ETAY_GAU                1
 #define  ETAZ_GAU                2
 #define  KAPPA_GAU               3
-#define  TWALL                   4
-#define  T0                      5
-#define  DENS0                   6
-#define  VZ0                     7
-#define  ALPHA_J                 8
+#define  DYN_VISC_GAU            4
+#define  TWALL                   5
+#define  T0                      6
+#define  DENS0                   7
+#define  VZ0                     8
+#define  ALPHA_J                 9
 
 /* [Beg] user-defined constants (do not change this line) */
 
