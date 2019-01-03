@@ -236,7 +236,7 @@ void SetRBox_capWall(int Nghost) {
   rbox_center_capCorn[s].kb = 0;
   rbox_center_capCorn[s].ke = NX3_TOT-1;
 
-  #ifdef DEBUG_ACCURATE_BCS
+  #ifdef DEBUG_BCS
     printbox(rbox_center_capWall[CAP_WALL_INTERNAL], "rbox_center_capWall[CAP_WALL_INTERNAL]");
     printbox(rbox_center_capWall[CAP_WALL_EXTERNAL], "rbox_center_capWall[CAP_WALL_EXTERNAL]");
     printbox(rbox_center_capCorn[0], "rbox_center_capCorn[0]");
