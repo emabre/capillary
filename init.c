@@ -525,7 +525,11 @@ void UserDefBoundary (const Data *d, RBox *box, int side, Grid *grid)
     // [Err] This is just a test, delete next print-info line in the future
     print1("\n Setting BCs for parabolic step from init.c");
 
-Attenzione: qui devo
+Attenzione: qui devo imporre condizioni riflessive+no-slip(o altro) incluse anche le correzioni per la/le cella/e di angolo
+usare FlipSign + una versione(o più versioni) modificata di ReflectiveBoundCap pare una scelta intelligente.
+perchè modificata: perchè non deve riflettere le velocità tangenziali, ma mettere una condizione tale per cui
+la velocità tangenziale sul bordo sia zero (o il valore deciso).
+Inoltre per altre quantità (e.g. la temperatura e il campo mag.) il valore sul bordo va imposto e non riflesso (anche se questo ha poco effetto sul "flusso viscoso").
 
 /*
     // Setting T
