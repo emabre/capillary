@@ -65,7 +65,7 @@
 /*  Ema's additional macros                            */
 #define SPLIT_DIFF_ADV_ADV_DIFF
 // #define PROFILE_GPROF_STOPSTEP  40
-#define FREEZE_FLUID
+// #define FREEZE_FLUID
 
 /* ---------------------------------------------------- */
 /* ADI scheme settings                                  */
@@ -148,8 +148,8 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 #define RHO_TAB_MAX                (2.5e-6)  /* You should never go hiher than UNIT_DENSITY*1e7 */
 #define N_TAB_RHO                  50
 #define T_TAB_MIN                  (0.8*T_CUT_RHOE)
-#define T_TAB_MAX                  15.e4
-#define N_TAB_T                    100
+#define T_TAB_MAX                  3.e5
+#define N_TAB_T                    120
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
@@ -165,7 +165,9 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 - if T is higher than T_MAX_HARD_RESET than it is put back to T_MAX_HARD_RESET
 */
 #define RHO_VACUUM                 2.5e-11  /* You should never go below UNIT_DENSITY*1e-7 */
-#define T_MAX_HARD_RESET           (T_TAB_MAX*0.9)  /* It must be below T_TAB_MAX and all other tabulated temperatures */
+#define T_MAX_HARD_RESET           (T_TAB_MAX*0.99)  /* It must be below T_TAB_MAX and all other tabulated temperatures */
+#define T_LIM_IEN                  1.0e5    /* Limit of temeperature above which EOS is modified (cv not constant anymore)*/
+#define BETA_IEN                   1.2637   /* When T>T_LIM_IEN the int.enrgy gets multiplied by (T/T_LIM_IEN)^BETA_IEN*/
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
@@ -189,6 +191,6 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 // #define DEBUG_EMA
 // #define DEBUG_BCS
 // #define DEBUG_BUILDIJ
-#define DEBUG_TNEGATIVE
+// #define DEBUG_TNEGATIVE
 #define WARN_CTP_FAIL  NO
 #define WARN_ERR_COMP_TEMP NO

@@ -22,6 +22,12 @@ static double SahaXFrac(double T, double rho);
                            to derivatives in Gamma1()  */
 #define INTE_EXACT 1    /* Compute internal energy exactly in Gamma1() */
 
+#if (defined(T_LIM_IEN) || defined(BETA_IEN))
+  #if !defined(T_LIM_IEN) || !defined(BETA_IEN)
+    #error T_LIM_IEN and BETA_IEN must either be both defined or none must be defined.
+  #endif
+#endif
+
 /* ***************************************************************** */
 double InternalEnergyFunc(double *v, double T)
 /*!
@@ -39,14 +45,25 @@ double InternalEnergyFunc(double *v, double T)
  ******************************************************************* */
 {
   double x, rho, e, mu, kT;
-  double rhoe, chi = 13.6*CONST_eV;
+  double chi = 13.6*CONST_eV;  /*[Ema] I removed the definition of rhoe, as it was not used*/
   double p0 = UNIT_DENSITY*UNIT_VELOCITY*UNIT_VELOCITY;
+  double alpha;
 
   kT   = CONST_kB*T;
   x    = SahaXFrac(T, v[RHO]);
   GetMu(T,v[RHO],&mu);
   rho  = v[RHO]*UNIT_DENSITY;
+
   e    = 1.5*kT/(mu*CONST_amu) + chi*x/CONST_mH;
+
+  /*[Ema] Added by Ema*/
+  #ifdef T_LIM_IEN
+    if (T>T_LIM_IEN) {
+      alpha = pow(T/T_LIM_IEN, BETA_IEN);
+      e    = 1.5*kT/(mu*CONST_amu)*alpha + chi*x/CONST_mH;
+    }
+  #endif
+  /* [Ema] end added by Ema*/
 
 /*
 FILE *fp;
