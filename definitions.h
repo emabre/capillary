@@ -168,6 +168,7 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 #define T_MAX_HARD_RESET           (T_TAB_MAX*0.99)  /* It must be below T_TAB_MAX and all other tabulated temperatures */
 #define T_LIM_IEN                  1.0e5    /* Limit of temeperature above which EOS is modified (cv not constant anymore)*/
 #define BETA_IEN                   1.2637   /* When T>T_LIM_IEN the int.enrgy gets multiplied by (T/T_LIM_IEN)^BETA_IEN*/
+#define RHO_MIN_HARD_RESET         (RHO_TAB_MIN*100.0)  /* When RHO<RHO_MIN_HARD_RESET rho is set equal to RHO_MIN_HARD_RESET*/
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */

@@ -167,7 +167,7 @@ double Gamma1(double *v)
  *********************************************************************** */
 {
   double gmm1, T;
-  double cv, mu, chirho = 1.0, chiT = 1.0, rho, rhoe;
+  double cv, mu, chirho = 1.0, chiT = 1.0, rho; // rhoe; // I remove the definition of rhoe, as it is not used
   double epp, emm, ep, em, delta = 1.e-3;
   double Tpp, Tmm, Tp, Tm, mupp, mumm, mup, mum, rhopp, rhomm, rhop, rhom;
   double dmu_dT, dmu_drho, de_dT;
