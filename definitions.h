@@ -18,7 +18,7 @@
 #define  BACKGROUND_FIELD        NO
 #define  RESISTIVITY             ALTERNATING_DIRECTION_IMPLICIT
 #define  THERMAL_CONDUCTION      ALTERNATING_DIRECTION_IMPLICIT
-#define  VISCOSITY               SUPER_TIME_STEPPING
+#define  VISCOSITY               NO
 #define  ROTATING_FRAME          NO
 
 /* -- user-defined parameters (labels) -- */
