@@ -10,6 +10,7 @@
 Function to build the Ip,Im,Jp,Jm, CI, CJ (and also dEdT) for the thermal conduction problem
 Note that I must make available for outside dEdT, as I will use it later to
 advance the energy in a way that conserves the energy
+Note: Harmonic averaging of k is done as suggested in paper P.Sharma,G.W.Hammett,"Preserving Monotonicity in Anisotropic Diffusion"(2007)
 *****************************************************************************/
 void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
                    double **Ip, double **Im, double **Jp,
@@ -18,7 +19,7 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
   static double **protoIp, **protoIm, **protoJp, **protoJm, **protoCI, **protoCJ;
   int i,j,k;
   int nv, l;
-  double kpar, knor, phi; // Thermal conductivity
+  double kpar, knor, knor2, phi; // Thermal conductivity
   double v[NVAR];
   double ****Vc;
   double *inv_dri, *inv_dzi;
@@ -107,23 +108,41 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
 
       /* :::: Im on i=lidx :::: */
       for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][lidx] + Vc[nv][k][j][lidx-1]);
-      TC_kappa( v, rL[lidx], z[j], theta[k], &kpar, &knor, &phi);
+        v[nv] = Vc[nv][k][j][lidx]; // [Err] no, you should use armonic average of kappa
+      TC_kappa( v, r[lidx], z[j], theta[k], &kpar, &knor, &phi);
+
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = Vc[nv][k][j][lidx-1];
+      TC_kappa( v, r[lidx-1], z[j], theta[k], &kpar, &knor2, &phi);
+
+      knor = 2/(1/knor + 1/knor2);
       Im[j][lidx] = knor*protoIm[j][lidx];
 
       /* :::: Ip and Im for internal (non boundary) interfaces :::: */
       for (i=lidx; i<ridx; i++) {
         for (nv=0; nv<NVAR; nv++)
-          v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j][i+1]);
-        TC_kappa( v, rR[i], z[j], theta[k], &kpar, &knor, &phi);
+          v[nv] = Vc[nv][k][j][i];  // [Err] no, you should use armonic average of kappa
+        TC_kappa( v, r[i], z[j], theta[k], &kpar, &knor, &phi);
+
+        for (nv=0; nv<NVAR; nv++)
+          v[nv] = Vc[nv][k][j][i+1];
+        TC_kappa( v, r[i+1], z[j], theta[k], &kpar, &knor2, &phi);
+        
+        knor = 2/(1/knor + 1/knor2);
         Ip[j][i] = knor*protoIp[j][i];
         Im[j][i+1] = knor*protoIm[j][i+1];
       }
 
       /* :::: Ip on i=ridx :::: */
       for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][j][ridx] + Vc[nv][k][j][ridx+1]);
-      TC_kappa( v, rR[ridx], z[j], theta[k], &kpar, &knor, &phi);
+        v[nv] = Vc[nv][k][j][ridx];
+      TC_kappa( v, r[ridx], z[j], theta[k], &kpar, &knor, &phi);  // [Err] no, you should use armonic average of kappa
+      
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = Vc[nv][k][j][ridx+1];
+      TC_kappa( v, r[ridx+1], z[j], theta[k], &kpar, &knor2, &phi);
+      
+      knor = 2/(1/knor + 1/knor2);
       Ip[j][ridx] = knor*protoIp[j][ridx];
     }
 
@@ -136,23 +155,41 @@ void BuildIJ_TC(const Data *d, Grid *grid, Lines *lines,
 
       /* :::: Jm on j=lidx :::: */
       for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][lidx][i] + Vc[nv][k][lidx-1][i]);
-      TC_kappa( v, r[i], zL[lidx], theta[k], &kpar, &knor, &phi);
+        v[nv] = Vc[nv][k][lidx][i];  // [Err] no, you should use armonic average of kappa
+      TC_kappa( v, r[i], z[lidx], theta[k], &kpar, &knor, &phi);
+      
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = Vc[nv][k][lidx-1][i];
+      TC_kappa( v, r[i], z[lidx-1], theta[k], &kpar, &knor2, &phi);
+      
+      knor = 2/(1/knor + 1/knor2);
       Jm[lidx][i] = knor*protoJm[lidx][i];
 
       /* :::: Jp and Jm for internal (non boundary) interfaces :::: */
       for (j=lidx; j<ridx; j++) {
         for (nv=0; nv<NVAR; nv++)
-          v[nv] = 0.5 * (Vc[nv][k][j][i] + Vc[nv][k][j+1][i]);
-        TC_kappa( v, r[i], zR[j], theta[k], &kpar, &knor, &phi);
+          v[nv] = Vc[nv][k][j][i];  // [Err] no, you should use armonic average of kappa
+        TC_kappa( v, r[i], z[j], theta[k], &kpar, &knor, &phi);
+        
+        for (nv=0; nv<NVAR; nv++)
+          v[nv] = Vc[nv][k][j+1][i];  // [Err] no, you should use armonic average of kappa
+        TC_kappa( v, r[i], z[j+1], theta[k], &kpar, &knor2, &phi);
+        
+        knor = 2/(1/knor + 1/knor2);
         Jp[j][i] = knor*protoJp[j][i];
         Jm[j+1][i] = knor*protoJm[j+1][i]; 
       }
 
       /* :::: Jp on j=ridx :::: */
       for (nv=0; nv<NVAR; nv++)
-        v[nv] = 0.5 * (Vc[nv][k][ridx][i] + Vc[nv][k][ridx+1][i]);
-      TC_kappa( v, r[i], zR[ridx], theta[k], &kpar, &knor, &phi);
+        v[nv] = Vc[nv][k][ridx][i];  // [Err] no, you should use armonic average of kappa
+      TC_kappa( v, r[i], z[ridx], theta[k], &kpar, &knor, &phi);
+      
+      for (nv=0; nv<NVAR; nv++)
+        v[nv] = Vc[nv][k][ridx+1][i];  // [Err] no, you should use armonic average of kappa
+      TC_kappa( v, r[i], z[ridx+1], theta[k], &kpar, &knor2, &phi);
+      
+      knor = 2/(1/knor + 1/knor2);
       Jp[ridx][i] = knor*protoJp[ridx][i];
     }
 
