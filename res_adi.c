@@ -113,11 +113,13 @@ void BuildIJ_Res (const Data *d, Grid *grid, Lines *lines,
 
       /* :::: Im on i=lidx :::: */
       for (nv=0; nv<NVAR; nv++)
-        v[nv] = Vc[nv][k][j][lidx];  // [Err] no, you should use armonic average of etas
-      Resistive_eta( v, rL[lidx], z[j], theta[k], NULL, eta);  // rL, z
+        v[nv] = Vc[nv][k][j][lidx];
+      Resistive_eta( v, r[lidx], z[j], theta[k], NULL, eta);  
+
       for (nv=0; nv<NVAR; nv++)
         v[nv] = Vc[nv][k][j][lidx-1];
-      Resistive_eta( v, rL[lidx], z[j], theta[k], NULL, eta2);  // rL, z
+      Resistive_eta( v, r[lidx-1], z[j], theta[k], NULL, eta2);
+      
       eta[0] = 2/(1/eta[0] + 1/eta2[0]);
       // if (eta[0] != eta[1] || eta[1] != eta[2]) {
       //   ComplainAnisotropic(v, eta, rL[lidx], z[j], theta[k]);
@@ -127,12 +129,14 @@ void BuildIJ_Res (const Data *d, Grid *grid, Lines *lines,
 
       /* :::: Ip and Im for internal (non boundary) interfaces :::: */
       for (i=lidx; i<ridx; i++) {
+
         for (nv=0; nv<NVAR; nv++)
-          v[nv] = Vc[nv][k][j][i];  // [Err] no, you should use armonic average of eta
-        Resistive_eta( v, rR[i], z[j], theta[k], NULL, eta);   // rR, z
+          v[nv] = Vc[nv][k][j][i];  
+        Resistive_eta( v, r[i], z[j], theta[k], NULL, eta);
+
         for (nv=0; nv<NVAR; nv++)
           v[nv] = Vc[nv][k][j][i+1];
-        Resistive_eta( v, rR[i], z[j], theta[k], NULL, eta2);
+        Resistive_eta( v, r[i+1], z[j], theta[k], NULL, eta2);
         eta[0] = 2/(1/eta[0] + 1/eta2[0]);
         // if (eta[0] != eta[1] || eta[1] != eta[2]) {
         //   ComplainAnisotropic(v, eta, rR[i], z[j], theta[k]);
@@ -144,11 +148,13 @@ void BuildIJ_Res (const Data *d, Grid *grid, Lines *lines,
 
       /* :::: Ip on i=ridx :::: */
       for (nv=0; nv<NVAR; nv++)
-        v[nv] = Vc[nv][k][j][ridx];  // [Err] no, you should use armonic average of eta
-      Resistive_eta( v, rR[ridx], z[j], theta[k], NULL, eta);
+        v[nv] = Vc[nv][k][j][ridx];  
+      Resistive_eta( v, r[ridx], z[j], theta[k], NULL, eta);
+
       for (nv=0; nv<NVAR; nv++)
         v[nv] = Vc[nv][k][j][ridx+1];
-      Resistive_eta( v, rR[ridx], z[j], theta[k], NULL, eta2);   // rR, z
+      Resistive_eta( v, r[ridx+1], z[j], theta[k], NULL, eta2);
+
       eta[0] = 2/(1/eta[0] + 1/eta2[0]);
       // if (eta[0] != eta[1] || eta[1] != eta[2]) {
       //   ComplainAnisotropic(v, eta, rR[ridx], z[j], theta[k]);
@@ -166,11 +172,13 @@ void BuildIJ_Res (const Data *d, Grid *grid, Lines *lines,
 
       /* :::: Jm on j=lidx :::: */
       for (nv=0; nv<NVAR; nv++)
-        v[nv] = Vc[nv][k][lidx][i];  // [Err] no, you should use armonic average of eta
-      Resistive_eta( v, r[i], zL[lidx], theta[k], NULL, eta);
+        v[nv] = Vc[nv][k][lidx][i];  
+      Resistive_eta( v, r[i], z[lidx], theta[k], NULL, eta);
+
       for (nv=0; nv<NVAR; nv++)
         v[nv] = Vc[nv][k][lidx-1][i];
-      Resistive_eta( v, r[i], zL[lidx], theta[k], NULL, eta2);
+      Resistive_eta( v, r[i], z[lidx-1], theta[k], NULL, eta2);
+
       eta[0] = 2/(1/eta[0] + 1/eta2[0]);
       // if (eta[0] != eta[1] || eta[1] != eta[2]) {
       //   ComplainAnisotropic(v, eta, r[i], zL[lidx], theta[k]);
@@ -180,12 +188,15 @@ void BuildIJ_Res (const Data *d, Grid *grid, Lines *lines,
 
       /* :::: Jp and Jm for internal (non boundary) interfaces :::: */
       for (j=lidx; j<ridx; j++) {
+
         for (nv=0; nv<NVAR; nv++)
-          v[nv] = Vc[nv][k][j][i];  // [Err] no, you should use armonic average of eta
-        Resistive_eta( v, r[i], zR[j], theta[k], NULL, eta);
+          v[nv] = Vc[nv][k][j][i];  
+        Resistive_eta( v, r[i], z[j], theta[k], NULL, eta);
+
         for (nv=0; nv<NVAR; nv++)
-          v[nv] = Vc[nv][k][j+1][i];  // [Err] no, you should use armonic average of eta
-        Resistive_eta( v, r[i], zR[j], theta[k], NULL, eta2);
+          v[nv] = Vc[nv][k][j+1][i];  
+        Resistive_eta( v, r[i], z[j+1], theta[k], NULL, eta2);
+
         eta[0] = 2/(1/eta[0] + 1/eta2[0]);
         // if (eta[0] != eta[1] || eta[1] != eta[2]) {
         //   ComplainAnisotropic(v, eta, r[i], zR[j], theta[k]);
@@ -197,11 +208,13 @@ void BuildIJ_Res (const Data *d, Grid *grid, Lines *lines,
 
       /* :::: Jp on j=ridx :::: */
       for (nv=0; nv<NVAR; nv++)
-        v[nv] = Vc[nv][k][ridx][i];  // [Err] no, you should use armonic average of eta
-      Resistive_eta( v, r[i], zR[ridx], theta[k], NULL, eta);
+        v[nv] = Vc[nv][k][ridx][i];  
+      Resistive_eta( v, r[i], z[ridx], theta[k], NULL, eta);
+
       for (nv=0; nv<NVAR; nv++)
-        v[nv] = Vc[nv][k][ridx+1][i];  // [Err] no, you should use armonic average of eta
-      Resistive_eta( v, r[i], zR[ridx], theta[k], NULL, eta2);
+        v[nv] = Vc[nv][k][ridx+1][i];  
+      Resistive_eta( v, r[i], z[ridx+1], theta[k], NULL, eta2);
+
       eta[0] = 2/(1/eta[0] + 1/eta2[0]);
       // if (eta[0] != eta[1] || eta[1] != eta[2]) {
       //   ComplainAnisotropic(v, eta, r[i], zR[ridx], theta[k]);
