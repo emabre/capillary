@@ -11,7 +11,7 @@ plt.close("all")
 # <codecell>
 # Main settings
 if len(sys.argv) != 13: # 8 = 7(provided args) + 1(script name(sys.argv[0]))
-    raise ValueError("Input args must be 10!")
+    raise ValueError("Input args must be 12!")
 
 # Everything in cgs units
 UNIT_LENGTH = float(sys.argv[1])
