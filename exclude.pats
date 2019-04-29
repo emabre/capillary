@@ -1,0 +1,6 @@
+# How to use this: run diff path/to/sim1 path/to/sim2 -X path/to/this/file 
+*.o
+makefile
+*.out
+*.vscode
+*.bin
