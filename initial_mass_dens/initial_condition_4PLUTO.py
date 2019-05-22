@@ -11,7 +11,9 @@ plt.close("all")
 # <codecell>
 # Main settings
 if len(sys.argv) != 13: # 8 = 7(provided args) + 1(script name(sys.argv[0]))
-    raise ValueError("Input args must be 12!")
+    error = "Input args must be 12!"
+    print(error)
+    raise ValueError(error)
 
 # Everything in cgs units
 UNIT_LENGTH = float(sys.argv[1])
@@ -35,7 +37,7 @@ T_finame = 'T.raw'
 p_finame = 'p.raw'
 
 # Tolerance to declare zero (and thus neglect) the a certain length
-pos_zero_toll = 1e-15
+pos_zero_toll = 1e-5
 
 # How to fill regions outside from provided data.
 # "min" -> put minimum value in domain (or minimum allowed)
@@ -52,16 +54,22 @@ p = np.loadtxt(p_fi, skiprows=2)
 T = np.loadtxt(T_fi, skiprows=2)
 
 if np.any(np.abs(T[:,(0,1)]-p[:,(0,1)])>pos_zero_toll):
-    raise ValueError("p and T refer to different points, cannot continue!")
+    error = "p and T refer to different points, cannot continue!"
+    print(error)
+    raise ValueError(error)
 
 if np.all(p[:,2]<pos_zero_toll):
     p = np.delete(p, 2, 1)
 else:
-    raise ValueError("I cannot remove the third dimension from p, as it seems not zero")
+    error = "I cannot remove the third dimension from p, as it seems not zero"
+    print(error)
+    raise ValueError(error)
 if np.all(T[:,2]<pos_zero_toll):
     T = np.delete(T, 2, 1)
 else:
-    raise ValueError("I cannot remove the third dimension from T, as it seems not zero")
+    error = "I cannot remove the third dimension from T, as it seems not zero"
+    print(error)
+    raise ValueError(error)
 
 # <codecell>
 # I elaborate the data
@@ -71,8 +79,8 @@ kB = 1.3807e-16 # Boltzm. const. (erg/K)
 # I convert presure to dyne/cm² to have gcs units
 p[:,2] *= 10.0
 # I convert x,y to cm to have cgs units
-p[:,0] *= 1e2
-p[:,1] *= 1e2
+p[:,0] *= 1e2  # This is z
+p[:,1] *= 1e2  # This is r
 T[:,0] *= 1e2
 T[:,1] *= 1e2
 
@@ -98,7 +106,9 @@ r_cc_mg, z_cc_mg = np.meshgrid(r_cc,z_cc)
 if fill_outside=="min":
     fill_rho = np.min(rho[:,2])
 else:
-    raise ValueError("Option for filling regions outside provided domain not understood")
+    error = "Option for filling regions outside provided domain not understood"
+    print(error)
+    raise ValueError(error)
 rho_i = interp.griddata(rho[:,(0,1)], rho[:,2],
                         (z_cc_mg.flatten(),r_cc_mg.flatten()),
                         fill_value = fill_rho)
@@ -109,7 +119,9 @@ if replot_p_rho:
     if fill_outside=="min":
         fill_p = np.min(p[:,2])
     else:
-        raise ValueError("Option for filling regions outside provided domain not understood")
+        error = "Option for filling regions outside provided domain not understood"
+        print(error)
+        raise ValueError(error)
     p_i = interp.griddata(p[:,(0,1)], p[:,2],
                           (z_cc_mg.flatten(),r_cc_mg.flatten()),
                           fill_value = fill_p)
