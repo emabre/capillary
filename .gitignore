@@ -8,6 +8,8 @@ pluto.log
 eta.dat
 kappa.dat
 out/*.dat
+initial_mass_dens/T.raw
+initial_mass_dens/p.raw
 makefile
 .directory
 breaks
