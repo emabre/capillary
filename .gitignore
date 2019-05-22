@@ -5,11 +5,13 @@ pluto.log
 *.vtk
 *.dbl
 *.out
+eta.dat
+kappa.dat
+out/*.dat
 makefile
 .directory
 breaks
 profiled.txt
-*.dat
 rplots/.Rproj.user
 rplots/rplots.Rproj
 profiled*
