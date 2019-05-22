@@ -1,4 +1,4 @@
-# Current table 200A peak (rescaled from 170A to get 200A peak)
+# Current table as used for simulation of publication to EAAC2017 (i.e. 3cmL-1mmD, 20kV, ~2nF, as in Pompili et al, APL110,104101 (2017) )
 # Time/s  Current/A
 -1.000000e-20   0.0001e+00
 1.500000e-07   4.0e0
