@@ -37,7 +37,7 @@ T_finame = 'T.raw'
 p_finame = 'p.raw'
 
 # Tolerance to declare zero (and thus neglect) the a certain length
-pos_zero_toll = 1e-5
+pos_zero_toll = 1e-15
 
 # How to fill regions outside from provided data.
 # "min" -> put minimum value in domain (or minimum allowed)

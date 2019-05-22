@@ -55,7 +55,7 @@
 #define  ASSIGN_VECTOR_POTENTIAL   NO
 #define  UPDATE_VECTOR_POTENTIAL   NO
 #define  SHOW_TIME_STEPS           YES
-#define  T_CUT_RHOE                1000
+#define  T_CUT_RHOE                800
 
 /* ---------------------------------------------------- */
 /* Additional constants */
@@ -78,23 +78,23 @@ Method for Thermal conduction and Resisitivity (when ADI is chosen), available c
   - PEACEMAN_RACHFORD_MOD
   - STRANG
 */
-#define METHOD_TC                  SPLIT_IMPLICIT
+#define METHOD_TC                  DOUGLAS_RACHFORD
 #define METHOD_RES                 DOUGLAS_RACHFORD
 /*
 Number of sub-iterations in the whole "adi" scheme (at every sub-iteration the
 conservative variables are updated and the kappa/eta re-evaluated)
 */
-#define NSUBS_ADI_TOT              2
+#define NSUBS_ADI_TOT              4
 /*
 Number of sub-iterations for the thermal conduction scheme (the
 conservative variables and kappa, are not updated between two iterations)
 */
-#define NSUBS_TC                   2
+#define NSUBS_TC                   30
 /*
 Number of sub-iterations for the magnetic diffusion scheme (the
 conservative variables and eta, are not updated between two iterations)
 */
-#define NSUBS_RES                  50
+#define NSUBS_RES                  70
 
 /*Theta value for Glowinsky's fractional theta method (a value in ]0,0.5[)*/
 // #define FRACTIONAL_THETA_THETA_TC   0.3
@@ -129,7 +129,7 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* To set to 0 the mag field in a region outside capillary*/
 // #define FLATTEN_B_OUTCAP
 #define RUNTIMESET_CALL            AFTER_SETOUTPUT
-// #define CONE_LOW_TCKAPPA           (CONST_PI/4)
+#define CONE_LOW_TCKAPPA           (CONST_PI/4)
 /* ---------------------------------------------------- */
 
 /*---------------------------------------------------------------------------*/
@@ -140,12 +140,12 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 
 /* ---------------------------------------------------- */
 /* Transport parameters, settings for computing them from tables*/
-#define ETA_TABLE                  NO
-#define KAPPA_TABLE                NO
+#define ETA_TABLE                  YES
+#define KAPPA_TABLE                YES
 #define MAKE_ETA_TAB_FILE          YES /* If YES, the ascii table file will be made with python script, */
 #define MAKE_KAPPA_TAB_FILE        YES /* instead, if NO it is assumed that the file is already present*/
-#define RHO_TAB_MIN                (2.5e-14)  /* You should never go below UNIT_DENSITY*1e-7 */
-#define RHO_TAB_MAX                (2.5e-6)  /* You should never go hiher than UNIT_DENSITY*1e7 */
+#define RHO_TAB_MIN                (2.5e-13)  /* You should never go below UNIT_DENSITY*1e-7 */
+#define RHO_TAB_MAX                (2.5e-5)  /* You should never go hiher than UNIT_DENSITY*1e7 */
 #define N_TAB_RHO                  50
 #define T_TAB_MIN                  (0.8*T_CUT_RHOE)
 #define T_TAB_MAX                  3.e5
@@ -156,7 +156,7 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /*    CAPILLARY GEOMETRY SETTINGS                      */
 #define RCAP                       0.05
 #define DZCAP                      0.1 /*the electrodes are wide DZCAP cm*/
-#define ZCAP                       1.5 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
+#define ZCAP                       1.6 /*the capillary is long 2*ZCAP cm and wide 2*RCAP cm*/
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
@@ -164,11 +164,11 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 - if rho is below RHO_VACUUM than the k is reduced a bit (see tc_kappa.c)
 - if T is higher than T_MAX_HARD_RESET than it is put back to T_MAX_HARD_RESET
 */
-#define RHO_VACUUM                 2.5e-11  /* You should never go below UNIT_DENSITY*1e-7 */
+#define RHO_VACUUM                 2.5e-10  /* You should never go below UNIT_DENSITY*1e-7 */
 #define T_MAX_HARD_RESET           (T_TAB_MAX*0.99)  /* It must be below T_TAB_MAX and all other tabulated temperatures */
 #define T_LIM_IEN                  1.0e5    /* Limit of temeperature above which EOS is modified (cv not constant anymore)*/
-#define BETA_IEN                   1.2637   /* When T>T_LIM_IEN the int.enrgy gets multiplied by (T/T_LIM_IEN)^BETA_IEN*/
-#define RHO_MIN_HARD_RESET         (RHO_TAB_MIN*100.0)  /* When RHO<RHO_MIN_HARD_RESET rho is set equal to RHO_MIN_HARD_RESET*/
+#define BETA_IEN                   2.5   /* When T>T_LIM_IEN the int.enrgy gets multiplied by (T/T_LIM_IEN)^BETA_IEN*/
+#define RHO_MIN_HARD_RESET         5.0e-10  /* When RHO<RHO_MIN_HARD_RESET rho is set equal to RHO_MIN_HARD_RESET*/
 /* ---------------------------------------------------- */
 
 /* ---------------------------------------------------- */
@@ -176,7 +176,7 @@ To set the order of directions in the ADI scheme, allowed values: YES, NO, RANDO
 /* 'DENS_INITIAL' Available: SMOOTH_COS2 (cos² smothing ouside capillary),
                             UNIFORM_FILL (sharp transition with vacuum),
                             FROM_FILE    (from a bin file + grid file, named:  rho_ic.flt, grid_ic.out)*/
-#define DENS_INITIAL               SMOOTH_COS2
+#define DENS_INITIAL               FROM_FILE
 /* Useful only in case of DENS_INITIAL==FROM_FILE;
    if 1 replot from python the p and rho interpolated,
    if 0 it does nothing (keep 0 as default) */
