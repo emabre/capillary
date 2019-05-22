@@ -55,8 +55,8 @@ Inside the folder ```initial_mass_dens``` there must be two files:
 + ```T.raw```
 
 They are in ASCII format, and are made by two starting rows that begin with \#.
-Than, each row represents a mesh-point. Each row containing 4 numbers (space separated).
-The first number in each row represents the z coordinate, the second the r and the third the theta (in the r-z-theta system of pluto). The forth number is the value of pressure (for p.raw) or temperature (T.raw). Please note that the values of the theta coords must be approximately zero (with a tolerance defined inside ```initial_mass_dens/initial_condition_4PLUTO.py```).
+Than, each row represents a mesh-point. Each row containes 4 numbers (space separated).
+The first number in each row represents the z coordinate (meters), the second the r(meters) and the third the theta (in the r-z-theta system of pluto). The forth number is the value of pressure (for p.raw) (in Pascal) or temperature (T.raw) (in Kelvin). Please note that the values of the theta coords must be approximately zero (with a tolerance defined inside ```initial_mass_dens/initial_condition_4PLUTO.py```).
 The field represented might be even larger than the domain simulated. What is important is that where the capillary is defined the data are present. This means that one does not need to cut off the left or bottom part of the capillary, one can leave the entiere capillary (theta=0)-slice.
 
 ## Using a table (e.g. for eta (resistivity) as function of rho, T)
