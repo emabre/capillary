@@ -1109,20 +1109,23 @@ void DouglasRachford (double **v_new, double **v_old,
   ApplyBCs(lines, d, grid, t_now, dir2);
 
   if (recompute_operators){
+    // print1("I update diff operators (diff=%d, BDIFF=%d, TDIFF=%d)", diff, BDIFF, TDIFF);
     switch(diff) {
-      print1("I recompute diff operators (diff=%d, BDIFF=%d, TDIFF=%d)", diff, BDIFF, TDIFF);
       #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
         case BDIFF:
           BuildIJ_Res(d, grid, lines, IpB, ImB, JpB, JmB, CIB, CJB, dEdT);
+          break;
       #endif
       #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
         case TDIFF:
           BuildIJ_TC(d, grid, lines, IpT, ImT, JpT, JmT, CIT, CJT, dEdT);
+          break;
       #endif
     }
-  } else {
-    print1("I DO NOT recompute diff operators (diff=%d, BDIFF=%d, TDIFF=%d)", diff, BDIFF, TDIFF);
   }
+  // } else {
+  //   print1("I DO NOT update diff operators (diff=%d, BDIFF=%d, TDIFF=%d)", diff, BDIFF, TDIFF);
+  // }
 
   #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
