@@ -83,8 +83,13 @@ Method for Thermal conduction and Resisitivity (when ADI is chosen), available c
 /*
 Number of sub-iterations in the whole "adi" scheme (at every sub-iteration the
 conservative variables are updated and the kappa/eta re-evaluated)
+(total adi-diffusive steps)
 */
 #define NSUBS_ADI_TOT              4
+/*
+Set the period (in number of total adi-diffusive steps) for recomputation of discrete diffusive
+*/
+#define DIFF_OP_RECOMPUTE_PERIOD   3
 /*
 Number of sub-iterations for the thermal conduction scheme (the
 conservative variables and kappa, are not updated between two iterations)

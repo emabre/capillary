@@ -24,6 +24,7 @@ double t_diff = 0;
 void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   static int first_call=1;
   int i,j,k, l;
+  int recompute_operators=1; /*Tells whether the discrete diffusion operators have to be recomputed*/
   
   static Lines lines[2]; /*I define two of them as they are 1 per direction (r and z)*/
   #if RESISTIVITY == ALTERNATING_DIRECTION_IMPLICIT
@@ -125,6 +126,11 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
   dt_reduced = dt/adi_steps;
 
   for (s=0; s<adi_steps; s++) {
+
+    /* Decide whether recompute discrete diffusive operators:
+       recompute only if s is multiple of DIFF_OPERATOR_RECOMPUTE_PERIOD */
+    recompute_operators = ((s%DIFF_OP_RECOMPUTE_PERIOD) == 0);
+
     #ifdef DEBUG_EMA
       printf("\nNstep:%ld",g_stepNumber);
       printf("\ns:%d\n", s);
@@ -165,7 +171,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         }
         FractionalTheta(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA_THETA_TC);
       #elif METHOD_TC==DOUGLAS_RACHFORD
-        DouglasRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_TC);
+        DouglasRachford(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_TC, recompute_operators);
       #elif METHOD_TC==PEACEMAN_RACHFORD_MOD
         PeacemanRachfordMod(T_new, T_old, NULL, dEdT, d, grid, lines, TDIFF, ORDER, dt_reduced, t_start_sub, FRACT_TC, NSUBS_TC);
       #elif METHOD_TC==STRANG_LIE
@@ -228,7 +234,7 @@ void ADI(const Data *d, Time_Step *Dts, Grid *grid) {
         }
         FractionalTheta(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACTIONAL_THETA_THETA_RES);
       #elif METHOD_RES==DOUGLAS_RACHFORD
-        DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_RES);
+        DouglasRachford(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, NSUBS_RES, recompute_operators);
       #elif METHOD_RES==PEACEMAN_RACHFORD_MOD
         PeacemanRachfordMod(Br_new, Br_old, dUres, NULL, d, grid, lines, BDIFF, ORDER, dt_reduced, t_start_sub, FRACT_RES, NSUBS_RES);
       #elif METHOD_RES==STRANG_LIE

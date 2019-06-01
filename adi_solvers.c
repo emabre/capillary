@@ -966,15 +966,19 @@ void DouglasRachford (double **v_new, double **v_old,
                       double **dUres, double **dEdT,
                       const Data *d, Grid *grid,
                       Lines *lines, int diff, int order,
-                      double dt, double t0, int M) {
+                      double dt, double t0, int M, int recompute_operators) {
 
-  static double **v_aux, **v_hat, **v_old_aux; // auxiliary solution vector
-  static double **Ip, **Im, **CI, **Jp, **Jm, **CJ;
+  static double **v_aux, **v_hat, **v_old_aux; // auxiliary solution vectors
+  #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
+    static double **IpB, **ImB, **CIB, **JpB, **JmB, **CJB;
+  #endif
+  #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+    static double **IpT, **ImT, **CIT, **JpT, **JmT, **CJT;
+  #endif
   static int first_call = 1;
   double **H1p, **H1m, **H2p, **H2m, **C1, **C2;
   // void (*BoundaryADI) (Lines, const Data, Grid, double);
   BoundaryADI *ApplyBCs;
-  BuildIJ *MakeIJ;
   int dir1, dir2;
   int l,i,j,s;
   double dts;
@@ -994,40 +998,90 @@ void DouglasRachford (double **v_new, double **v_old,
     #if (JOULE_EFFECT_AND_MAG_ENG)
       dUres_aux = ARRAY_2D(NX2_TOT, NX1_TOT, double);
     #endif
-    Ip = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    Im = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    Jp = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    Jm = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    CI = ARRAY_2D(NX2_TOT, NX1_TOT, double);
-    CJ = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+
+    #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
+      IpB = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      ImB = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      JpB = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      JmB = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      CIB = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      CJB = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    #endif
+    #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+      IpT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      ImT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      JpT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      JmT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      CIT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+      CJT = ARRAY_2D(NX2_TOT, NX1_TOT, double);
+    #endif
+
     first_call = 0;
   }
 
-  /* Set the direction order*/
+  // /* Set the direction order*/
+  // if (order == FIRST_IDIR) {
+  //   H1p = Ip;     H1m = Im;
+  //   H2p = Jp;     H2m = Jm;
+  //   C1 = CI;      C2 = CJ;
+  //   dir1 = IDIR;  dir2 = JDIR;
+  // } else if (order == FIRST_JDIR) {
+  //   print1("\n[DouglasRachford]Be careful! I suspect there is a mistake in D-R scheme when you start with the JDIR direction");
+  //   H1p = Jp;     H1m = Jm;
+  //   H2p = Ip;     H2m = Im;
+  //   C1 = CJ;      C2 = CI;
+  //   dir1 = JDIR;  dir2 = IDIR;
+  // }
+
+    /* Set the direction order and diffusion parameters/operators*/
   if (order == FIRST_IDIR) {
-    H1p = Ip;     H1m = Im;
-    H2p = Jp;     H2m = Jm;
-    C1 = CI;      C2 = CJ;
     dir1 = IDIR;  dir2 = JDIR;
+    switch(diff){
+      #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
+        case BDIFF:
+          H1p = IpB;     H1m = ImB;
+          H2p = JpB;     H2m = JmB;
+          C1 = CIB;      C2 = CJB; 
+          break;
+      #endif
+      #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+        case TDIFF:
+          H1p = IpT;     H1m = ImT;
+          H2p = JpT;     H2m = JmT;
+          C1 = CIT;      C2 = CJT;
+          break;
+      #endif
+    }
   } else if (order == FIRST_JDIR) {
-    print1("\n[DouglasRachford]Be careful! I suspect there is a mistake in D-R scheme when you start with the JDIR direction");
-    H1p = Jp;     H1m = Jm;
-    H2p = Ip;     H2m = Im;
-    C1 = CJ;      C2 = CI;
     dir1 = JDIR;  dir2 = IDIR;
+    print1("\n[DouglasRachford]Be careful! I suspect there is a mistake in D-R scheme when you start with the JDIR direction");
+    switch(diff) {
+      #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
+        case BDIFF:
+          H1p = JpB;     H1m = JmB;
+          H2p = IpB;     H2m = ImB;
+          C1 = CJB;      C2 = CIB;
+          break;
+      #endif
+      #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+        case TDIFF:
+          H1p = JpB;     H1m = JmB;
+          H2p = IpB;     H2m = ImB;
+          C1 = CJB;      C2 = CIB;
+          break;
+      #endif 
+    }
   }
 
   switch (diff) {
     #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
       case BDIFF:
         ApplyBCs = BoundaryADI_Res;
-        MakeIJ = BuildIJ_Res;
         break;
     #endif
     #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
       case TDIFF:
         ApplyBCs = BoundaryADI_TC;
-        MakeIJ = BuildIJ_TC;
         break;
     #endif
     default:
@@ -1053,7 +1107,22 @@ void DouglasRachford (double **v_new, double **v_old,
 
   ApplyBCs(lines, d, grid, t_now, dir1);
   ApplyBCs(lines, d, grid, t_now, dir2);
-  MakeIJ(d, grid, lines, Ip, Im, Jp, Jm, CI, CJ, dEdT);
+
+  if (recompute_operators){
+    switch(diff) {
+      print1("I recompute diff operators (diff=%d, BDIFF=%d, TDIFF=%d)", diff, BDIFF, TDIFF);
+      #if RESISTIVITY==ALTERNATING_DIRECTION_IMPLICIT
+        case BDIFF:
+          BuildIJ_Res(d, grid, lines, IpB, ImB, JpB, JmB, CIB, CJB, dEdT);
+      #endif
+      #if THERMAL_CONDUCTION==ALTERNATING_DIRECTION_IMPLICIT
+        case TDIFF:
+          BuildIJ_TC(d, grid, lines, IpT, ImT, JpT, JmT, CIT, CJT, dEdT);
+      #endif
+    }
+  } else {
+    print1("I DO NOT recompute diff operators (diff=%d, BDIFF=%d, TDIFF=%d)", diff, BDIFF, TDIFF);
+  }
 
   #if (JOULE_EFFECT_AND_MAG_ENG && POW_INSIDE_ADI)
       if (diff == BDIFF) {
