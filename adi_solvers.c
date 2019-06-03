@@ -1094,8 +1094,8 @@ void DouglasRachford (double **v_new, double **v_old,
   LINES_LOOP(lines[IDIR], l, j, i)
     v_old_aux[j][i] = v_old[j][i];
 
-  print1("\nI apply a Douglas-Rachford scheme for diff=%d (BDIFF=%d,TDIFF=%d)\n", diff, BDIFF, TDIFF);
-  print1(" -> I do %d calls to ImplicitUpdate() and %d calls to ExplicitUpdate()\n", 2*M,2*M);
+  // print1("\nI apply a Douglas-Rachford scheme for diff=%d (BDIFF=%d,TDIFF=%d)\n", diff, BDIFF, TDIFF);
+  // print1(" -> I do %d calls to ImplicitUpdate() and %d calls to ExplicitUpdate()\n", 2*M,2*M);
 
   /*****************************************
   * ---------------------------------------
