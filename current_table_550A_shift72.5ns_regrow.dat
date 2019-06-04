@@ -1,0 +1,21 @@
+# Modified from the one of the new circuit, (3cmL-1mmD capillary) (shifted 72.5ns with respect to current plotted in report $Dottorato/dati_sperimentali_e_calcoli/circuito/HV pulser up to 600A.pdf). This has a oscillation around the top
+# Time/s  Current/A
+-1.e-20   	0.0001e+00
+10.e-9		10.
+72.5e-9 	125.
+135.e-9		375.
+197.5e-9	520.
+260.e-9		550.
+322.5e-9	542.
+435.e-9		450.
+485.e-9		450.
+578.e-9		532.
+623.e-9		550.
+685.e-9		542.
+895.e-9		370.
+1056.e-9	243.
+1185e-9		155.
+1308.e-9	112.
+1.4355e-6	75.
+1.6855e-6	45.
+2.1855e-6	10.
