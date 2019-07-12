@@ -11,7 +11,7 @@ This file contains also some other quantities and parameter useful for computing
 - other plasma parameters, computed as in Ref[1] and in:
 [2] Plasma Phys. Control. Fusion 43 (2001) 571–588
 [3] Physical Review E, Volume 65, 016407
-- plasma parameters as defined inside dued
+- plasma parameters as defined inside DD
 */
 
 #define ERG2KEV(kT) ((kT)/CONST_eV/1e3)
@@ -160,12 +160,12 @@ double elRes_norm(double z, double rho, double kT, int corr, double B) {
 }
 
 /*------------------------------------------------
-  Electrical resistivity as in code DUED.
+  Electrical resistivity as in code DD.
   (the expression implemented here is valid ONLY FOR z<1).
   Resistivity of Spitzer, in direction parallel to magnetic field,
   (ONLY VALID FOR HYDROGEN), corrected incuding collisions e-e.
 ------------------------------------------------*/
-double elRes_norm_DUED(double z, double rho, double kT) {
+double elRes_norm_DD(double z, double rho, double kT) {
   double TkeV = ERG2KEV(kT);
   double sqrt_TkeV = TkeV*TkeV;
   double Z_ion = fmax(1.0,z);
@@ -176,14 +176,14 @@ double elRes_norm_DUED(double z, double rho, double kT) {
   // double Zmin = fmin(z,1.0);
 
   /*-----------------------------------------------------------------------*/
-  /*Electrical resitivity due to collisions with neutrals according to DUED*/
+  /*Electrical resitivity due to collisions with neutrals according to DD*/
   
   sqrt_TkeV = sqrt(TkeV);
   elRes_norm_en = 1.03e-14 * (1-z)/(z+1e-20) * sqrt_TkeV * (sigma_ea/1.4e-15);
   /*-----------------------------------------------------------------------*/
 
   /*-----------------------------------------------------------------------*/
-  /*Electrical resitivity due to collisions with ions according to DUED.*/
+  /*Electrical resitivity due to collisions with ions according to DD.*/
 
   // Coulomb log computation
   cl_quant = 7.1 - 0.5*log(ne/1e21) + log(TkeV);
@@ -196,7 +196,7 @@ double elRes_norm_DUED(double z, double rho, double kT) {
 
   /*Old (equivalent) version, less performing,
     (I used to call a function) */
-  // cl_ei_el = cl_ei_el_DUED(ne, kT, z);
+  // cl_ei_el = cl_ei_el_DD(ne, kT, z);
 
    elRes_norm_ei = 1.840e-19 * cl_ei_el /(TkeV*sqrt_TkeV) * Z_ion;
   // Old (equivalent) version, less performing
@@ -206,9 +206,9 @@ double elRes_norm_DUED(double z, double rho, double kT) {
   return elRes_norm_ei + elRes_norm_en;
 }
 /*---------------------------------------------------
-  Coulomb log for e-i according to DUED, for computation of electrical resitivity
+  Coulomb log for e-i according to DD, for computation of electrical resitivity
 ---------------------------------------------------*/
-double cl_ei_el_DUED(double ne, double kT, double z){
+double cl_ei_el_DD(double ne, double kT, double z){
   double TkeV, Z_ion, cl_quant, cl;
 
   TkeV = ERG2KEV(kT);
@@ -244,15 +244,15 @@ double thermCond_norm(double z,double rho, double kT, int corr, double B) {
 }
 
 /*------------------------------------------------
-  Thermal conductivity of Hydrogen according to DUED. Works for an equation of conduction where
+  Thermal conductivity of Hydrogen according to DD. Works for an equation of conduction where
   temperature gradients expressed WITH TEMPERTURE DEFINED IN KELVIN (Kelvin/cm).
   I removed the "chie multiplier" which is (to my knowledge) always 1
   for the cases of our interest
 ------------------------------------------------*/
-double thermCond_norm_DUED(double z, double rho, double kT) {
+double thermCond_norm_DD(double z, double rho, double kT) {
   double ne = ELEC_DENS(rho,z);
   double cl, deleps;
-  double Z_ion = fmax(1.0,z); // This is called ZEI in dued
+  double Z_ion = fmax(1.0,z); // This is called ZEI in DD
   double Z_ion_sq = Z_ion*Z_ion;
   double Zion_pow_089 = pow(Z_ion,0.89);
   double T=kT/CONST_kB;
@@ -283,7 +283,7 @@ double thermCond_norm_DUED(double z, double rho, double kT) {
 }
 
 /*-----------------------------------------------------------------
-Coulomb log for e-i according to DUED, for computation of thermal conductivity'''
+Coulomb log for e-i according to DD, for computation of thermal conductivity'''
 -----------------------------------------------------------------*/
 double cl_ei_th(double ne, double kT, double z){
   double T, Z_ion, cl;

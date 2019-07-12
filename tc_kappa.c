@@ -51,7 +51,7 @@ void TC_kappa(double *v, double x1, double x2, double x3,
 
       // unit_Mfield = COMPUTE_UNIT_MFIELD(UNIT_VELOCITY, UNIT_DENSITY);
       // k = thermCond_norm(z, v[RHO]*UNIT_DENSITY, T*CONST_kB, 1, v[iBPHI]*unit_Mfield);
-      k = thermCond_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
+      k = thermCond_norm_DD(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
       // I increase the value of k to take into account the conductivity of a hydrogen gas at 2000K
       // (according to Timrot value of H2 conductivity, cited in Mehl et al., "Ab initio transport...",2010 ),
       // anyway, I am not sure this correction is ok, especially because I don't know what is the "low-density

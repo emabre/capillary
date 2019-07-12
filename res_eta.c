@@ -25,7 +25,7 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
   if (g_inputParam[ETAX_GAU] > 0.0) {
     // Fixed value from pluto.ini
     res = g_inputParam[ETAX_GAU];
-    
+
   } else {
     if (GetPV_Temperature(v, &(T) )!=0) {
       #if WARN_ERR_COMP_TEMP
@@ -49,7 +49,7 @@ void Resistive_eta(double *v, double x1, double x2, double x3, double *J, double
     #else
       GetMu(T, v[RHO], &mu);
       z = fmax(1/mu - 1, IONIZMIN);
-      res = elRes_norm_DUED(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
+      res = elRes_norm_DD(z, v[RHO]*UNIT_DENSITY, T*CONST_kB);
     #endif
 
     #ifdef RESMAX_PLASMA

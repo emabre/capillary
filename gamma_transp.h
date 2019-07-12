@@ -26,11 +26,11 @@ double freq_coll_e(double z, double rho, double kT);
 double elRes_norm(double z, double rho, double kT, int corr, double B);
 double thermCond_norm(double z,double rho, double kT, int corr, double B);
 
-double cl_ei_el_DUED(double ne, double kT, double z);
+double cl_ei_el_DD(double ne, double kT, double z);
 double cl_ei_th(double ne, double kT, double z);
 double erg2keV(double kT);
-double elRes_norm_DUED(double z, double rho, double kT);
-double thermCond_norm_DUED(double z, double rho, double kT);
+double elRes_norm_DD(double z, double rho, double kT);
+double thermCond_norm_DD(double z, double rho, double kT);
 
 
 #endif
