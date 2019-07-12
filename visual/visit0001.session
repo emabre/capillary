@@ -5494,10 +5494,10 @@
         </Object>
         <Object name="ViewerSubject">
             <Object name="SourceMap">
-                <Field name="SOURCE00" type="string">"localhost:/home/konrad/simulazioni/sims_pluto/disch_outcap_27082018/out/data.*.vtk database"</Field>
+                <Field name="SOURCE00" type="string">"localhost:/home/konrad/simulazioni/sims_pluto/capillary_27082018/out/data.*.vtk database"</Field>
             </Object>
             <Object name="SourcePlugins">
-                <Field name="localhost:/home/konrad/simulazioni/sims_pluto/disch_outcap_27082018/out/data.*.vtk database" type="string">VTK_1.0</Field>
+                <Field name="localhost:/home/konrad/simulazioni/sims_pluto/capillary_27082018/out/data.*.vtk database" type="string">VTK_1.0</Field>
             </Object>
             <Object name="DatabaseCorrelationList">
                 <Field name="needPermission" type="bool">true</Field>

@@ -1,2 +1,2 @@
 #!/usr/bin/env
-colordiff . $SIMS/sims_pluto/disch_outcap -X $SIMS/sims_pluto/disch_outcap/exclude.pats
+colordiff . $SIMS/sims_pluto/capillary -X $SIMS/sims_pluto/capillary/exclude.pats
